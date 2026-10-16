@@ -1,0 +1,100 @@
+# 20 — Risks, Decisions (ADR) & Open Questions
+
+## 1. Risk register
+
+| ID | Rủi ro | Khả năng | Ảnh hưởng | Giảm thiểu | Trigger hành động |
+|---|---|---|---|---|---|
+| R1 | **Payouts không dùng được trong sandbox app** | Trung bình | Rất cao | `sandbox-check` ngày 17/10; hỏi Discord; fallback [11](11-paypal-integration.md) §6 | sandbox-check fail |
+| R2 | Ôm quá nhiều sponsor → không xong core | Cao | Cao | Tier hoá; cut list; feature freeze 05/11 | Trễ milestone > 1 ngày |
+| R3 | Trial AG/Bryntum/Elastic/Zapier hết trong judging (1–15/12) | Cao | Trung bình | Kích hoạt muộn; xin license hackathon trên Discord; degrade gracefully; feature flags | 7 ngày trước hết hạn |
+| R4 | Webhook sandbox chậm/không đến khi quay video | Trung bình | Trung bình | Reconcile sweep + "Sync now"; quay nhiều take | Webhook > 30s |
+| R5 | LLM không ổn định khi demo (plan khác nhau mỗi lần) | Trung bình | Trung bình | Seed + temperature thấp; prompt cố định trong video; cache plan | Eval fail |
+| R6 | Render Workflows chưa sẵn/khác kỳ vọng | Trung bình | Thấp | Outbox + worker + cron tương đương | Spike 17/10 |
+| R7 | Bryntum + AG Studio + Next.js SSR xung đột | Trung bình | Trung bình | Dynamic import `ssr:false`; spike 20/10 | Build lỗi |
+| R8 | Bug double-spend / ledger lệch | Thấp | Rất cao (mất uy tín) | Property tests, concurrency tests, job kiểm I1 | Bất kỳ test fail |
+| R9 | Judges không chạy được local | Trung bình | Trung bình | Hosted demo là chính; Docker compose; README thử trên máy sạch | — |
+| R10 | Vấn đề pháp lý (money transmission) bị judges hỏi | Thấp | Thấp | Nói rõ: sandbox; production cần licensed partner / PayPal-native mechanisms | — |
+| R11 | Thương hiệu: dùng "Agent Pass"/"Sui"/"PayPal" trong tên | Thấp | Trung bình | Tên Kitty/Leash; chỉ "inspired by" | — |
+| R12 | Một người làm, ốm/quá tải | Trung bình | Cao | M2 sớm (28/10) = luôn có bản nộp được | — |
+| R13 | Judges không có API key nên không thử được agents | Cao | Cao | Demo key có hạn mức cho tài khoản `is_demo` (ADR-015); manual mode | — |
+| R14 | Provider khác nhau xử lý tool calling khác nhau → agent chạy lệch | Trung bình | Trung bình | AI SDK chuẩn hoá; eval chạy với ≥2 provider; chặn model không hỗ trợ tools | Eval fail trên một provider |
+| R15 | Lộ API key người dùng | Thấp | Rất cao (uy tín) | Envelope encryption, redaction test, không trả plaintext ([24](24-byok-ai-models.md) §5) | — |
+
+## 2. Architecture Decision Records
+
+### ADR-001 — Prefunded envelope thay vì charge trực tiếp tài khoản user
+- **Bối cảnh:** Bounded loss cần giới hạn không phụ thuộc hoàn toàn vào việc Gateway đúng.
+- **Quyết định:** Agent chỉ tiêu tiền **đã thu vào Kitty và đã cấp vào leash** (ledger). Không dùng vault/billing agreement để charge user theo nhu cầu trong MVP.
+- **Hệ quả:** + Loss bị chặn bởi số tiền thật đã cấp. − Tiền nằm ở tài khoản platform (vấn đề custody nếu production → cần partner/PayPal-native mechanism).
+
+### ADR-002 — Gateway là service riêng, duy nhất giữ PayPal secret
+- **Quyết định:** `apps/gateway` tách biệt; web/agents/worker không có secret. CI kiểm.
+- **Hệ quả:** + Câu chuyện bảo mật đứng vững, Gateway tái sử dụng như MCP server. − Thêm một service, thêm hop mạng.
+
+### ADR-003 — Policy engine thuần, không LLM
+- **Quyết định:** `packages/leash.evaluate()` là hàm thuần, deterministic. `justification` của agent không ảnh hưởng.
+- **Hệ quả:** Test 100%, giải thích được, không bị injection.
+
+### ADR-004 — Ed25519 request signing cho agents
+- **Quyết định:** Mỗi agent một keypair; ký method+path+timestamp+nonce+body hash.
+- **Thay thế bị loại:** bearer token (dễ lộ), mTLS (phức tạp trên Render).
+
+### ADR-005 — Collect bằng Invoicing, trả bằng Payouts
+- **Quyết định:** Inbound = Invoicing v2 (+ Orders fallback); outbound = Payouts; refund = captures refund.
+- **Thay thế bị loại:** Multiparty/partner (cần onboarding), Orders có payee là vendor (cần buyer approve mỗi lần — không tự động).
+
+### ADR-006 — Ledger double-entry dạng bucket, tiền là cents bigint
+- **Quyết định:** Xem [05](05-leash-spec.md) §8. Số dư luôn tính từ ledger.
+
+### ADR-007 — PayPal Agent Toolkit ở sau leash *(chờ spike 18/10)*
+- **Đề xuất:** Gateway dùng Agent Toolkit như executor cho invoices/orders nếu API khớp; Payouts/verify webhook qua REST client riêng. Agents **không bao giờ** nhận Toolkit/MCP PayPal trực tiếp.
+- **Tiêu chí quyết:** Toolkit có hỗ trợ `PayPal-Request-Id`/idempotency và các field cần không? Nếu không → REST client cho tất cả, chỉ nhắc Toolkit nếu thực sự dùng (không "khai khống").
+
+### ADR-008 — Turborepo + Bun + Next.js (latest) + Hono trên Bun
+- **Quyết định:** Monorepo TypeScript do **Turborepo** điều phối; **Bun 1.3** là package manager, runtime và test runner; `apps/web` dùng **Next.js 16 (latest)**; gateway/agents/worker dùng **Hono 4 chạy trên Bun**; Postgres + Drizzle (driver postgres.js). Chi tiết ở [07](07-tech-stack.md).
+- **Lý do:** Một công cụ thay cho Node + pnpm + tsx + Vitest; Hono native trên Bun; Hono RPC chia sẻ type API sang Next; dev loop nhanh.
+- **Hệ quả:** + Đơn giản, nhanh. − Rủi ro tương thích Bun với một số package → giữ `packages/*` chỉ dùng API Web-standard và chọn driver chạy được cả Node; spike ngày 17/10 ([07](07-tech-stack.md) §6).
+- **Fallback:** service nào có package lỗi trên Bun thì chạy service đó trên Node 22; code không đổi.
+- **Kết quả spike (điền ngày 17/10):** _chưa chạy_
+
+### ADR-009 — Một leash active mỗi agent (MVP)
+- **Lý do:** Agent không cần chọn leash → không thể "chọn nhầm/chọn trộm". Gateway tra leash theo agent.
+
+### ADR-010 — Delegation tối đa 2 cấp, chỉ thu hẹp
+- **Lý do:** Đủ cho demo Planner → Shopper; giảm bề mặt lỗi.
+
+### ADR-011 — Channel3 cho discovery, fulfilment qua demo vendor
+- **Lý do:** Sandbox không checkout được tại retailer thật; trung thực trong UI/README.
+
+### ADR-012 — Docs nội bộ tiếng Việt, mọi thứ hướng judges tiếng Anh
+- **Lý do:** Team làm việc nhanh hơn bằng tiếng Việt; hackathon yêu cầu tiếng Anh cho submission.
+
+### ADR-013 — BYOK: app không cung cấp model
+- **Quyết định (16/10):** Người dùng tự nhập API key và chọn model (default + theo vai). Kitty không trả tiền model cho người dùng thật. Chi tiết ở [24](24-byok-ai-models.md).
+- **Lý do:** Không cần billing trong hackathon; người dùng tự chọn model và nhà cung cấp; củng cố thông điệp "an toàn tiền không phụ thuộc model".
+- **Hệ quả:** + Chi phí vận hành gần 0, linh hoạt. − Thêm bước onboarding; phải mã hoá key; phải hỗ trợ nhiều provider; cần manual mode khi chưa có key.
+- **Tương lai:** gói trả phí Kitty tự cấp model = credential `source='platform'` + `llm_usage` metering + PayPal Subscriptions.
+
+### ADR-014 — Vercel AI SDK làm lớp provider, vòng lặp agent vẫn tự viết
+- **Quyết định:** Dùng `ai@7.x` + provider packages để gọi model; giữ vòng lặp, tool dispatcher và guardrails của mình.
+- **Thay thế bị loại:** chỉ dùng `@anthropic-ai/sdk` (khoá vào một provider); tự viết adapter cho từng provider (tốn thời gian).
+
+### ADR-015 — Demo key có hạn mức cho tài khoản demo và judges
+- **Quyết định:** `DEMO_LLM_API_KEY` của team chỉ dùng cho `is_demo = true`, có hạn mức run/ngày và token/run. Ghi rõ trên UI và README.
+- **Lý do:** Rules yêu cầu judges dùng thử miễn phí; BYOK không được làm judges kẹt lại.
+
+## 3. Open questions (cần trả lời, có hạn)
+
+| # | Câu hỏi | Ai/cách trả lời | Hạn |
+|---|---|---|---|
+| Q1 | Payouts sandbox có cần bật thêm gì? | sandbox-check + Discord | 17/10 |
+| Q2 | Invoicing sandbox có gửi email/payer-view link dùng được để demo? | sandbox-check | 18/10 |
+| Q3 | Refund invoice payment qua `captures/{id}/refund` có chạy với invoice? Capture id lấy ở đâu trong webhook? | spike | 19/10 |
+| Q4 | Agent Toolkit hỗ trợ những tool nào, có idempotency? | spike | 18/10 |
+| Q5 | Render Workflows SDK TypeScript có sẵn cho account? | spike | 17/10 |
+| Q6 | AG Studio license trial có watermark? Có gia hạn cho judging? | Discord AG Grid | 20/10 |
+| Q7 | Bryntum trial có hạn chế render production build? | docs/Discord | 20/10 |
+| Q8 | Zapier MCP free plan đủ cho demo trong judging? | thử | 01/11 |
+| Q9 | Elastic Jina inference endpoint id chính xác? | setup | 28/10 |
+| Q11 | AI SDK v7 tool calling ổn định với Anthropic + một OpenAI-compatible endpoint (OpenRouter/Ollama) trên Bun? | spike | 29/10 |
+| Q10 | Làm solo hay team? Nếu team: chia vai (Gateway/ledger · Web/UI · Agents/sponsors) | quyết định của bạn | 17/10 |

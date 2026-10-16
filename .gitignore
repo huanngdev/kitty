@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+
+# builds
+.next/
+dist/
+out/
+.turbo/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+
+# OS / editors
+.DS_Store
+.obsidian/
+.vscode/
+.idea/
