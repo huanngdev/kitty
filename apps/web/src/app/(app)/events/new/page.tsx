@@ -1,5 +1,5 @@
+import { LinkButton } from "@/components/link-button";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ArrowLeft, Sparkles } from "lucide-react";
-import Link from "next/link";
 import type { JSX } from "react";
 import { routes } from "@/lib/routes";
 
@@ -41,10 +40,10 @@ export default function NewEventPage(): JSX.Element {
             </CardAction>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" render={<Link href={routes.events} />}>
+            <LinkButton variant="outline" href={routes.events}>
               <ArrowLeft data-icon="inline-start" aria-hidden />
               Back to events
-            </Button>
+            </LinkButton>
           </CardContent>
         </Card>
       </div>
