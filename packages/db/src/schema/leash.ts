@@ -139,6 +139,29 @@ export const leashes = leashSchema.table(
   ],
 );
 
+/**
+ * Payee email the kitty organizer has verified (AGENTS.md invariant #12,
+ * docs/10-api-spec.md §1).
+ *
+ * A leash may only name payees in `allowedPayees` that appear here with the
+ * same lowercase email; `member:*` is the only non-email token. Agents can
+ * propose vendors but only the organizer can insert a row here.
+ */
+export const verifiedPayees = leashSchema.table(
+  "verified_payees",
+  {
+    kittyId: text("kitty_id")
+      .notNull()
+      .references(() => kitties.id),
+    /** Lowercase PayPal email, e.g. `homestay@vendor.example`. */
+    email: text("email").notNull(),
+    /** Organizer user id that verified the payee. */
+    verifiedBy: text("verified_by").notNull(),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.kittyId, t.email] })],
+);
+
 /** One spend intent: the end-to-end idempotency unit (docs/05 §4, §7). */
 export const spendIntents = leashSchema.table(
   "spend_intents",
@@ -367,6 +390,8 @@ export type AgentKeyRow = typeof agentKeys.$inferSelect;
 export type NewAgentKey = typeof agentKeys.$inferInsert;
 export type LeashRow = typeof leashes.$inferSelect;
 export type NewLeash = typeof leashes.$inferInsert;
+export type VerifiedPayeeRow = typeof verifiedPayees.$inferSelect;
+export type NewVerifiedPayee = typeof verifiedPayees.$inferInsert;
 export type SpendIntentRow = typeof spendIntents.$inferSelect;
 export type NewSpendIntent = typeof spendIntents.$inferInsert;
 export type ApprovalRow = typeof approvals.$inferSelect;

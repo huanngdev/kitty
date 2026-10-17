@@ -22,6 +22,7 @@ import {
   SPEND_INTENT_STATUSES,
   spendIntentStatusEnum,
   spendIntents,
+  verifiedPayees,
   webhookEvents,
 } from "./leash";
 import type { ContributionRow, LedgerEntryRow, LeashRow, SpendIntentRow } from "./leash";
@@ -47,6 +48,7 @@ const allTables: ReadonlyArray<readonly [string, PgTable]> = [
   ["kitties", kitties],
   ["agent_keys", agentKeys],
   ["leashes", leashes],
+  ["verified_payees", verifiedPayees],
   ["spend_intents", spendIntents],
   ["approvals", approvals],
   ["contributions", contributions],
@@ -187,6 +189,11 @@ describe("leash tables", () => {
       "kitty_id->leash.kitties",
       "parent_id->leash.leashes",
     ]);
+  });
+
+  test("verified payees are unique per (kitty_id, email)", () => {
+    const primaryKey = getTableConfig(verifiedPayees).primaryKeys[0];
+    expect(primaryKey?.columns.map((column) => column.name)).toEqual(["kitty_id", "email"]);
   });
 
   test("views are exposed in the leash schema", () => {

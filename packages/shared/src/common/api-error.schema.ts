@@ -16,6 +16,20 @@ export const errorCodes = {
   validationFailed: "VALIDATION_FAILED",
   rateLimited: "RATE_LIMITED",
   internal: "INTERNAL",
+
+  // --- Gateway Admin API (docs/10-api-spec.md §1) ---
+  kittyNotFound: "KITTY_NOT_FOUND",
+  agentNotFound: "AGENT_NOT_FOUND",
+  leashNotFound: "LEASH_NOT_FOUND",
+  payeeNotFound: "PAYEE_NOT_FOUND",
+  invalidStateTransition: "INVALID_STATE_TRANSITION",
+  allocationExceedsKittyAvailable: "ALLOCATION_EXCEEDS_KITTY_AVAILABLE",
+  expiryTooLong: "EXPIRY_TOO_LONG",
+  payeeNotVerified: "PAYEE_NOT_VERIFIED",
+  agentAlreadyLeashed: "AGENT_ALREADY_LEASHED",
+  invalidLeashLimits: "INVALID_LEASH_LIMITS",
+  invalidExpiry: "INVALID_EXPIRY",
+  invalidPublicKey: "INVALID_PUBLIC_KEY",
 } as const;
 
 export type ErrorCode = (typeof errorCodes)[keyof typeof errorCodes];
