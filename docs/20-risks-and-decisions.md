@@ -123,13 +123,23 @@
   2. **`(app)`, `/`, `/sign-in` export `instant = false`** — đây là route cần dữ liệu theo request (auth) nên stream một shell rỗng vô nghĩa; blocking là hành vi đúng (Next 16 Cache Components).
   3. **Demo login ở server, mặc định TẮT:** `POST /api/demo-sign-in` (mount ngoài `/api/auth/*` để không bị catch-all của Better Auth nuốt) gọi `auth.api.signInEmail({ asResponse: true })` với `DEMO_USER_PASSWORD` trong env của `apps/api` rồi trả nguyên response (kèm `Set-Cookie`). Browser không bao giờ thấy mật khẩu demo (bất biến #11). Endpoint chỉ tồn tại khi `DEMO_LOGIN_ENABLED=true` (mặc định `false`; bật chỉ ở deployment demo cho judges) — tắt thì trả **404** `DEMO_LOGIN_DISABLED`, và mọi request đều bị **rate limit 10 lần / 10 phút / IP** (`x-forwarded-for`) → **429** `RATE_LIMITED` theo shape lỗi chung. Web biết có nên hiện nút hay không nhờ `GET /api/demo-sign-in/status` → `{ enabled: boolean }` (`demoLoginStatusSchema`).
   4. **`is_demo` là additional field của Better Auth user** (`user.additionalFields`, `input: false`) + cột `app.user.is_demo` (Drizzle); seed `apps/api/scripts/seed-demo-users.ts` (root script `seed:demo-users`) dùng `auth.api.signUpEmail` — không tự hash mật khẩu — và idempotent.
-  5. **Dark mode bằng `next-themes`** (`attribute="class"`), token brand ở `packages/ui/src/styles/globals.css`, toggle ở top bar với `useSyncExternalStore` để tránh lệch hydration.
+  5. **Dark mode bằng `next-themes`** (`attribute="class"`), token brand ở `packages/ui/src/styles/globals.css` *(từ ADR-024 theme nằm ở `apps/web/src/app/globals.css` và dùng mặc định của preset `b4VmS9QxUG`)*, toggle ở top bar với `useSyncExternalStore` để tránh lệch hydration.
   6. **Tôn trọng `@shadcn/lint` no-restyle:** không truyền class layout vào component shadcn — bọc trong `div`/`span` thường (đúng pattern đã có ở `page.tsx` cũ).
 - **Hệ quả:** + web giữ đúng ranh giới (không session/secret của auth), deep link sống qua sign-in, demo một chạm. − mọi layout class phải qua wrapper (hơi dài dòng); `next-themes` là dependency mới của `apps/web`; route app là blocking (chấp nhận vì đã auth-gated).
 ### ADR-023 — Tạo event kèm kitty bằng compensating flow, không 2PC (KIT-30)
 - **Bối cảnh:** `POST /api/events` vừa ghi `app.events` (Postgres) vừa gọi gateway tạo `leash.kitties`. Hai service/DB khác nhau nên không thể một transaction.
 - **Quyết định:** insert event (chưa có `kitty_id`) → gọi `POST /v1/kitties` → ghi `kitty_id`. Nếu bước 2/3 lỗi thì **xoá lại event** rồi ném lỗi. Gateway giữ idempotency/ownership như thường. Bất biến "một event = một kitty" giữ được ở phía event (không có event thiếu kitty).
 - **Hệ quả:** + đơn giản, không cần 2PC/saga hạ tầng; lỗi gateway phổ biến (chưa cấu hình, mạng) → event không được tạo, đúng kỳ vọng. − trường hợp hiếm kitty tạo xong nhưng ghi `kitty_id` lỗi để lại kitty mồ côi (xem Q13); không ảnh hưởng tiền vì kitty rỗng.
+
+### ADR-024 — Bỏ `@kitty/ui`; shadcn cài trực tiếp trong `apps/web` bằng preset `b4VmS9QxUG`
+- **Bối cảnh:** owner phản hồi sau KIT-24: package `@kitty/ui` (shadcn dạng monorepo) khiến UI khó nâng cấp (phải map token và alias qua lại giữa package và app); owner muốn shadcn CLI sở hữu component ngay trong app với **theme mặc định, không token brand riêng**.
+- **Quyết định:**
+  1. **Xoá `packages/ui`** — không còn dependency `@kitty/ui`, tsconfig path, `transpilePackages` entry hay import nào.
+  2. **Chạy CLI trong `apps/web`:** `bunx --bun shadcn@latest init --preset b4VmS9QxUG --template next --pointer` rồi `bunx --bun shadcn@latest add --all`. CLI init **tại chỗ** (không scaffold app mới) và sinh `components.json`, `src/app/globals.css` (theme mặc định), `src/lib/utils.ts` (`cn`), `src/components/ui/*` + helper `src/hooks/*`, `src/lib/highlighter.tsx`. CLI cũng thêm font heading (Merriweather) và bọc `className` bằng `cn()` trong `app/layout.tsx`.
+  3. **File CLI sinh ra là vendor**: không sửa tay. App import `@/components/ui/*` và `@/lib/utils`; `next.config.ts` giữ nguyên `turbopack` rule `@tailwindcss/turbopack` (rule này có từ trước khi `packages/ui` xuất hiện).
+  4. **Brand qua một component:** mascot + wordmark chỉ render bằng `<Logo />` (`src/components/brand/logo.tsx`, props `size`/`showWordmark`/`className`, SVG `currentColor`).
+  5. **Lint cho vendor code:** nếu component CLI sinh vi phạm rule design-system thì **tắt đúng rule đó cho đúng path** trong `apps/web/eslint.config.js` (`shadcn/no-inline-styles`, `shadcn/require-static-classes`, `better-tailwindcss/no-unknown-classes`, `react-hooks/set-state-in-effect`), tuyệt đối không patch file vendor.
+- **Hệ quả:** + một nguồn UI duy nhất trong app, `bunx shadcn add/apply` hoạt động trực tiếp, bỏ lớp map `@kitty/ui/*`; − không còn component dùng chung giữa nhiều app UI (chấp nhận: hiện chỉ `apps/web` có UI), và `components/ui` làm tăng số file lint phải loại trừ theo path.
 
 ## 3. Open questions (cần trả lời, có hạn)
 
