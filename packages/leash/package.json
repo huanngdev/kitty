@@ -1,0 +1,23 @@
+{
+  "name": "@kitty/leash",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "check-types": "tsc --noEmit",
+    "test": "bun test --no-env-file --coverage"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "@kitty/eslint-config": "workspace:*",
+    "@kitty/typescript-config": "workspace:*",
+    "@types/bun": "1.4.3",
+    "eslint": "^10.13.0",
+    "fast-check": "^4.5.0",
+    "typescript": "^5"
+  }
+}

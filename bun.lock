@@ -115,6 +115,18 @@
         "eslint": "^10",
       },
     },
+    "packages/leash": {
+      "name": "@kitty/leash",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@kitty/eslint-config": "workspace:*",
+        "@kitty/typescript-config": "workspace:*",
+        "@types/bun": "1.4.3",
+        "eslint": "^10.13.0",
+        "fast-check": "^4.5.0",
+        "typescript": "^5",
+      },
+    },
     "packages/ledger": {
       "name": "@kitty/ledger",
       "version": "0.0.0",
@@ -464,6 +476,8 @@
     "@kitty/db": ["@kitty/db@workspace:packages/db"],
 
     "@kitty/eslint-config": ["@kitty/eslint-config@workspace:packages/eslint-config"],
+
+    "@kitty/leash": ["@kitty/leash@workspace:packages/leash"],
 
     "@kitty/ledger": ["@kitty/ledger@workspace:packages/ledger"],
 
