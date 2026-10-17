@@ -96,7 +96,7 @@ packages/events   (planned) Domain event types (zod)
 packages/ui       (exists) @kitty/ui — shadcn/ui components, Tailwind tokens, cn()
 packages/config   (planned) env schemas (zod)
 postman/          (planned) Postman collections
-scripts/          (planned) sandbox-check, gen-agent-keys, demo reset, env isolation check
+scripts/          (exists) check-env-isolation; sandbox-check nằm ở apps/gateway/scripts; còn lại planned
 turbo.json        Turborepo task graph
 ```
 
@@ -117,6 +117,7 @@ bun run check:env-isolation      # fail nếu PAYPAL_CLIENT_SECRET lọt ra ngo�
 bun run db:generate              # drizzle-kit generate (packages/db, offline)
 bun run db:migrate               # drizzle-kit migrate (packages/db, cần DATABASE_URL_UNPOOLED)
 bun run db:studio                # drizzle-kit studio (packages/db, cần DATABASE_URL_UNPOOLED)
+bun run sandbox:check            # kiểm tra PayPal sandbox (apps/gateway only; cần biến PayPal trong apps/gateway/.env)
 bun run format                   # prettier --write .
 bun run format:check             # prettier --check .
 bun run clean                    # xoá .turbo / .next / cache

@@ -115,31 +115,45 @@ CMD ["bun", "apps/gateway/src/index.ts"]
 
 Mỗi app parse env bằng Zod trong `src/env.ts` (schema riêng cho từng app) — thiếu biến là crash ngay khi khởi động.
 
+> `DATABASE_URL_UNPOOLED` (Neon direct) **không** nằm trong env của app nào; nó chỉ khai báo trong `packages/db/.env` để chạy `bun run db:generate` / `db:migrate` / `db:studio` (xem `packages/db/.env.example`).
+
 ### `kitty-gateway` (DUY NHẤT có PayPal secret)
 | Biến | Mô tả |
 |---|---|
 | `DATABASE_URL` | Neon pooled (role `kitty_gateway`) |
-| `DATABASE_URL_UNPOOLED` | Neon direct — **chỉ** cho migrations |
 | `PAYPAL_ENV` | `sandbox` |
 | `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | app sandbox |
 | `PAYPAL_WEBHOOK_ID` | id webhook đã đăng ký (dùng verify signature) |
 | `PLATFORM_PAYPAL_EMAIL` | email business account platform |
+| `PAYPAL_SANDBOX_PAYER_EMAIL` | tài khoản sandbox personal trả invoice — chỉ dùng cho `bun run sandbox:check` |
+| `PAYPAL_SANDBOX_PAYEE_EMAIL` | tài khoản sandbox nhận payout — chỉ dùng cho `bun run sandbox:check` |
 | `GATEWAY_ADMIN_TOKEN` | service token cho web BFF (kèm user id ký HMAC) |
 | `GATEWAY_INTERNAL_TOKEN` | token cho worker |
 | `LEASH_MAX_EXPIRY_DAYS` | mặc định 30 |
 | `LEASH_PROBING_PAUSE` | `true` trong demo |
 
-### `kitty-web`
+### `kitty-web` (Next.js UI + BFF)
 | Biến | Mô tả |
 |---|---|
-| `DATABASE_URL` | Neon pooled (role `kitty_web`) |
-| `DATABASE_URL_UNPOOLED` | Neon direct — **chỉ** cho migrations |
-| `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | auth |
+| `API_URL` | URL nội bộ của `apps/api` cho Next rewrite proxy (`/api` → API) |
+| `NEXT_PUBLIC_APP_URL` | URL public của web (`http://localhost:3000`); cũng là `baseURL` của Better Auth client |
 | `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | public, cho JS SDK v6 |
-| `GATEWAY_URL`, `GATEWAY_ADMIN_TOKEN` | gọi admin API |
-| `AGENTS_URL`, `AGENTS_INTERNAL_TOKEN` | gọi agent runtime |
-| `AG_STUDIO_LICENSE_KEY` | trial |
-| `BRYNTUM_*` | (trial dùng package trial, không cần key) |
+| `GATEWAY_URL`, `GATEWAY_ADMIN_TOKEN` | (kế hoạch) gọi admin API |
+| `AGENTS_URL`, `AGENTS_INTERNAL_TOKEN` | (kế hoạch) gọi agent runtime |
+| `AG_STUDIO_LICENSE_KEY` | (kế hoạch) trial |
+| `BRYNTUM_*` | (kế hoạch) trial dùng package trial, không cần key |
+
+> Web **không** có `DATABASE_URL`: chỉ `apps/api` và `apps/gateway` được dùng `@kitty/db` (ESLint chặn import `@kitty/db` trong `apps/web`).
+
+### `kitty-api` (Hono trên Bun)
+| Biến | Mô tả |
+|---|---|
+| `PORT` | `8787` (Render inject) |
+| `DATABASE_URL` | Neon pooled — Better Auth (bảng `app.user`/`session`/`account`/`verification`) |
+| `BETTER_AUTH_SECRET` | 32+ ký tự; `openssl rand -base64 32` |
+| `BETTER_AUTH_URL` | URL public của **web** (`http://localhost:3000`): browser gọi auth qua Next proxy |
+| `WEB_ORIGIN` | origin được phép (`http://localhost:3000`) — `trustedOrigins` của Better Auth |
+| `GATEWAY_URL`, `GATEWAY_ADMIN_TOKEN` | (kế hoạch) gọi Gateway Admin API |
 
 ### `kitty-agents`
 | Biến | Mô tả |
@@ -166,6 +180,8 @@ Bun tự load file `.env` theo thư mục chạy. Vẫn phải parse bằng Zod 
 
 **Kiểm tra tự động (CI):** script `scripts/check-env-isolation.ts` — fail nếu `PAYPAL_CLIENT_SECRET` xuất hiện trong env schema của bất kỳ app nào ngoài gateway.
 
+**Kiểm tra PayPal sandbox (không thuộc CI):** `bun run sandbox:check` (root) → `apps/gateway/scripts/sandbox-check.ts`: lần lượt kiểm tra OAuth2 client credentials, Invoicing v2 (draft + send), Payouts v1 và webhook đã đăng ký; in `PASS`/`FAIL` (kèm `debug_id`), **không** in token/secret, và từ chối chạy khi `PAYPAL_ENV=live`. Cần điền biến PayPal sandbox trong `apps/gateway/.env`.
+
 ## 4. PayPal sandbox setup
 
 1. developer.paypal.com → **Apps & Credentials** → tạo app **"Kitty Demo"** (sandbox), bật: Payouts, Invoicing, Accept payments.
@@ -180,7 +196,7 @@ Bun tự load file `.env` theo thư mục chạy. Vẫn phải parse bằng Zod 
 3. Nạp số dư sandbox lớn cho platform account (để payout được trước khi có đủ tiền thu — chỉ dùng trong test; ledger vẫn chặn theo Kitty).
 4. **Webhooks**: đăng ký URL `https://<gateway>/webhooks/paypal` với events: `INVOICING.INVOICE.PAID`, `INVOICING.INVOICE.CANCELLED`, `CHECKOUT.ORDER.APPROVED`, `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.REFUNDED`, `PAYMENT.PAYOUTSBATCH.SUCCESS`, `PAYMENT.PAYOUTSBATCH.DENIED`, `PAYMENT.PAYOUTS-ITEM.SUCCEEDED`, `PAYMENT.PAYOUTS-ITEM.FAILED`, `PAYMENT.PAYOUTS-ITEM.UNCLAIMED`, `PAYMENT.PAYOUTS-ITEM.RETURNED`, `PAYMENT.PAYOUTS-ITEM.BLOCKED`, `PAYMENT.PAYOUTS-ITEM.DENIED`. Lưu `PAYPAL_WEBHOOK_ID`.
 5. Local dev: expose gateway bằng tunnel (cloudflared/ngrok) và đăng ký webhook thứ hai cho app "Kitty Dev".
-6. Script `scripts/sandbox-check.ts`: lấy token, tạo invoice $1, payout $1 tới vendor, in kết quả → chạy **ngày đầu tiên** để phát hiện sớm quyền Payouts.
+6. Script `apps/gateway/scripts/sandbox-check.ts` (chạy `bun run sandbox:check`): lấy token, tạo invoice $1 USD tới `PAYPAL_SANDBOX_PAYER_EMAIL` (tài khoản **personal**, ví dụ organizer Mai), payout $1 USD tới `PAYPAL_SANDBOX_PAYEE_EMAIL` (tài khoản business, ví dụ vendor), kiểm webhook đã đăng ký, in kết quả → chạy **ngày đầu tiên** để phát hiện sớm quyền Payouts. Đặt hai biến này trong `apps/gateway/.env`.
 
 ## 5. Sponsor accounts checklist
 

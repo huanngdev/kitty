@@ -1,6 +1,6 @@
 # 25 — Code Architecture
 
-> **Trạng thái:** `@kitty/shared`, `@kitty/db`, `@kitty/ui` **đã tồn tại**. File này chốt cấu trúc thư mục và luật phụ thuộc để mọi người code theo. Rules bắt buộc ở [CODE_RULES.md](../CODE_RULES.md).
+> **Trạng thái:** `@kitty/shared`, `@kitty/db`, `@kitty/ui` **đã tồn tại**; web đã có data layer (axios + TanStack Query + proxy `/api`), `apps/api` đã có Better Auth (bảng `app.user`/`session`/`account`/`verification` — migration 0001 **chưa apply**), logger pino + `onError` dùng chung; gateway đã có `bun run sandbox:check`. File này chốt cấu trúc thư mục và luật phụ thuộc để mọi người code theo. Rules bắt buộc ở [CODE_RULES.md](../CODE_RULES.md).
 
 Mục tiêu: tách rõ **hiển thị / logic / dữ liệu**, giữ **contract là một nguồn duy nhất** (`@kitty/shared`), và để mọi service backend (web BFF, `apps/api`, sau này gateway/agents/worker) dùng cùng một cách phân tầng.
 
@@ -23,6 +23,7 @@ flowchart LR
 - Request **vào** `apps/api`: `zValidator("json", schemaFromShared)` parse payload trước khi vào service.
 - Response **ra**: tầng axios parse lại response bằng **cùng schema `@kitty/shared`** → type ở web luôn khớp server.
 - Component không biết axios/query; hook không biết JSX.
+- **Proxy same-origin:** browser chỉ gọi `/api/*` trên origin của web; `next.config.ts` `rewrites()` chuyển tiếp sang `apps/api` (`API_URL`). Nhờ vậy cookie auth là first-party (không cần CORS, không cần `SameSite=None`).
 
 ## 2. Tổng quan monorepo & luật phụ thuộc
 
@@ -68,32 +69,31 @@ Routes chỉ là vỏ mỏng; mọi thứ theo feature.
 apps/web/
 ├─ src/
 │  ├─ app/                         # routes only (page/layout mỏng)
-│  │  ├─ layout.tsx
-│  │  ├─ page.tsx
-│  │  └─ events/
+│  │  ├─ layout.tsx                # ✅ bọc <Providers>
+│  │  ├─ providers.tsx             # ✅ QueryClientProvider (+ devtools chỉ ở dev)
+│  │  ├─ page.tsx                  # ✅ landing + ApiStatusBadge
+│  │  └─ events/                   # (kế hoạch)
 │  │     ├─ page.tsx
 │  │     └─ [id]/page.tsx
 │  ├─ features/
-│  │  └─ events/
-│  │     ├─ api/
-│  │     │  └─ events.api.ts       # axios fn + eventsKeys + queryOptions
-│  │     ├─ components/
-│  │     │  ├─ event-list.tsx
-│  │     │  └─ event-form.tsx
-│  │     ├─ hooks/
-│  │     │  ├─ use-events.ts
-│  │     │  └─ use-event-form.ts
-│  │     └─ utils/
-│  │        └─ format-date.ts
-│  ├─ components/                  # component ghép chung toàn app
-│  ├─ hooks/                       # hook chung toàn app
+│  │  ├─ system/                   # ✅ ví dụ mẫu để copy cho feature sau
+│  │  │  ├─ api/system.api.ts      # axios fn + systemKeys + queryOptions
+│  │  │  ├─ hooks/use-api-status.ts
+│  │  │  └─ components/api-status-badge.tsx
+│  │  └─ events/                   # (kế hoạch)
+│  │     ├─ api/events.api.ts
+│  │     ├─ components/…
+│  │     ├─ hooks/…
+│  │     └─ utils/…
+│  ├─ components/                  # component ghép chung toàn app (chưa có)
+│  ├─ hooks/                       # hook chung toàn app (chưa có)
 │  ├─ lib/
-│  │  ├─ http.ts                   # axios instance (baseURL từ env, withCredentials)
-│  │  ├─ query-client.ts
-│  │  ├─ auth-client.ts            # better-auth/react
-│  │  └─ env.ts                    # zod-validated env
-│  └─ providers/
-│     ├─ query-provider.tsx        # QueryClientProvider
+│  │  ├─ http.ts                   # ✅ axios instance (baseURL "/api", withCredentials) + ApiRequestError
+│  │  ├─ query-client.ts           # ✅ makeQueryClient/getQueryClient (staleTime 30s, không retry 4xx)
+│  │  ├─ auth-client.ts            # ✅ better-auth/react
+│  │  └─ env.ts                    # ✅ zod-validated env (clientEnv + getServerEnv)
+│  └─ providers/                   # (kế hoạch) tách file provider riêng khi cần
+│     ├─ query-provider.tsx
 │     └─ theme-provider.tsx
 ├─ eslint.config.js
 └─ tsconfig.json
@@ -104,27 +104,31 @@ apps/web/
 - `src/app/` mỏng → route dễ đọc; logic ở `features/`.
 - Mỗi feature tự chứa `api` + `hooks` + `components` + `utils` → xoá/sửa feature không lan.
 - `lib/http.ts` là điểm duy nhất tạo axios instance → mọi interceptor/cookie ở một chỗ.
+- `features/system/` là **ví dụ mẫu hoàn chỉnh** (api → hook → component) để feature sau copy; component không chứa logic.
+- `lib/http.ts` (`baseURL: "/api"`) + `next.config.ts` `rewrites()` → browser same-origin, cookie auth first-party.
 
 ## 4. apps/api — modular theo domain
 
 ```
 apps/api/
 ├─ src/
-│  ├─ index.ts                     # Bun entry: { port, fetch: app.fetch }
-│  ├─ app.ts                       # Hono app: middleware, onError, mount routes
-│  ├─ env.ts                       # zod-validated env
+│  ├─ index.ts                     # ✅ Bun entry: { port, fetch: app.fetch }
+│  ├─ app.ts                       # ✅ Hono app: onError + mount /api (và /api/auth/*)
+│  ├─ env.ts                       # ✅ zod-validated env
 │  ├─ lib/
-│  │  ├─ auth.ts                   # Better Auth instance (Drizzle adapter)
-│  │  ├─ db.ts                     # drizzle client (từ @kitty/db)
-│  │  ├─ r2.ts                     # S3 client + presign helper
-│  │  ├─ logger.ts                 # pino (redact secret/PII)
-│  │  └─ errors.ts                 # AppError + shape lỗi dùng chung
+│  │  ├─ auth.ts                   # ✅ Better Auth instance (Drizzle adapter, lazy getAuth)
+│  │  ├─ db.ts                     # ✅ drizzle client (từ @kitty/db)
+│  │  ├─ r2.ts                     # (kế hoạch) S3 client + presign helper
+│  │  ├─ logger.ts                 # ✅ pino (redact secret/PII)
+│  │  └─ errors.ts                 # ✅ AppError + shape lỗi dùng chung
 │  ├─ middleware/
-│  │  ├─ auth.ts                   # gán c.var.user / c.var.session
-│  │  ├─ require-role.ts
-│  │  └─ request-id.ts
+│  │  ├─ session.ts                # ✅ gán c.var.user / c.var.session + export AppEnv
+│  │  ├─ require-role.ts           # (kế hoạch)
+│  │  └─ request-id.ts             # (kế hoạch)
 │  └─ modules/
-│     └─ events/
+│     ├─ system/
+│     │  └─ system.routes.ts       # ✅ GET /api/health (mount dưới /api)
+│     └─ events/                   # (kế hoạch)
 │        ├─ events.routes.ts       # Hono router + zValidator → service
 │        ├─ events.service.ts      # business logic (không type Hono)
 │        └─ events.repository.ts   # chỉ Drizzle
@@ -135,6 +139,8 @@ apps/api/
 
 - Một module = một domain; `routes → service → repository` bắt buộc (xem [CODE_RULES.md](../CODE_RULES.md) §D).
 - `app.ts` tách khỏi `index.ts` để test được Hono app (`app.request`) mà không mở port.
+- `GET /health` ở root giữ cho health check hạ tầng; route sản phẩm nằm dưới `/api` (`GET /api/health` để verify proxy).
+- `/api/auth/*` mount trong `app.ts` nhưng `middleware/session.ts` **chưa gắn toàn cục** (cần DB) — feature sau tự gắn khi cần phiên đăng nhập.
 
 ## 5. packages/shared — contract
 
