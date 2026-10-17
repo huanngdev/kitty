@@ -88,9 +88,39 @@ Request (rút gọn):
 | `PAYMENT.PAYOUTSBATCH.SUCCESS/DENIED` | `batch_header.sender_batch_header.sender_batch_id` | Cập nhật batch; DENIED → mọi item failed |
 | `PAYMENT.PAYOUTS-ITEM.SUCCEEDED` | `sender_item_id` | intent settled; ledger held → payee; outbox `leash.intent_settled` |
 | `PAYMENT.PAYOUTS-ITEM.FAILED/RETURNED/BLOCKED/DENIED` | `sender_item_id` | intent failed; release hold; outbox `leash.intent_failed` |
-| `PAYMENT.PAYOUTS-ITEM.UNCLAIMED` | `sender_item_id` | cảnh báo |
+| `PAYMENT.PAYOUTS-ITEM.UNCLAIMED` | `sender_item_id` | cảnh báo (audit), giữ `submitted` |
+| `PAYMENT.PAYOUTS-ITEM.ONHOLD` / `PENDING` | `sender_item_id` | chờ, không đổi trạng thái |
 
 Thứ tự đến không đảm bảo → mọi handler **idempotent** và **state-machine guarded** (không chuyển ngược từ `settled`).
+
+### 3.1 Thực thi trong KIT-7 (`apps/gateway`)
+
+- Endpoint `POST /webhooks/paypal`; thứ tự verify → dedupe → settle và map sang trạng thái chi tiết: [10-api-spec.md](10-api-spec.md) §5.
+- **Khoá tra item là `sender_item_id = intentId`** (và `sender_batch_id = intentId`): `payouts.createSingle` set cả hai (default `senderItemId = senderBatchId`), và `GET /v1/payments/payouts/{id}` trả `sender_item_id` trong object `payout_item` lồng nhau — parser đọc cả hai vị trí (đã kiểm chứng với sandbox thật, xem `packages/paypal/src/payouts.ts`).
+- `PAYMENT.PAYOUTS-ITEM.FAILED/RETURNED/BLOCKED/DENIED` → `submitted` → (`failed`) → **`released`** + release txn; badge trạng thái cuối là `released`, `failed` chỉ là bước trung gian trong sơ đồ docs/05 §4, lý do PayPal ghi vào `spend_intents.error` và audit.
+- `RETURNED`/`REFUNDED` đến **sau khi** intent đã `settled`: tiền đã rời ledger sang account ngoài (`external:payee`), không thể hoàn tác bằng bút toán nội bộ → chỉ ghi `paypal_objects` + audit alert `intent.returned_after_settled`/`intent.refunded_after_settled` và **không** đụng ledger. Xử lý tiền thật cho case này là open question **Q12** ở [20-risks-and-decisions.md](20-risks-and-decisions.md).
+- `UNCLAIMED`: chỉ audit `intent.unclaimed` + cập nhật `paypal_objects`, giữ hold; organizer **cancel unclaimed** → release (KIT-30).
+- Event không match/ thiếu khoá/ resource sai shape → `webhook_events.status = 'failed'` + log, vẫn `200`.
+- Event ngoài scope (invoice/order/capture/refund, và `PAYMENT.PAYOUTS-ITEM.REFUNDED` khi chưa settled là trong scope) → lưu + `ignored`, chờ KIT-22 (invoice/topup), KIT-27 (orders/capture), KIT-42 (refund).
+
+### 3.2 Event list để đăng ký webhook
+
+Đăng ký trên PayPal app (sandbox + live) với URL `https://<gateway-host>/webhooks/paypal`, cần URL HTTPS public (**KIT-8**, Render). Subscribe đúng danh sách này:
+
+```text
+PAYMENT.PAYOUTS-ITEM.SUCCEEDED
+PAYMENT.PAYOUTS-ITEM.FAILED
+PAYMENT.PAYOUTS-ITEM.RETURNED
+PAYMENT.PAYOUTS-ITEM.BLOCKED
+PAYMENT.PAYOUTS-ITEM.DENIED
+PAYMENT.PAYOUTS-ITEM.UNCLAIMED
+PAYMENT.PAYOUTS-ITEM.ONHOLD
+PAYMENT.PAYOUTS-ITEM.REFUNDED
+PAYMENT.PAYOUTSBATCH.SUCCESS
+PAYMENT.PAYOUTSBATCH.DENIED
+```
+
+Sau đó lưu `id` webhook PayPal trả về vào `PAYPAL_WEBHOOK_ID` (gateway env) và chạy `bun run sandbox:check` để xác nhận. Các event invoicing/order/capture/refund sẽ được thêm vào cùng webhook khi KIT-22/KIT-27/KIT-42 lên (thêm event type cho một webhook đã đăng ký qua `PATCH /v1/notifications/webhooks/{id}`).
 
 ## 4. Idempotency & retry
 

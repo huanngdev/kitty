@@ -8,16 +8,18 @@ import {
   type NewSpendIntent,
   type SpendIntentRow,
   approvals,
-  auditEvents,
   leashes,
-  outbox,
-  paypalObjects,
   spendIntents,
 } from "@kitty/db/schema";
 import type { LeashBalance, LedgerTxn } from "@kitty/ledger";
 import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import type { DbTx } from "../../lib/db-types";
-import { postLedgerTxn } from "../../lib/ledger";
+import {
+  insertAuditEvent,
+  insertLedgerTxn,
+  insertOutboxEvent,
+  upsertPaypalObject,
+} from "../../lib/store-writes";
 import {
   findActiveLeashByAgent,
   findLeashById,
@@ -185,7 +187,7 @@ function toTx(db: DbTx): IntentsTx {
     async insertLedgerEntry({ kittyId, txn }) {
       // Reuses the single ledger writer so `kind`/`ref` stay consistent with
       // the Admin API's own movements (docs/09 §3.2).
-      await postLedgerTxn(db, txn, kittyId, { ref: txn.intentId ?? txn.txnId });
+      await insertLedgerTxn(db, { kittyId, txn });
     },
 
     async insertApproval(row) {
@@ -193,21 +195,15 @@ function toTx(db: DbTx): IntentsTx {
     },
 
     async insertAuditEvent(row) {
-      await db.insert(auditEvents).values(row);
+      await insertAuditEvent(db, row);
     },
 
     async insertOutboxEvent(row) {
-      await db.insert(outbox).values(row);
+      await insertOutboxEvent(db, row);
     },
 
     async upsertPaypalObject(row) {
-      await db
-        .insert(paypalObjects)
-        .values(row)
-        .onConflictDoUpdate({
-          target: [paypalObjects.kind, paypalObjects.id],
-          set: { status: row.status, raw: row.raw, updatedAt: sql`now()` },
-        });
+      await upsertPaypalObject(db, row);
     },
 
     async kittyIdOfLeash(leashId) {

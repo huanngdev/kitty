@@ -5,6 +5,8 @@ import { logger } from "./lib/logger";
 import { mcpRoutes } from "./modules/agent-mcp";
 import { intentsRoutes } from "./modules/intents";
 import { v1Routes } from "./modules/v1";
+import { reconcileRoutes } from "./modules/webhooks/reconcile.routes";
+import { webhooksRoutes } from "./modules/webhooks/webhooks.routes";
 
 /**
  * The single Hono error handler (CODE_RULES.md §D): `AppError` becomes the shared
@@ -48,5 +50,11 @@ app.route("/internal", intentsRoutes);
 
 // Gateway Agent API (docs/10-api-spec.md §2). Signed MCP Streamable HTTP.
 app.route("/mcp", mcpRoutes);
+
+// PayPal webhooks (docs/10-api-spec.md §5): verify, dedupe, settle.
+app.route("/webhooks", webhooksRoutes);
+
+// Reconcile sweep (docs/10-api-spec.md §6): the webhook fallback.
+app.route("/internal", reconcileRoutes);
 
 export type GatewayApp = typeof app;

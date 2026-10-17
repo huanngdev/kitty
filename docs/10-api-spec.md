@@ -221,12 +221,40 @@ Agents internal (chỉ web gọi, `AGENTS_INTERNAL_TOKEN`): `POST /internal/ai/c
 
 ## 5. Gateway Webhook
 
-`POST /webhooks/paypal`
-1. Đọc raw body + headers `PAYPAL-TRANSMISSION-ID`, `PAYPAL-TRANSMISSION-TIME`, `PAYPAL-CERT-URL`, `PAYPAL-AUTH-ALGO`, `PAYPAL-TRANSMISSION-SIG`.
-2. Gọi `POST /v1/notifications/verify-webhook-signature` với `webhook_id = PAYPAL_WEBHOOK_ID` → phải `SUCCESS`.
-3. `INSERT INTO leash.webhook_events … ON CONFLICT (id) DO NOTHING` → nếu đã có → 200 ngay.
-4. Xử lý theo `event_type` (bảng ở [11-paypal-integration.md](11-paypal-integration.md)) trong transaction; ghi outbox.
-5. Trả 200 nhanh (< 2s); việc nặng đẩy sang worker.
+`POST /webhooks/paypal` — verify → dedupe → settle (KIT-7). Không có auth token: danh tính đến từ chữ ký PayPal.
+
+Headers PayPal gửi: `PAYPAL-TRANSMISSION-ID`, `PAYPAL-TRANSMISSION-TIME`, `PAYPAL-CERT-URL`, `PAYPAL-AUTH-ALGO`, `PAYPAL-TRANSMISSION-SIG`.
+
+Thứ tự xử lý (không được đảo):
+
+1. `PAYPAL_WEBHOOK_ID` chưa cấu hình → `503 WEBHOOK_NOT_CONFIGURED` (fail closed, không đọc body).
+2. Đọc **raw body đúng một lần** — PayPal ký chính các bytes đó, không ký bản đã encode lại — rồi `JSON.parse`; body không phải JSON → `400 WEBHOOK_PAYLOAD_INVALID`.
+3. `POST /v1/notifications/verify-webhook-signature` với `webhook_id = PAYPAL_WEBHOOK_ID` → phải `SUCCESS`. Sai chữ ký → `400 WEBHOOK_SIGNATURE_INVALID`; chỉ log `eventId`, payload vẫn là untrusted (AGENTS.md #10).
+4. Parse payload **sau khi** đã verify thành event chuẩn hoá (`@kitty/paypal` `parsePaypalWebhookEvent`): `payout_item` | `payout_batch` | `other` | `malformed`. Envelope thiếu `id`/`event_type` → `400 WEBHOOK_PAYLOAD_INVALID`.
+5. Trong **một transaction**: `INSERT INTO leash.webhook_events … ON CONFLICT (id) DO NOTHING`. Trùng `id` → `200` ngay, không xử lý lại (docs/11 §4). Nếu mới: khoá intent `FOR UPDATE`, dispatch theo `event_type`, rồi ghi verdict (`processed` | `ignored` | `failed`) + `processed_at`.
+6. Trả `200 { ok: true, duplicate: boolean, status }` nhanh (< 2s); việc nặng (email, index, thông báo) đi qua outbox → worker.
+
+Handler (chi tiết bảng ở [11-paypal-integration.md](11-paypal-integration.md) §3):
+
+| `event_type` | Tìm bằng | Hành động |
+|---|---|---|
+| `PAYMENT.PAYOUTS-ITEM.SUCCEEDED` | `sender_item_id` | `submitted` → `settled`; `settlePayout` (held → `external:payee`); `paypal_objects` (item); audit; outbox `leash.intent_settled` |
+| `PAYMENT.PAYOUTS-ITEM.FAILED/BLOCKED/DENIED` | `sender_item_id` | `submitted` → `released`; `release` (held → available); audit; outbox `leash.intent_failed` |
+| `PAYMENT.PAYOUTS-ITEM.RETURNED` (chưa settled) | `sender_item_id` | như FAILED |
+| `PAYMENT.PAYOUTS-ITEM.RETURNED/REFUNDED` **sau khi** đã `settled` | `sender_item_id` | chỉ ghi `paypal_objects` + audit alert, **không** đụng ledger (open question Q12 ở [20](20-risks-and-decisions.md)) |
+| `PAYMENT.PAYOUTS-ITEM.UNCLAIMED` | `sender_item_id` | chỉ audit cảnh báo; giữ `submitted` (organizer có thể cancel unclaimed) |
+| `PAYMENT.PAYOUTS-ITEM.ONHOLD`/`PENDING` | `sender_item_id` | không đổi gì, ghi `ignored` |
+| `PAYMENT.PAYOUTSBATCH.SUCCESS` | `sender_batch_header.sender_batch_id` | chỉ cập nhật `paypal_objects` (batch) |
+| `PAYMENT.PAYOUTSBATCH.DENIED` | `sender_batch_id` | mọi item `submitted` của batch → `released` + release txn + outbox `leash.intent_failed`; cập nhật `paypal_objects` |
+| mọi event khác | — | lưu + `ignored` (invoice/order/refund ở KIT-22/KIT-27/KIT-42) |
+
+Đảm bảo:
+
+- **Idempotent** và **state-machine guarded**: `settled`/`released` là terminal, không handler nào đi ngược lại; retry của một event đã áp dụng (hoặc event đến sai thứ tự) là no-op, không bao giờ thành bút toán tiền thứ hai (I4).
+- Handler lỗi → rollback cả transaction → PayPal retry lại đúng event đó.
+- Intent không match (`sender_item_id` lạ, thiếu khoá, resource sai shape) → lưu event với `status = 'failed'` + log; vẫn trả `200` để PayPal không retry vô ích.
+- `leash.webhook_events.status` ∈ `received | processed | ignored | failed` (docs/09 §3.3). Trigger append-only chỉ áp cho `audit_events`/`ledger_entries`; `webhook_events` update được.
+- Đăng ký webhook cần URL HTTPS public (KIT-8); event list phải subscribe ở [11-paypal-integration.md](11-paypal-integration.md) §3.
 
 ---
 
@@ -248,4 +276,12 @@ Auth: `GATEWAY_INTERNAL_TOKEN`. Dùng bởi worker:
 - `GET` trả `{ intent }`; `POST` trả `{ intent, outcome }` với `outcome ∈ { submitted, failed_released, unknown, not_implemented, noop }`. Schema ở `@kitty/shared/internal` (`intentViewSchema`, `executeIntentResponseSchema`). `intent` gồm `intentId`, `leashId`, `kittyId`, `agentId`, `action`, `amount` (string thập phân), `currency`, `payee`, `category`, `memo`, `taskId`, `decision`, `reasons[]`, `status`, `paypalRef`, `executeAttempts`, `error`, `createdAt`, `updatedAt`.
 - Intent không tồn tại → 404 `INTENT_NOT_FOUND`. `POST` chỉ thực thi hành động `payout` trong task này; hành động khác giữ `reserved` và ghi `last_execute_error = { code: "NOT_IMPLEMENTED" }`.
 - Route handler **không** chạm DB: `routes → service → repository` (CODE_RULES §D).
+
+**KIT-7** implement `POST /internal/sweeps/reconcile` (webhook fallback, docs/11 §4):
+
+- Auth: cùng middleware `Bearer <GATEWAY_INTERNAL_TOKEN>` như trên (constant-time).
+- Body (`reconcileSweepRequestSchema` ở `@kitty/shared/internal`): `{ olderThanMinutes?: number (0..1440, default 5), limit?: number (1..100, default 25) }`. `olderThanMinutes: 0` cho test/demo → reconcile ngay.
+- Chọn intent `status = 'submitted'` và `updated_at <= now - olderThanMinutes`, cũ nhất trước, tối đa `limit`. Mỗi intent: `GET /v1/payments/payouts/{payout_batch_id}` (item tra bằng `sender_item_id = intentId`) — **không mở transaction khi gọi PayPal**.
+- Sau đó mở transaction, khoá lại intent `FOR UPDATE`, re-check vẫn `submitted` rồi mới áp **đúng** hai hàm `settleIntent`/`failIntent` mà webhook dùng (docs/05 §8) và cập nhật `paypal_objects`. Webhook đến trước → sweep thành no-op.
+- Response `{ scanned, settled, failed, unchanged, errored }` (`reconcileSweepResponseSchema`). `errored` đếm intent không đọc được từ PayPal (network/auth) hoặc thiếu `payout_batch_id`; chúng giữ nguyên `submitted` để lần sweep sau thử lại.
 
