@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { demoLoginErrorMessage, readAuthErrorMessage } from "./auth-error";
+import { demoLoginErrorMessage, readAuthErrorMessage } from "@/features/auth/lib/auth-error";
 
 describe("readAuthErrorMessage", () => {
   test("prefers the Better Auth message", () => {

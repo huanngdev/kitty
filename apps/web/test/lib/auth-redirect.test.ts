@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { resolveAuthRedirect } from "./auth-redirect";
-import { buildSignInPath, readNextPath } from "./routes";
+import { resolveAuthRedirect } from "@/lib/auth-redirect";
+import { buildSignInPath, readNextPath } from "@/lib/routes";
 
 describe("resolveAuthRedirect", () => {
   test("sends signed-out visitors from the app area to sign-in with ?next", () => {

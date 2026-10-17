@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { initialsFromName } from "./initials";
+import { initialsFromName } from "@/features/shell/lib/initials";
 
 describe("initialsFromName", () => {
   test("uses the first and last word", () => {
