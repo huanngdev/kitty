@@ -49,6 +49,8 @@ interface Leash {
 available = allocation − settled_spend − reserved
 ```
 
+> **Ghi chú triển khai `packages/leash` (KIT-17).** Trong package, tiền là **integer cents `bigint`**, các field đặt tên `…Cents` (`allocationCents`, `limits.perTxMaxCents`, `limits.dailyMaxCents`, `stepUpAboveCents`); `Money` dạng chuỗi ở trên chỉ là định dạng wire. `Category` lấy từ `app.budget_lines` (docs/09): `lodging | food | transport | gear | merch | activities | other`; `allowedCategories` là danh sách category **hoặc** wildcard `["*"]`. `SpendIntent.amountCents` là `bigint`; `justification` vẫn tồn tại nhưng engine không bao giờ đọc (bất biến #2).
+
 ## 3. Actions
 
 | Action | Hướng tiền | PayPal API | Ai thường có |
@@ -172,6 +174,16 @@ Kết quả:
 
 **Không có LLM, không có heuristic mờ** trong hàm này. `justification` của agent không bao giờ được đọc.
 
+**Quy tắc biên đã chốt trong `packages/leash` (KIT-17).**
+- Chữ ký hàm thuần: `evaluate({ leash, ancestors, intent, usage, ancestorUsage, now })`. `usage` gồm `availableCents`, `spent24hCents`, `allowCountLastHour`, `recentIntents` (`{ intentId, payee, amountCents, at }`). `ancestorUsage: Record<leashId, Usage>` là **bắt buộc** để chạy check #14 theo số dư/cửa sổ của từng ancestor; thiếu entry → coi như usage rỗng (`available = 0`) và fail theo hướng an toàn.
+- `member:*`: payee là chuỗi `member:<id>`; entry allowlist `member:*` khớp mọi payee bắt đầu bằng `member:`. Mọi so sánh payee (allowlist lẫn trùng lặp) **không phân biệt hoa thường** (trim + lowercase).
+- Category: chỉ kiểm khi intent có `category`; wildcard `["*"]` cho phép mọi category.
+- Số tiền: money actions (§3) yêu cầu `amountCents > 0`; zero-amount actions (`send_reminder`, `browser_booking`) yêu cầu `amountCents = 0`. Vi phạm → `INVALID_AMOUNT`.
+- Cửa sổ hiệu lực: `notBefore` **inclusive**, `expiresAt` **exclusive**. Cửa sổ trùng lặp: intent cũ cùng payee + cùng `amountCents` với `0 ≤ now − at ≤ 10 phút` (biên 10 phút **inclusive**; timestamp ở tương lai bị bỏ qua) → `POSSIBLE_DUPLICATE`.
+- `POSSIBLE_DUPLICATE` một mình → `STEP_UP`; kèm bất kỳ lỗi cứng nào khác → `DENY` (vẫn liệt kê nó). Vượt `stepUpAbove` → `STEP_UP` với code bổ sung `STEP_UP_REQUIRED` (chưa có trong bảng gốc, thêm để UI/agent có mã ổn định cho ngưỡng step-up). Check #1 phát mã theo status: `LEASH_REVOKED` / `LEASH_PAUSED` / `LEASH_EXHAUSTED` / `LEASH_EXPIRED`.
+- Check #14 lặp lại theo từng ancestor các chiều action/payee/category allowlist + `perTxMaxCents`, `dailyMaxCents`, `availableCents`; mỗi vi phạm là một reason `PARENT_LIMIT_EXCEEDED` (details nêu ancestor). Kiểm well-formedness của amount (#8) là thuộc tính của action nên chỉ chạy một lần, không lặp theo ancestor.
+- Engine thuần: `now` là input, không gọi `Date.now()`; không I/O. Helper `maxPossibleLoss(leashes, balances)` = Σ (`availableCents` + `heldCents`) của các leash `status = "active"` (sub-leash đã cắt khỏi `available` của cha nên không đếm trùng).
+
 ## 7. Reservation (chống race & double spend)
 
 Trong **một transaction Postgres**:
@@ -284,6 +296,8 @@ Agent có action `delegate` gọi `leash.delegate(childAgentId, spec)`. Validati
 - Organizer được thông báo mỗi lần delegate; có thể revoke.
 
 Revoke cha → cascade revoke con (trong cùng transaction); tiền con về cha rồi về Kitty.
+
+**Chi tiết code của `DELEGATION_EXCEEDS_PARENT` (KIT-17).** `validateDelegation(parent, child, parentUsage)` gom **tất cả** vi phạm (không dừng ở lỗi đầu); mỗi vi phạm một entry `{ code, detail, details }` với `detail` ∈ `ALLOCATION` (child allocation > parent available), `PER_TX`, `DAILY`, `RATE`, `ACTIONS`, `DELEGATE_NOT_ALLOWED` (sub-leash chứa `delegate`), `PAYEES`, `CATEGORIES`, `EXPIRY`, `STEP_UP` (parent có ngưỡng thì con phải có và ≤), `DEPTH` (parent phải là leash gốc — tối đa 2 cấp). `child.allowedPayees`/`allowedCategories` phải là **tập con** của cha (wildcard `member:*` và `["*"]` xử lý theo ngữ nghĩa tập con).
 
 ## 10. Step-up approval
 
