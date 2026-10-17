@@ -1,4 +1,9 @@
-import { createPayPalClient, type PayPalClient } from "@kitty/paypal";
+import {
+  createPayPalClient,
+  type PayPalClient,
+  type PayoutBatch,
+  type VerifyWebhookInput,
+} from "@kitty/paypal";
 import { env } from "../env";
 import { AppError } from "./errors";
 import { logger } from "./logger";
@@ -50,6 +55,9 @@ export function getPayoutExecutor(): PayoutExecutor {
       const result = await paypal.payouts.createSingle({
         requestId: input.requestId,
         senderBatchId: input.requestId,
+        // The item lookup key for `PAYMENT.PAYOUTS-ITEM.*` webhooks
+        // (docs/11 §3): with one intent per batch the intent id is both.
+        senderItemId: input.requestId,
         payeeEmail: input.payeeEmail,
         amountCents: input.amountCents,
         currency: input.currency,
@@ -58,5 +66,33 @@ export function getPayoutExecutor(): PayoutExecutor {
 
       return { batchId: result.batchId, status: result.status };
     },
+  };
+}
+
+/** Signature verification of an inbound webhook (docs/10 §5 step 2). */
+export interface WebhookVerifier {
+  verify(input: VerifyWebhookInput): Promise<boolean>;
+}
+
+/** Adapts the PayPal client to {@link WebhookVerifier}. */
+export function getWebhookVerifier(): WebhookVerifier {
+  const paypal = getPayPalClient();
+
+  return {
+    verify: (input) => paypal.webhooks.verifySignature(input),
+  };
+}
+
+/** Reads a payout batch back from PayPal, for the reconcile sweep (docs/10 §6). */
+export interface PayoutStatusReader {
+  getBatch(input: { readonly batchId: string }): Promise<PayoutBatch>;
+}
+
+/** Adapts the PayPal client to {@link PayoutStatusReader}. */
+export function getPayoutStatusReader(): PayoutStatusReader {
+  const paypal = getPayPalClient();
+
+  return {
+    getBatch: (input) => paypal.payouts.getBatch({ batchId: input.batchId }),
   };
 }

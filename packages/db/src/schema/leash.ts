@@ -210,6 +210,10 @@ export const spendIntents = leashSchema.table(
     check("spend_intents_amount_cents_non_negative", sql`${t.amountCents} >= 0`),
     index("spend_intents_leash_id_created_at_idx").on(t.leashId, t.createdAt.desc()),
     index("spend_intents_payee_amount_created_at_idx").on(t.payee, t.amountCents, t.createdAt),
+    // Reconcile sweep: intents stuck in `submitted` (docs/10 §6).
+    index("spend_intents_status_updated_at_idx").on(t.status, t.updatedAt),
+    // Webhook handlers look an intent up by its PayPal batch id.
+    index("spend_intents_paypal_ref_idx").on(t.paypalRef),
   ],
 );
 
@@ -302,18 +306,41 @@ export const paypalObjects = leashSchema.table(
   (t) => [uniqueIndex("paypal_objects_kind_id_unique").on(t.kind, t.id)],
 );
 
+/**
+ * Verdict of a stored webhook event (docs/09 §3.3). Mirrors
+ * `webhookEventStatusSchema` in `@kitty/shared`; a test asserts both lists.
+ */
+export const WEBHOOK_EVENT_STATUSES = ["received", "processed", "ignored", "failed"] as const;
+
+export type WebhookEventStatus = (typeof WEBHOOK_EVENT_STATUSES)[number];
+
 /** Verified PayPal webhooks, deduped by event id (docs/11). */
-export const webhookEvents = leashSchema.table("webhook_events", {
-  /** PayPal event id; the dedupe key (PK). */
-  id: text("id").primaryKey(),
-  eventType: text("event_type").notNull(),
-  resourceId: text("resource_id"),
-  verified: boolean("verified").notNull(),
-  payload: jsonb("payload").notNull(),
-  receivedAt: timestamp("received_at", { withTimezone: true }).defaultNow().notNull(),
-  processedAt: timestamp("processed_at", { withTimezone: true }),
-  error: text("error"),
-});
+export const webhookEvents = leashSchema.table(
+  "webhook_events",
+  {
+    /** PayPal event id; the dedupe key (PK). */
+    id: text("id").primaryKey(),
+    eventType: text("event_type").notNull(),
+    resourceId: text("resource_id"),
+    verified: boolean("verified").notNull(),
+    /**
+     * How far the handler got (docs/09 §3.3): `received` only exists inside the
+     * handler transaction, `processed`/`ignored`/`failed` is the stored verdict.
+     */
+    status: text("status").notNull().default("received"),
+    payload: jsonb("payload").notNull(),
+    receivedAt: timestamp("received_at", { withTimezone: true }).defaultNow().notNull(),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+    error: text("error"),
+  },
+  (t) => [
+    check(
+      "webhook_events_status_known",
+      sql`${t.status} IN ('received', 'processed', 'ignored', 'failed')`,
+    ),
+    index("webhook_events_status_received_at_idx").on(t.status, t.receivedAt),
+  ],
+);
 
 /** Request-signing nonces; PK `(agent_id, nonce)`, swept by `expires_at`. */
 export const nonces = leashSchema.table(

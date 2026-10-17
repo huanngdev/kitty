@@ -50,6 +50,13 @@
       "when": 1792226984605,
       "tag": "0006_familiar_molecule_man",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792228365649,
+      "tag": "0007_loose_crystal",
+      "breakpoints": true
     }
   ]
 }

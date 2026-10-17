@@ -300,6 +300,8 @@ CREATE TABLE leash.spend_intents (
 );
 CREATE INDEX spend_intents_leash_id_created_at_idx ON leash.spend_intents (leash_id, created_at DESC);
 CREATE INDEX spend_intents_payee_amount_created_at_idx ON leash.spend_intents (payee, amount_cents, created_at);
+CREATE INDEX spend_intents_status_updated_at_idx ON leash.spend_intents (status, updated_at); -- KIT-7: reconcile sweep
+CREATE INDEX spend_intents_paypal_ref_idx ON leash.spend_intents (paypal_ref);                 -- KIT-7: webhook theo batch id
 
 CREATE TABLE leash.approvals (
   id            text PRIMARY KEY,               -- apr_…
@@ -354,11 +356,13 @@ CREATE TABLE leash.webhook_events (
   event_type    text NOT NULL,
   resource_id   text,
   verified      boolean NOT NULL,
+  status        text NOT NULL DEFAULT 'received' CHECK (status IN ('received','processed','ignored','failed')),
   payload       jsonb NOT NULL,
   received_at   timestamptz NOT NULL DEFAULT now(),
   processed_at  timestamptz,
   error         text
 );
+CREATE INDEX webhook_events_status_received_at_idx ON leash.webhook_events (status, received_at);
 
 CREATE TABLE leash.nonces (
   agent_id      text NOT NULL,

@@ -16,6 +16,7 @@
     "./internal": "./src/internal/index.ts",
     "./api-paths": "./src/api-paths.ts",
     "./auth": "./src/auth/index.ts",
+    "./webhooks": "./src/webhooks/index.ts",
     "./leash-admin": "./src/leash-admin/index.ts",
     "./leash-agent": "./src/leash-agent/index.ts"
   },

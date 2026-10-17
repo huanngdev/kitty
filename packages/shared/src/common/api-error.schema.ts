@@ -34,6 +34,11 @@ export const errorCodes = {
   // --- Gateway Agent API / MCP (docs/10-api-spec.md §2) ---
   /** The same `intentId` was resubmitted with a different body (docs/10 §2). */
   intentIdReused: "INTENT_ID_REUSED",
+
+  // --- Gateway Webhook (docs/10-api-spec.md §5) ---
+  webhookNotConfigured: "WEBHOOK_NOT_CONFIGURED",
+  webhookSignatureInvalid: "WEBHOOK_SIGNATURE_INVALID",
+  webhookPayloadInvalid: "WEBHOOK_PAYLOAD_INVALID",
 } as const;
 
 export type ErrorCode = (typeof errorCodes)[keyof typeof errorCodes];
