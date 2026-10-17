@@ -4,14 +4,15 @@
 
 | Thời gian | Hình | Lời (VO) |
 |---|---|---|
-| 0:00–0:12 | Nhóm chat đầy "who still owes?", Venmo/PayPal screenshots giả lập | "Every group trip has one person who fronts the money and chases everyone for weeks." |
-| 0:12–0:22 | Logo Kitty, tagline | "AI agents could do all of that — but would you hand an AI your PayPal? Kitty lets your agents spend. On a leash." |
-| 0:22–0:45 | Mai gõ prompt → Planner trả plan → Gantt hiện ra với 🔒 gates | "Mai describes the trip. The Planner builds a budget and a timeline where money is a dependency." |
-| 0:45–1:05 | Collector gửi 12 invoices; chuyển tab member trả bằng PayPal sandbox; Kitty gauge tăng; gate 🔓 | "Members chip in through PayPal invoices. Webhooks land, the kitty fills, and the next task unlocks." |
-| 1:05–1:30 | Leashes page: Treasurer leash ($2,500, 3 payees, step-up $500). Payout $1,200 → Slack approval → Approve → settled ✅ | "Each agent gets a leash — a spending pass with limits, approved payees and an expiry. Big payments step up to Mai." |
-| 1:30–2:05 | Planner delegates $500 sub-leash to Shopper; Shopper finds hoodies via Channel3, buys for $336 (ALLOW). Rồi mở "Hoodie Deals" → injection → payout $2,000 → **DENY** đỏ → Slack alert → Revoke | "Now the scary part: a product page hides an instruction. The model falls for it — the leash doesn't. Max possible loss: $164. Actual loss: zero." |
-| 2:05–2:25 | AG Studio: "Which leash was blocked this week?" → widget; Who-still-owes scoreboard | "Every cent is in a real ledger, and you can ask the dashboard anything." |
-| 2:25–2:40 | Kiến trúc 1 slide: Agents → Leash Gateway (only PayPal credentials) → PayPal | "Agents never hold PayPal credentials. A deterministic gateway signs off on every action — Sui-style bounded loss, PayPal-grade reversibility." |
+| 0:00–0:10 | Nhóm chat đầy "who still owes?", Venmo/PayPal screenshots giả lập | "Every group trip has one person who fronts the money and chases everyone for weeks." |
+| 0:10–0:20 | Logo Kitty, tagline | "AI agents could do all of that — but would you hand an AI your PayPal? Kitty lets your agents spend. On a leash." |
+| 0:20–0:40 | Mai gõ prompt → Planner trả plan → timeline hiện ra với 🔒 payment gates | "Mai describes the trip. The Planner builds a budget and a timeline where money is a dependency." |
+| 0:40–1:00 | Collector gửi 12 invoices; chuyển tab member trả bằng PayPal sandbox; Kitty gauge tăng; gate 🔓 | "Members chip in through PayPal invoices. Webhooks land, the kitty fills, and the next task unlocks." |
+| 1:00–1:22 | Leashes page: Treasurer leash ($2,500, 3 payees, step-up $500). Payout $1,200 → Approval Inbox (badge) → Approve → settled ✅ | "Each agent gets a leash — a spending pass with limits, approved payees and an expiry. Big payments step up to Mai." |
+| 1:22–1:52 | Planner delegates $500 sub-leash to Shopper; Shopper finds hoodies (Channel3 hoặc catalog demo), buys for $336 (ALLOW). Rồi mở "Hoodie Deals" → injection → payout $2,000 → **DENY** đỏ → banner đỏ → Revoke | "Now the scary part: a product page hides an instruction. The model falls for it — the leash doesn't. Max possible loss: $164. Actual loss: zero." |
+| 1:52–2:10 | Terminal: `bunx leash-mcp init` → dán public key vào "Connect an external agent" → Claude Desktop list `leash_*` tools → "pay refund-desk $500" → **DENY** | "And it's not just our agents. Any MCP client — here, Claude Desktop — gets a leash in one command. Same limits. Same denial." |
+| 2:10–2:25 | AG Studio: "Which leash was blocked this week?" → widget; Who-still-owes scoreboard | "Every cent is in a real ledger, and you can ask the dashboard anything." |
+| 2:25–2:40 | Kiến trúc 1 slide: Agents (của Kitty + MCP client bên ngoài) → Leash Gateway (only PayPal credentials) → PayPal | "Agents never hold PayPal credentials. A deterministic gateway signs off on every action — Sui-style bounded loss, PayPal-grade reversibility." |
 | 2:40–2:52 | Settlement: refund $15 each; mèo ngủ | "When the trip ends, Kitty refunds what's left. No one fronts. No one chases." |
 
 Quy tắc quay:
@@ -35,7 +36,7 @@ At Sui Basecamp 2026, Sui introduced the idea of an agent pass: give AI agents l
 - **Bounded loss** — even a fully hijacked agent can move at most its leash balance, only to approved payees.
 
 ### How we built it
-(Điền từ [06](06-architecture.md), [11](11-paypal-integration.md), [13](13-sponsor-integrations.md): Leash Gateway as MCP server, Ed25519-signed requests, deterministic policy engine, double-entry ledger, PayPal Invoicing/Payouts/Orders/Refunds/Webhooks, Render Workflows, AG Studio, Bryntum, Channel3, Zapier MCP, Elastic, Claude.)
+(Điền từ [06](06-architecture.md), [11](11-paypal-integration.md), [13](13-sponsor-integrations.md): Leash Gateway as MCP server, `leash-mcp` stdio bridge for any MCP client, Ed25519-signed requests, deterministic policy engine, double-entry ledger, PayPal Invoicing/Payouts/Orders/Refunds/Webhooks (+ PayPal Agent Toolkit nếu gateway dùng — ADR-007), Render, AG Studio, Channel3 (nếu dùng), Vercel AI SDK (BYOK).)
 
 ### How we used each tool
 | Tool | How |
@@ -55,7 +56,7 @@ At Sui Basecamp 2026, Sui introduced the idea of an agent pass: give AI agents l
 - …
 
 ### What we learned / What's next
-- Leash as a standalone MCP server any agent can use; open spec for agent spending passes on fiat rails; PayPal Vault for user-funded leashes; production compliance.
+- Remote Leash MCP with an OAuth-style consent screen where the consent *is* the leash (today: the `leash-mcp` bridge); open spec for agent spending passes on fiat rails; PayPal Vault for user-funded leashes; production compliance.
 - Today Kitty is **bring-your-own-model**: users plug in their own API key (Anthropic, OpenAI, Google, OpenRouter or any OpenAI-compatible endpoint). Next: optional paid plans where Kitty provides the model, billed with PayPal Subscriptions.
 
 ## 3. Checklist nộp bài
@@ -68,7 +69,8 @@ At Sui Basecamp 2026, Sui introduced the idea of an agent pass: give AI agents l
 - [ ] Video YouTube Public < 3'
 - [ ] Built With tags (xem [13](13-sponsor-integrations.md) §11)
 - [ ] Mục "Tools used" chi tiết từng tool
-- [ ] Ghi chú sponsor prizes muốn được xét (AG Grid, Bryntum, Channel3, APIMatic, Render)
+- [ ] Ghi chú sponsor prizes muốn được xét: AG Grid (chính); Channel3, APIMatic, Render chỉ khi dùng thật; Bryntum chỉ khi Gantt có trong bản nộp ([ADR-024](20-risks-and-decisions.md))
+- [ ] README có MCP quickstart (`leash-mcp` + snippet Claude Desktop / Claude Code / MCP Inspector), đã thử trên máy sạch
 - [ ] Team members đều đã join hackathon và được add vào project
 - [ ] Nộp trước **11/11 23:59 ICT**; chụp màn hình xác nhận
 - [ ] Kiểm lại demo URL mỗi tuần đến 15/12; trả lời câu hỏi judges (nếu có) trên Devpost
