@@ -1,6 +1,13 @@
 import { z } from "zod";
 
 /**
+ * Treat empty strings (for example `API_URL=` in a local `.env`) as unset, so a
+ * blank optional variable falls back to its default instead of failing
+ * validation. Same rule as `apps/api` and `apps/gateway`.
+ */
+const unsetIfEmpty = (value: unknown): unknown => (value === "" ? undefined : value);
+
+/**
  * Env for the Kitty web app (`apps/web`).
  *
  * Validated at import time. Server and client variables are kept apart because
@@ -11,14 +18,14 @@ import { z } from "zod";
  */
 const serverSchema = z.object({
   // Internal URL of apps/api, used by the Next rewrite proxy (/api -> apps/api).
-  API_URL: z.url().default("http://localhost:8787"),
+  API_URL: z.preprocess(unsetIfEmpty, z.url().default("http://localhost:8787")),
 });
 
 const clientSchema = z.object({
   // Public URL of this app.
-  NEXT_PUBLIC_APP_URL: z.url().default("http://localhost:3000"),
+  NEXT_PUBLIC_APP_URL: z.preprocess(unsetIfEmpty, z.url().default("http://localhost:3000")),
   // PayPal JS SDK client id (public). Optional until checkout is wired.
-  NEXT_PUBLIC_PAYPAL_CLIENT_ID: z.string().min(1).optional(),
+  NEXT_PUBLIC_PAYPAL_CLIENT_ID: z.preprocess(unsetIfEmpty, z.string().min(1).optional()),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
