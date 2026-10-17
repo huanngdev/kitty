@@ -1,5 +1,5 @@
 import { boolean, text, timestamp } from "drizzle-orm/pg-core";
-import { appSchema } from "./app";
+import { appSchema } from "./app-schema";
 
 /**
  * Better Auth core tables (Better Auth 1.7), self-hosted in `apps/api`.

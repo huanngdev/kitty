@@ -52,6 +52,21 @@ describe("signAdminRequest", () => {
     expect(headers[ADMIN_AUTH_HEADERS.timestamp]).toBe("1700000000");
     expect(headers[ADMIN_AUTH_HEADERS.signature]).toMatch(/^[0-9a-f]{64}$/);
   });
+
+  // Known-answer vector shared with apps/api (apps/api/src/lib/admin-signing.test.ts):
+  // both implementations of the docs/10 §1 signature must agree byte-for-byte.
+  test("matches the cross-service known-answer vector", async () => {
+    const headers = await signAdminRequest({
+      token: TOKEN,
+      userId: USER_ID,
+      body: '{"a":1}',
+      timestamp: 1_700_000_000,
+    });
+
+    expect(headers[ADMIN_AUTH_HEADERS.signature]).toBe(
+      "4cffc84195ebaf1fb01fcbd3f30c9a23eff734e0ed084b5b86ee26e2e0179fe0",
+    );
+  });
 });
 
 describe("createAdminAuth", () => {

@@ -1,4 +1,5 @@
-import type { MiddlewareHandler } from "hono";
+import { errorCodes } from "@kitty/shared";
+import type { Context, MiddlewareHandler } from "hono";
 import type { AuthSession } from "../lib/auth";
 import { getAuth } from "../lib/auth";
 import { AppError } from "../lib/errors";
@@ -32,3 +33,26 @@ export const sessionMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
 
   await next();
 };
+
+/**
+ * Rejects a request with no session with `401 UNAUTHORIZED`. Mount it right
+ * after {@link sessionMiddleware} on every route that needs an organizer.
+ */
+export const requireSession: MiddlewareHandler<AppEnv> = async (c, next) => {
+  if (c.get("user") === null) {
+    throw new AppError(errorCodes.unauthorized, 401, { reason: "sign in required" });
+  }
+
+  await next();
+};
+
+/** The authenticated user, or `401 UNAUTHORIZED` (handlers run after `requireSession`). */
+export function requireUser(c: Context<AppEnv>): AuthSession["user"] {
+  const user = c.get("user");
+
+  if (user === null) {
+    throw new AppError(errorCodes.unauthorized, 401, { reason: "sign in required" });
+  }
+
+  return user;
+}

@@ -204,6 +204,29 @@ Các route `app/api/*` của Next.js, gọi Gateway Admin API phía server:
 
 ---
 
+### 4.1 Product routes trong `apps/api` (KIT-30 — session auth)
+
+`apps/api` phục vụ dữ liệu không phải tiền với Better Auth session; web BFF proxy tới đây. Mọi route dưới đây `401 UNAUTHORIZED` khi chưa đăng nhập, và chỉ organizer của event được thao tác (`403 FORBIDDEN`), id không tồn tại `404 *_NOT_FOUND`. Tiền là decimal string ở biên.
+
+| Method | Path | Mô tả |
+|---|---|---|
+| POST | `/api/events` | Tạo event; đồng thời tạo kitty bên gateway và lưu `kitty_id` |
+| GET | `/api/events` | Event của session user ("mine") |
+| GET | `/api/events/:id` | Chi tiết event |
+| PATCH | `/api/events/:id` | Cập nhật event (kể cả `status`) |
+| POST · GET | `/api/events/:id/members` | Thêm (unique email/event, sinh `member_token`) · liệt kê |
+| DELETE | `/api/events/:id/members/:memberId` | Xoá member |
+| POST · GET | `/api/events/:id/vendors` | Đề xuất (luôn `verified=false`) · liệt kê |
+| PATCH | `/api/events/:id/vendors/:vendorId` | Sửa vendor; đổi `paypalEmail` → `verified=false` lại |
+| POST | `/api/events/:id/vendors/:vendorId/verify` | **Chỉ organizer**: `verified=true` + `POST /v1/kitties/:kittyId/payees {email}` |
+| GET · PUT | `/api/events/:id/budget-lines` | Đọc · thay cả set (`{lines:[{category, planned}]}`) |
+
+**Tạo event + kitty (compensating flow).** Hai ghi không cùng transaction (gateway là service riêng). `POST /api/events`: (1) insert `app.events`; (2) gọi `POST /v1/kitties` qua admin client; (3) ghi `kitty_id`. Nếu (2) hoặc (3) lỗi → xoá lại event vừa tạo rồi ném lỗi, để không bao giờ tồn tại event không có kitty. Không có leak ngược đáng kể: bước xoá chỉ chạy khi kitty chưa/không tạo được, và gateway không có endpoint xoá kitty (nếu tạo kitty xong mà ghi `kitty_id` lỗi, kitty mồ côi — ghi lại khi retry dùng eventId khác; chấp nhận cho MVP, xem Open questions).
+
+**Seller `apps/api` → Gateway Admin API** (`apps/api/src/lib/gateway-client.ts`): axios tới `GATEWAY_URL`, mỗi request ký Bearer `GATEWAY_ADMIN_TOKEN` + `X-Kitty-User/Timestamp/Signature` (HMAC-SHA256 hex trên `userId\n timestamp\n rawBody`, khớp `apps/gateway/src/admin/auth.ts`; vector chung khoá ở test hai phía). Lỗi gateway map sang `AppError` giữ nguyên `code`. `GATEWAY_URL`/`GATEWAY_ADMIN_TOKEN` bắt buộc khi dùng (lazy, như `getDb`). Không có PayPal ở đây (AGENTS.md #1).
+
+---
+
 ### BYOK settings (session auth; web chỉ chuyển tiếp lên agents, không lưu/log key)
 | Method | Path | Mô tả |
 |---|---|---|

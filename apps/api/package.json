@@ -10,11 +10,16 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check-types": "tsc --noEmit",
-    "test": "bun test --no-env-file --pass-with-no-tests"
+    "test": "bun test --no-env-file --pass-with-no-tests",
+    "smoke:events": "bun scripts/smoke-events.ts"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.9.1",
     "@kitty/db": "workspace:*",
+    "@kitty/ledger": "workspace:*",
     "@kitty/shared": "workspace:*",
+    "@kitty/signing": "workspace:*",
+    "axios": "^1.20.0",
     "better-auth": "^1.7.10",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.13.13",

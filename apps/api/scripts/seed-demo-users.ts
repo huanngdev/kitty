@@ -32,6 +32,10 @@ if (!parsedEnv.success) {
   process.exit(1);
 }
 
+// Read once at module scope so the narrowed `parsedEnv.data` is not lost inside
+// the `main` closure (TS resets narrowing for captured variables).
+const { DEMO_USER_PASSWORD: demoUserPassword } = parsedEnv.data;
+
 const demoUsers = [
   { name: "Mai (Demo Organizer)", email: "organizer@demo.kitty" },
   { name: "Tuan (Demo Member)", email: "member@demo.kitty" },
@@ -80,7 +84,7 @@ async function seedDemoUser(input: {
 }
 
 async function main(): Promise<void> {
-  const password = parsedEnv.data.DEMO_USER_PASSWORD;
+  const password = demoUserPassword;
 
   for (const demoUser of demoUsers) {
     const outcome = await seedDemoUser({ ...demoUser, password });
