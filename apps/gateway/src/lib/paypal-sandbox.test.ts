@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
   buildInvoiceRequest,
   buildPayoutRequest,
+  extractInvoiceId,
+  InvoiceIdNotFoundError,
   isoDate,
   missingSandboxEnvKeys,
   paypalBaseUrl,
@@ -78,6 +80,62 @@ describe("readSandboxEnv", () => {
     if (!result.ok) {
       expect(result.invalid).toContain("PAYPAL_SANDBOX_PAYER_EMAIL");
     }
+  });
+
+  test("treats a blank optional PAYPAL_WEBHOOK_ID as unset", () => {
+    const result = readSandboxEnv({ ...validSource, PAYPAL_WEBHOOK_ID: "" });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.env.PAYPAL_WEBHOOK_ID).toBeUndefined();
+    }
+  });
+
+  test("treats a blank PAYPAL_ENV as unset and falls back to sandbox", () => {
+    const result = readSandboxEnv({ ...validSource, PAYPAL_ENV: "" });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.env.PAYPAL_ENV).toBe("sandbox");
+    }
+  });
+});
+
+describe("extractInvoiceId", () => {
+  test("prefers the id in the response body", () => {
+    expect(extractInvoiceId({ body: { id: "INV2-BODY" } })).toBe("INV2-BODY");
+  });
+
+  test("reads the id from the body href (the real Invoicing v2 shape)", () => {
+    const body = {
+      rel: "self",
+      href: "https://api-m.sandbox.paypal.com:8443/v2/invoicing/invoices/INV2-HREF",
+      method: "GET",
+    };
+
+    expect(extractInvoiceId({ body })).toBe("INV2-HREF");
+  });
+
+  test("falls back to the Location header when the body carries no id", () => {
+    const location = "https://api-m.sandbox.paypal.com:8443/v2/invoicing/invoices/INV2-LOCATION";
+
+    expect(extractInvoiceId({ body: { message: "Created" }, location })).toBe("INV2-LOCATION");
+  });
+
+  test("accepts a bare path in the Location header", () => {
+    expect(
+      extractInvoiceId({ body: undefined, location: "/v2/invoicing/invoices/INV2-PATH" }),
+    ).toBe("INV2-PATH");
+  });
+
+  test("throws when no id can be found anywhere", () => {
+    expect(() => extractInvoiceId({ body: { rel: "self" }, location: null })).toThrow(
+      InvoiceIdNotFoundError,
+    );
+  });
+
+  test("throws when the body is not an object at all", () => {
+    expect(() => extractInvoiceId({ body: "" })).toThrow(InvoiceIdNotFoundError);
   });
 });
 

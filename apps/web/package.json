@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check-types": "next typegen && tsc --noEmit",
-    "test": "bun test --pass-with-no-tests"
+    "test": "bun test --no-env-file --pass-with-no-tests"
   },
   "dependencies": {
     "@kitty/shared": "workspace:*",

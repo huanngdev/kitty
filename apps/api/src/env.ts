@@ -13,8 +13,11 @@ const unsetIfEmpty = (value: unknown): unknown => (value === "" ? undefined : va
  */
 const envSchema = z.object({
   // Runtime
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  PORT: z.coerce.number().int().positive().default(8787),
+  NODE_ENV: z.preprocess(
+    unsetIfEmpty,
+    z.enum(["development", "test", "production"]).default("development"),
+  ),
+  PORT: z.preprocess(unsetIfEmpty, z.coerce.number().int().positive().default(8787)),
 
   // Neon Postgres pooled connection used by the app. drizzle-kit migrations use
   // DATABASE_URL_UNPOOLED from packages/db/.env (packages/db/drizzle.config.ts).
