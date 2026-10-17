@@ -42,6 +42,7 @@
         "@kitty/paypal": "workspace:*",
         "@kitty/shared": "workspace:*",
         "@kitty/signing": "workspace:*",
+        "@modelcontextprotocol/sdk": "^1.32.1",
         "axios": "^1.20.0",
         "drizzle-orm": "^0.45.4",
         "hono": "^4.13.13",
