@@ -13,6 +13,8 @@
     "test": "bun test --pass-with-no-tests"
   },
   "dependencies": {
+    "@kitty/shared": "workspace:*",
+    "@kitty/ui": "workspace:*",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",

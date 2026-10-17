@@ -2,7 +2,9 @@
   "extends": "@kitty/typescript-config/nextjs.json",
   "compilerOptions": {
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@kitty/ui/*": ["../../packages/ui/src/*"],
+      "@kitty/shared/*": ["../../packages/shared/src/*"]
     }
   },
   "include": [
