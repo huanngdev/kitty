@@ -206,6 +206,20 @@ Sau commit:
 
 `execute_intent` gọi PayPal với header **`PayPal-Request-Id: <intentId>`** (PayPal tự idempotent), và `sender_batch_id = intentId` cho Payouts. Retry an toàn.
 
+### 7.1 Usage: ledger + intents (KIT-16)
+
+`Usage` (và `ancestorUsage`) được tính **trong cùng transaction, sau khi đã khoá leash + ancestors**, từ hai nguồn:
+
+- **`availableCents` / `heldCents`** đọc từ view `leash.leash_balances` (suy ra từ `ledger_entries`; invariant #5 — số dư luôn từ ledger). `availableCents` của entry ancestor là thông tin, engine **bỏ qua** (tiền đã bị cắt khỏi cha lúc delegate); entry ancestor vẫn cần có để check #14 chạy.
+- **Counters** đọc từ `leash.spend_intents` (chỉ các row `created_at ≥ now − 24h` của kitty):
+  - `spent24hCents` của một leash = Σ `amount_cents` của các intent của leash đó **thuộc trạng thái tiền đang bị giữ/đã đi**: `reserved`, `awaiting_approval`, `submitted`, `settled` — với `created_at` trong 24h. `denied`, `received`, `cancelled`, `failed`, `released` **không** tính (không cam kết đồng nào). Với một ancestor, giá trị này là 24h spend của **toàn bộ cây con** của ancestor đó (dùng `parent_id` của mọi leash trong kitty để suy cây).
+  - `allowCountLastHour` = số intent có `decision ∈ {ALLOW, STEP_UP}` với `created_at ≥ now − 1h`. Với ancestor là số của **toàn cây con**.
+  - `recentIntents` (check #13) = các intent của **đúng leash này** có `payee` và `created_at ≥ now − 10'`, kể cả intent bị DENY (thà step-up thừa còn hơn bỏ sót double-submit). Ancestor `recentIntents = []` (engine không dùng).
+
+**Idempotency & hash.** Mỗi row `spend_intents` lưu `payload_hash` = sha256 của **canonical JSON** `{action, amountCents, currency, payee, category, memo, taskId}` — **không** gồm `justification` (chỉ hiển thị/audit, không ảnh hưởng quyết định). Gửi lại cùng `intentId`: nếu row đã tồn tại → trả nguyên quyết định đã lưu (kể cả khi `status` đã `submitted`/`settled`), miễn là **cùng leash** và **cùng `payload_hash`**; ngược lại → `INTENT_ID_CONFLICT` (409). Ghi row bằng `ON CONFLICT (id) DO NOTHING` rồi đọc lại nên hai request đua nhau vẫn chỉ tạo một row và **một** bút toán reserve.
+
+**Execute (KIT-16, hành động `payout`).** Sau commit, `ALLOW` được `execute_intent` chạy tiếp. Claim nguyên tử bằng `SELECT … FOR UPDATE SKIP LOCKED` trên intent `reserved` (transaction ngắn, tăng `execute_attempts`); gọi PayPal **ngoài** transaction giữ lock. Thành công → `submitted` + row `paypal_objects(kind='payout_batch')` + `paypal_ref`. PayPal từ chối dứt khoát (4xx không retry: trừ 401/408/429) → `released` + bút toán release (`held → available`). Kết quả không xác định (network/5xx/429) → giữ `reserved`, ghi `last_execute_error`; gọi lại an toàn vì `sender_batch_id = intentId`. Lỗi execute **không** ném về agent.
+
 ## 8. Ledger (double-entry, nguồn sự thật)
 
 **Mô hình "bucket":** mỗi bút toán chuyển tiền **từ** một account (dòng âm) **đến** một account (dòng dương); Σ dòng của một bút toán = 0. Số dư một account = SUM các dòng của nó. Các bucket nội bộ (`kitty:*`, `leash:*`) cộng lại **chính là** tiền của Kitty đang nằm trong tài khoản PayPal platform — không có account `platform:paypal` riêng (tránh đếm trùng).
