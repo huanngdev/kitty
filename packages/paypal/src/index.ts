@@ -10,6 +10,15 @@ export { PAYPAL_BASE_URLS, paypalBaseUrl } from "./base-url";
 export { PayPalApiError, toPayPalApiError } from "./errors";
 export type { PayPalApiErrorInit, PayPalErrorDetail } from "./errors";
 export { InvoiceIdNotFoundError, extractInvoiceId, invoiceCreatedSchema } from "./invoice-id";
+export {
+  PAYOUT_BATCH_EVENT_TYPES,
+  PAYOUT_ITEM_EVENT_TYPES,
+  PaypalWebhookEventError,
+  parsePaypalWebhookEvent,
+  paypalWebhookEventEnvelopeSchema,
+  payoutBatchEventResourceSchema,
+  payoutItemEventResourceSchema,
+} from "./payout-events";
 export { WEBHOOK_TRANSMISSION_HEADERS, pickWebhookHeaders } from "./webhooks";
 export { BACKOFF_BASE_MS, backoffMs } from "./http";
 export type {
@@ -50,3 +59,13 @@ export type {
   WebhookTransmissionHeaders,
   WebhooksNamespace,
 } from "./types";
+export type {
+  MalformedPaypalWebhookEvent,
+  OtherPaypalWebhookEvent,
+  PaypalWebhookEvent,
+  PaypalWebhookEventEnvelope,
+  PayoutBatchEventType,
+  PayoutBatchWebhookEvent,
+  PayoutItemEventType,
+  PayoutItemWebhookEvent,
+} from "./payout-events";

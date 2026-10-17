@@ -23,6 +23,23 @@ export const amountSchema = z.object({
   value: moneyWireSchema,
 });
 
+/**
+ * A **payout item** amount. PayPal spells the currency `currency` in the payout
+ * item model but `currency_code` in some REST responses; both are accepted and
+ * normalised by {@link payoutItemCurrency} (docs/11 §2.3).
+ */
+export const payoutItemAmountSchema = z.union([
+  z.object({ currency: currencyCodeSchema, value: moneyWireSchema }),
+  z.object({ currency_code: currencyCodeSchema, value: moneyWireSchema }),
+]);
+
+export type PayoutItemAmount = z.infer<typeof payoutItemAmountSchema>;
+
+/** Currency of an amount parsed by {@link payoutItemAmountSchema}. */
+export function payoutItemCurrency(amount: PayoutItemAmount): string {
+  return "currency" in amount ? amount.currency : amount.currency_code;
+}
+
 export const linkSchema = z.object({
   rel: z.string(),
   href: z.string(),
@@ -74,7 +91,20 @@ export const payoutItemSchema = z.object({
   transaction_status: z.string(),
   payout_batch_id: z.string().optional(),
   sender_item_id: z.string().optional(),
-  amount: amountSchema.optional(),
+  amount: payoutItemAmountSchema.optional(),
+  /**
+   * PayPal's payout item model, nested inside the item in `GET
+   * /v1/payments/payouts/{batch_id}` and `/v1/payments/payouts-item/{id}` (and
+   * in some webhook payloads). The item lookup key `sender_item_id` and the
+   * amount live here, not at the item's top level.
+   */
+  payout_item: z
+    .object({
+      amount: payoutItemAmountSchema.optional(),
+      sender_item_id: z.string().optional(),
+      note: z.string().optional(),
+    })
+    .optional(),
 });
 
 const payoutBatchHeaderSchema = z.object({

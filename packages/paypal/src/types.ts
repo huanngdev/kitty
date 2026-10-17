@@ -132,6 +132,13 @@ export interface CreatePayoutInput {
   /** Idempotency key; also used as `sender_batch_id` (docs/11 §2.3). */
   readonly requestId: string;
   readonly senderBatchId: string;
+  /**
+   * `sender_item_id` of the single payout item: the **item lookup key** the
+   * gateway uses to match `PAYMENT.PAYOUTS-ITEM.*` webhooks back to a spend
+   * intent (docs/11 §3). Defaults to {@link senderBatchId}; Kitty always passes
+   * the intent id.
+   */
+  readonly senderItemId?: string;
   readonly payeeEmail: string;
   /** Amount in integer cents; formatted with `formatMoney` at the edge. */
   readonly amountCents: bigint;

@@ -4,6 +4,7 @@ import type { PayPalTransport } from "./http";
 import {
   payoutBatchSchema,
   payoutCreateSchema,
+  payoutItemCurrency,
   payoutItemSchema,
   payoutRequestSchema,
 } from "./schemas";
@@ -17,15 +18,24 @@ import type {
 
 type PayoutItemWire = z.infer<typeof payoutItemSchema>;
 
-/** Maps a Payouts item to the domain shape (amount → bigint cents). */
+/**
+ * Maps a Payouts item to the domain shape (amount → bigint cents).
+ *
+ * The item lookup key `sender_item_id` sits in the nested `payout_item` model
+ * for `GET /v1/payments/payouts/{id}` and `/v1/payments/payouts-item/{id}`; the
+ * flat spelling is kept as a fallback because webhook resources use it.
+ */
 function toPayoutItem(item: PayoutItemWire): PayoutItem {
+  const nested = item.payout_item;
+  const amount = nested?.amount ?? item.amount;
+
   return {
     itemId: item.payout_item_id,
     status: item.transaction_status,
     batchId: item.payout_batch_id,
-    senderItemId: item.sender_item_id,
-    amountCents: item.amount !== undefined ? parseMoney(item.amount.value) : undefined,
-    currency: item.amount?.currency_code,
+    senderItemId: nested?.sender_item_id ?? item.sender_item_id,
+    amountCents: amount === undefined ? undefined : parseMoney(amount.value),
+    currency: amount === undefined ? undefined : payoutItemCurrency(amount),
   };
 }
 
@@ -45,7 +55,9 @@ export function createPayoutsNamespace(transport: PayPalTransport): PayoutsNames
             amount: { value: formatMoney(input.amountCents), currency: input.currency },
             receiver: input.payeeEmail,
             note: input.note,
-            sender_item_id: input.senderBatchId,
+            // The item lookup key for `PAYMENT.PAYOUTS-ITEM.*` webhooks
+            // (docs/11 §3). Kitty passes the intent id here.
+            sender_item_id: input.senderItemId ?? input.senderBatchId,
           },
         ],
       });
