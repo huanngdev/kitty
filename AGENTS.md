@@ -78,25 +78,25 @@ Nếu một task có vẻ đòi vi phạm điều trên → dừng lại, ghi v�
 ```
 apps/web          Next.js 16 UI + BFF + Web App API cho agents     (no PayPal secret)
 apps/api          Hono 4 chạy trên Bun — service API                (no PayPal secret)
-apps/gateway      (planned) Leash Gateway: Hono REST admin + MCP + webhooks (ONLY PayPal secret)
+apps/gateway      (skeleton) Leash Gateway: Hono REST admin + MCP + webhooks (ONLY PayPal secret)
 apps/agents       (planned) Agent runtime: tool-use loops (BYOK models), agent keys, decrypts user LLM keys (no PayPal secret)
 apps/worker       (planned) Render Workflows / outbox / cron sweeps (no PayPal secret)
 apps/demo-sites   (planned) Static: demo vendor booking site + injection page
 packages/typescript-config  @kitty/typescript-config — tsconfig base/nextjs/bun
 packages/eslint-config      @kitty/eslint-config — shared ESLint flat config
 packages/prettier-config    @kitty/prettier-config — shared Prettier config
-packages/shared   (proposed) @kitty/shared — Zod contracts, types, error codes, API paths
+packages/shared   (exists) @kitty/shared — Zod contracts, types, error codes, API paths
 packages/leash    (planned) Pure policy engine, types, reason codes
 packages/ledger   (planned) Money (cents) + bucket ledger helpers
 packages/paypal   (planned) Typed PayPal REST client (gateway only)
 packages/signing  (planned) Ed25519 request signing/verification
 packages/crypto-box  (planned) Envelope encryption for user LLM API keys (agents only)
-packages/db       (proposed) @kitty/db — Drizzle schema, client, migrations (chỉ apps/api)
+packages/db       (exists) @kitty/db — Drizzle schema, client, migrations (chỉ apps/api và apps/gateway)
 packages/events   (planned) Domain event types (zod)
-packages/ui       (proposed) @kitty/ui — shadcn/ui components, Tailwind tokens, cn()
+packages/ui       (exists) @kitty/ui — shadcn/ui components, Tailwind tokens, cn()
 packages/config   (planned) env schemas (zod)
 postman/          (planned) Postman collections
-scripts/          (planned) sandbox-check, gen-agent-keys, demo reset, env isolation check
+scripts/          (exists) check-env-isolation; sandbox-check nằm ở apps/gateway/scripts; còn lại planned
 turbo.json        Turborepo task graph
 ```
 
@@ -106,16 +106,22 @@ turbo.json        Turborepo task graph
 
 ```bash
 bun install                      # cài toàn bộ workspace (bun.lock)
-bun run dev                      # turbo run dev → web :3000 · api :8787
+bun run dev                      # turbo run dev → web :3000 · api :8787 · gateway :8788
 bun run build                    # turbo run build
 bun run start                    # turbo run start (sau build)
 bun run lint                     # turbo run lint (ESLint 10: next, tailwind, shadcn)
 bun run lint:fix                 # turbo run lint:fix — sắp xếp class Tailwind + fix các rule
 bun run check-types              # turbo run check-types (tsc --noEmit)
+bun run test                     # turbo run test (bun test trong từng package)
+bun run check:env-isolation      # fail nếu PAYPAL_CLIENT_SECRET lọt ra ngoài apps/gateway
+bun run db:generate              # drizzle-kit generate (packages/db, offline)
+bun run db:migrate               # drizzle-kit migrate (packages/db, cần DATABASE_URL_UNPOOLED)
+bun run db:studio                # drizzle-kit studio (packages/db, cần DATABASE_URL_UNPOOLED)
+bun run sandbox:check            # kiểm tra PayPal sandbox (apps/gateway only; cần biến PayPal trong apps/gateway/.env)
 bun run format                   # prettier --write .
 bun run format:check             # prettier --check .
 bun run clean                    # xoá .turbo / .next / cache
-bun run ci                       # format:check + lint + check-types + build
+bun run ci                       # format:check + lint + check-types + test + check:env-isolation + build
 bun run --filter web dev         # chạy riêng một service
 ```
 

@@ -1,7 +1,26 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
-  "globalEnv": ["PORT"],
+  "globalEnv": [
+    "PORT",
+    "NODE_ENV",
+    "DATABASE_URL",
+    "DATABASE_URL_UNPOOLED",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "WEB_ORIGIN",
+    "GATEWAY_URL",
+    "GATEWAY_ADMIN_TOKEN",
+    "GATEWAY_INTERNAL_TOKEN",
+    "API_URL",
+    "NEXT_PUBLIC_APP_URL",
+    "NEXT_PUBLIC_PAYPAL_CLIENT_ID",
+    "PAYPAL_ENV",
+    "PAYPAL_CLIENT_ID",
+    "PAYPAL_CLIENT_SECRET",
+    "PAYPAL_WEBHOOK_ID",
+    "PLATFORM_PAYPAL_EMAIL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -25,6 +44,11 @@
     },
     "check-types": {
       "dependsOn": ["^check-types"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "**/*.test.ts", "**/*.test.tsx"],
+      "outputs": []
     }
   }
 }

@@ -1,0 +1,11 @@
+/**
+ * API path constants shared by the web app, the API and the gateway so a route
+ * is never spelled out twice.
+ */
+export const apiPaths = {
+  health: "/health",
+  /** Base path of the Better Auth handler mounted by `apps/api`. */
+  auth: "/api/auth",
+} as const;
+
+export type ApiPaths = typeof apiPaths;

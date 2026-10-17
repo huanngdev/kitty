@@ -1,16 +1,7 @@
-import { Hono } from "hono";
-
-const app = new Hono();
-
-app.get("/", (c) => {
-  return c.text("Hello Hono!");
-});
-
-app.get("/health", (c) => {
-  return c.json({ ok: true });
-});
+import { app } from "./app";
+import { env } from "./env";
 
 export default {
-  port: Number(process.env.PORT ?? 8787),
+  port: env.PORT,
   fetch: app.fetch,
 };
