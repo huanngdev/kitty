@@ -42,7 +42,8 @@ Monorepo + CI (đã có); `render.yaml` + Dockerfiles; web/api/gateway chạy tr
 Web: tạo event (form) → members/vendors → gửi invoice → member trả (sandbox) → Kitty tăng → leash Treasurer → step-up → approve → payout → settled; payment gate mở trên timeline; manual mode đủ dùng.
 
 - ✅ **KIT-24** — Web shell: sign in/up, tài khoản demo, app layout, theme · PR #14 (đã qua UI reset PR #19 + UI-QA PR #22)
-- 🟡 **KIT-64** — Auth: email/password + GitHub + PayPal login, authorization middleware (verify email, account linking policy, Settings → Account, rate limit DB) · PR mở, **owner review auth trước khi merge**- ✅ **KIT-30** — App schema + api modules (events, members, vendors, budget lines) · PR #15 (migration 0008, smoke:events OK)
+- 🟡 **KIT-64** — Auth: email/password + GitHub + PayPal login, authorization middleware (verify email, account linking policy, Settings → Account, rate limit DB) · PR mở, **owner review auth trước khi merge**
+- ✅ **KIT-30** — App schema + api modules (events, members, vendors, budget lines) · PR #15 (migration 0008, smoke:events OK)
 - ⬜ **KIT-21** — Tạo event, members, vendors (verify), kitty qua gateway · 21/10 · depends-on: KIT-30, KIT-12
 - ❌ **KIT-22** — `leash_create_invoice` + Invoicing webhook → contributions · gộp vào **KIT-58** (re-plan đưa tiền vào lên M1)
 - ⬜ **KIT-27** — Trang `/pay/:requestId` + Orders fallback (JS SDK v6) · 22/10 · depends-on: KIT-58
