@@ -53,7 +53,7 @@ Tokens định nghĩa một lần (Tailwind v4 `@theme`) và map sang theme AG S
 - Danh sách card mỗi leash: agent, allocation thanh tiến độ (available/held/spent), limits, payees chips, expiry countdown, nút **Pause / Revoke / Top-up**.
 - Cây delegation (Planner → Shopper) hiển thị lồng.
 - **Create leash** sheet với presets + "Explain this leash" (render câu tiếng Anh từ policy: *"Shopper can pay up to $400 at a time, $500 in total, only to Hoodie Lab, only for merch, until Nov 4 08:00."*).
-- **Connect an external agent** sheet ([ADR-025](20-risks-and-decisions.md)): (1) chạy `bunx leash-mcp init`, (2) dán public key + đặt tên ("Claude Desktop"), (3) cấp leash (preset nhỏ: $100, 24h), (4) copy snippet cấu hình cho Claude Desktop / Claude Code / Cursor. Agent ngoài có badge **External**.
+- **Connect an external agent** sheet ([ADR-027](20-risks-and-decisions.md)): (1) chạy `bunx leash-mcp init`, (2) dán public key + đặt tên ("Claude Desktop"), (3) cấp leash (preset nhỏ: $100, 24h), (4) copy snippet cấu hình cho Claude Desktop / Claude Code / Cursor. Agent ngoài có badge **External**.
 
 ### 3.3 Approval Inbox `/events/:id/approvals`
 Card: số tiền lớn, payee (verified ✓), leash + lý do step-up, task liên quan, *agent's justification (unverified)*, countdown 15', **Approve / Reject**.

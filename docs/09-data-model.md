@@ -117,7 +117,7 @@ CREATE TABLE app.agents (
   UNIQUE (event_id, role)
 );
 
-CREATE TABLE app.documents (                   -- báo giá / hợp đồng upload (chưa dùng trong hackathon: S6 bỏ — ADR-024)
+CREATE TABLE app.documents (                   -- báo giá / hợp đồng upload (chưa dùng trong hackathon: S6 bỏ — ADR-026)
   id            text PRIMARY KEY,
   event_id      text NOT NULL REFERENCES app.events(id) ON DELETE CASCADE,
   vendor_id     text REFERENCES app.vendors(id),

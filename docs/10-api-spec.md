@@ -185,7 +185,7 @@ Input: `{ limit?: number }` → 20 intent gần nhất của leash của agent.
 - **Theo spec MCP hiện hành (2026-07-28):** `GET` / `DELETE /mcp` đang trả `404` → phải trả **`405 Method Not Allowed`** (server stateless, không có SSE stream hay session). Thêm **tool annotations**: `readOnlyHint` cho `leash_status`, `leash_check`, `leash_intent_status`, `leash_activity`; `destructiveHint` + `idempotentHint` (theo `intentId`) cho các tool tạo intent. Thêm resource `leash://status` (cùng dữ liệu `leash_status`) để client đọc ngữ cảnh mà không cần gọi tool.
 - **Auth:** giữ Ed25519 per-request (ADR-004). Trong hackathon không quảng bá OAuth metadata (`/.well-known/oauth-protected-resource`); MCP client có sẵn nối qua `leash-mcp`.
 
-### 2.3 `leash-mcp` — bridge cho MCP client bên ngoài ([ADR-025](20-risks-and-decisions.md), lịch 31/10)
+### 2.3 `leash-mcp` — bridge cho MCP client bên ngoài ([ADR-027](20-risks-and-decisions.md), lịch 31/10)
 
 | Lệnh | Việc |
 |---|---|

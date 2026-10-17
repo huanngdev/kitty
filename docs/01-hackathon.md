@@ -102,7 +102,7 @@ Judges **không bắt buộc** test project — có thể chấm chỉ dựa tr�
 | Best Use of Channel3 | $1.500 | 1 | Gọi Channel3 API/MCP thực chất — chỉ nhắc tên mà không gọi thì **không đủ điều kiện** (https://paypalaihackathon.devpost.com/details/channel3) |
 | Best Use of Render — 1st/2nd/3rd | $1.000 / $750 / $500 Render credits | 1 mỗi hạng | Dùng tool Render |
 
-**Không có giải sponsor** cho Zapier, Postman, Elastic, KERNEL, Astropods (kiểm 17/10) — họ chỉ cung cấp tool/credits. Không sponsor nào có yêu cầu riêng về MCP. Chiến lược sponsor của Kitty: [13-sponsor-integrations.md](13-sponsor-integrations.md), [ADR-024](20-risks-and-decisions.md).
+**Không có giải sponsor** cho Zapier, Postman, Elastic, KERNEL, Astropods (kiểm 17/10) — họ chỉ cung cấp tool/credits. Không sponsor nào có yêu cầu riêng về MCP. Chiến lược sponsor của Kitty: [13-sponsor-integrations.md](13-sponsor-integrations.md), [ADR-026](20-risks-and-decisions.md).
 
 ### ⚠️ Luật cộng dồn giải
 > Một project chỉ thắng tối đa **1 Grand Prize + 1 Sponsor Prize** HOẶC **1 Honorable Mention + 1 Sponsor Prize**.
@@ -149,7 +149,7 @@ Hệ quả cho chiến lược: tích hợp nhiều sponsor chỉ **tăng số g
 
 ## 8. Sponsor tools (tóm tắt — chi tiết tích hợp ở [13-sponsor-integrations.md](13-sponsor-integrations.md))
 
-| Sponsor | Là gì | Free access | Có giải? | Kitty dùng? (ADR-024) |
+| Sponsor | Là gì | Free access | Có giải? | Kitty dùng? (ADR-026) |
 |---|---|---|---|---|
 | AG Grid (AG Studio) | Embedded analytics: dashboards + charts + grids, Studio Agent Framework | Trial 45 ngày; boilerplate PayPal: https://github.com/paypaldev/hackathon-paypal-ag-grid-boilerplate | ✅ | **Tier 1 — nhắm giải** |
 | APIMatic | Context Plugins cho AI coding agents (PayPal đã bật sẵn) | 1 tháng Basic (form), winners 6 tháng Business | ✅ | Dev tooling |

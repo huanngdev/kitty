@@ -69,7 +69,7 @@ At Sui Basecamp 2026, Sui introduced the idea of an agent pass: give AI agents l
 - [ ] Video YouTube Public < 3'
 - [ ] Built With tags (xem [13](13-sponsor-integrations.md) §11)
 - [ ] Mục "Tools used" chi tiết từng tool
-- [ ] Ghi chú sponsor prizes muốn được xét: AG Grid (chính); Channel3, APIMatic, Render chỉ khi dùng thật; Bryntum chỉ khi Gantt có trong bản nộp ([ADR-024](20-risks-and-decisions.md))
+- [ ] Ghi chú sponsor prizes muốn được xét: AG Grid (chính); Channel3, APIMatic, Render chỉ khi dùng thật; Bryntum chỉ khi Gantt có trong bản nộp ([ADR-026](20-risks-and-decisions.md))
 - [ ] README có MCP quickstart (`leash-mcp` + snippet Claude Desktop / Claude Code / MCP Inspector), đã thử trên máy sạch
 - [ ] Team members đều đã join hackathon và được add vào project
 - [ ] Nộp trước **11/11 23:59 ICT**; chụp màn hình xác nhận

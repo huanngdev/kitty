@@ -64,7 +64,7 @@ A: Trang `/pay` public cần SSR nhanh; AG Studio và Bryntum có wrapper React 
 | Services | `apps/gateway` (Leash Gateway), `apps/agents` (agent runtime), `apps/worker` (jobs/outbox) |
 | Entry | `export default { port: env.PORT, fetch: app.fetch }` → Bun tự `serve`. Mỗi app khai báo default trong `src/env.ts` (api 8787, gateway 8788) |
 | Middleware dùng | `hono/logger` (thay bằng pino), `hono/secure-headers`, `hono/body-limit`, `hono/timeout`, `zValidator` (`@hono/zod-validator`), middleware tự viết `leashSignature()` cho Ed25519 |
-| MCP | **`@modelcontextprotocol/sdk@1.32.x`** dùng trực tiếp: `WebStandardStreamableHTTPServerTransport` (stateless, JSON response) gắn vào route `POST /mcp` của gateway (KIT-5). Không dùng `@hono/mcp`. Client bên ngoài nối qua `packages/leash-mcp` (`StdioServerTransport`, ADR-025) |
+| MCP | **`@modelcontextprotocol/sdk@1.32.x`** dùng trực tiếp: `WebStandardStreamableHTTPServerTransport` (stateless, JSON response) gắn vào route `POST /mcp` của gateway (KIT-5). Không dùng `@hono/mcp`. Client bên ngoài nối qua `packages/leash-mcp` (`StdioServerTransport`, ADR-027) |
 | Type sharing | Contract là Zod schema trong **`@kitty/shared`** (`z.infer` cho type). Không dùng Hono RPC `hc<AppType>` (xem ADR-016) |
 | Raw body cho webhook | `await c.req.text()` trước khi parse JSON (cần raw cho verify chữ ký PayPal) |
 
@@ -104,10 +104,10 @@ export default { port: env.PORT, fetch: app.fetch };
 | Client state | React state trước; **Zustand** (tuỳ chọn) | Redux | Chỉ cho cross-component client state; không chứa server data |
 | Data contracts | **`@kitty/shared` (Zod v4)** | Hono RPC `hc<AppType>` | Một nguồn sự thật cho web + api; type = `z.infer` |
 | Styling | **Tailwind CSS 4 + `cn()` (clsx + tailwind-merge)** | CSS-in-JS | Nhanh; token dùng chung với AG Studio (và Bryntum nếu dùng) |
-| Payment-gate timeline | **Component shadcn của mình**; Bryntum Gantt (React wrapper, trial) chỉ là nâng cấp Could (ADR-024) | frappe-gantt | Không phụ thuộc trial cho tính năng "không bao giờ cắt" |
+| Payment-gate timeline | **Component shadcn của mình**; Bryntum Gantt (React wrapper, trial) chỉ là nâng cấp Could (ADR-026) | frappe-gantt | Không phụ thuộc trial cho tính năng "không bao giờ cắt" |
 | Dashboard | **AG Studio (React) + Studio Agent Framework** | Recharts | Sponsor; NL → widget |
 | Backend HTTP | **Hono 4.13 trên Bun** | Express, Fastify, Elysia | Web-standard, nhẹ, RPC types, middleware gọn |
-| MCP | **`@modelcontextprotocol/sdk`**: Streamable HTTP stateless cho Gateway; stdio cho `leash-mcp` | `@hono/mcp` | Gateway là MCP server từ xa; client có sẵn (Claude Desktop, Claude Code, Cursor) nối qua bridge ký Ed25519 (ADR-025) |
+| MCP | **`@modelcontextprotocol/sdk`**: Streamable HTTP stateless cho Gateway; stdio cho `leash-mcp` | `@hono/mcp` | Gateway là MCP server từ xa; client có sẵn (Claude Desktop, Claude Code, Cursor) nối qua bridge ký Ed25519 (ADR-027) |
 | DB | **Neon** (serverless PostgreSQL 16) | Render Postgres, SQLite | Branch theo dev/preview/test; pooled URL cho app, unpooled cho migrations; `SELECT … FOR UPDATE` cần TCP |
 | Object storage | **Cloudflare R2** (S3 API + presigned URL) | S3, GCS | Chỉ khi cần file; browser upload trực tiếp, key/metadata ở Postgres |
 | ORM / driver | **Drizzle ORM 0.45 + `postgres` (postgres.js)** | Prisma, `Bun.sql` | Chạy cả Bun lẫn Node (giữ được fallback); kiểm soát transaction/lock |
@@ -123,7 +123,7 @@ export default { port: env.PORT, fetch: app.fetch };
 | Money | **Integer cents (`bigint`)** + helper `Money` | float, decimal.js | Không sai số |
 | Jobs | **Render Workflows** | BullMQ + Redis | Sponsor; fallback: worker Hono/Bun poll outbox + Render Cron |
 | Product data | **Channel3 API/MCP** (Should) | scraping | Sponsor; không kịp → catalog demo |
-| Notifications | **In-app** (SSE: badge, toast, banner) + email của PayPal (invoice, reminder) | Zapier MCP, Slack SDK | ADR-024 |
+| Notifications | **In-app** (SSE: badge, toast, banner) + email của PayPal (invoice, reminder) | Zapier MCP, Slack SDK | ADR-026 |
 | Unit/integration test | **`bun test`** + **fast-check** (property) | Vitest | Có sẵn trong Bun, API giống Jest |
 | HTTP mock | **MSW 2** (`msw/node`, mock qua axios adapter) | nock | Mock PayPal API |
 | E2E | **Playwright** (`bunx playwright test`) | Cypress | |
@@ -133,7 +133,7 @@ export default { port: env.PORT, fetch: app.fetch };
 | Hosting | **Render** (Blueprint `render.yaml`, Docker runtime với image `oven/bun:1.3`) | Vercel + Fly | Sponsor; mọi service một chỗ |
 | AI coding | **Claude Code + APIMatic Context Plugin cho PayPal + PayPal AI-Toolkit plugin** | | Dev tooling (ADR-007) |
 
-> Đã bỏ khỏi stack hackathon ([ADR-024](20-risks-and-decisions.md)): Elastic (search/RAG), KERNEL (browser agent), Zapier MCP (notifications), Postman (API dev).
+> Đã bỏ khỏi stack hackathon ([ADR-026](20-risks-and-decisions.md)): Elastic (search/RAG), KERNEL (browser agent), Zapier MCP (notifications), Postman (API dev).
 
 ## 3. Model LLM theo vai
 

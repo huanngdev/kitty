@@ -1,6 +1,6 @@
 # 16 — Roadmap & Kế hoạch theo ngày
 
-> Cập nhật: **Sat 17/10/2026** — re-plan sau review chiến lược + audit code ([ADR-024](20-risks-and-decisions.md), [ADR-025](20-risks-and-decisions.md)). Hạn nội bộ nộp bài: **Wed 11/11/2026 23:59 ICT**. Hạn chót Devpost: Thu 12/11 12:00pm PST (≈ 03:00 Fri 13/11 ICT).
+> Cập nhật: **Sat 17/10/2026** — re-plan sau review chiến lược + audit code ([ADR-026](20-risks-and-decisions.md), [ADR-027](20-risks-and-decisions.md)). Hạn nội bộ nộp bài: **Wed 11/11/2026 23:59 ICT**. Hạn chót Devpost: Thu 12/11 12:00pm PST (≈ 03:00 Fri 13/11 ICT).
 > Còn **25 ngày** + 1 ngày buffer. Cập nhật bảng trạng thái (§6) mỗi tối.
 
 ## 1. Milestones
@@ -20,10 +20,12 @@
 ### Đã xong (16–17/10)
 Bộ docs 01–25 · monorepo Turborepo + Bun + CI · `packages/leash` (100% coverage, property tests) · `packages/ledger` · `packages/signing` (+ `createSignedFetch`) · `packages/paypal` (Payouts, Invoicing, Orders, Refunds, verify webhook) · `packages/db` (schema `leash`; schema `app`: events, members, vendors, budget lines, auth) · gateway: admin `/v1` (kitties, agents, leashes, payees, audit), reserve → execute payout, MCP 5 tool (KIT-5), webhook payout + reconcile (KIT-7) · `apps/api`: Better Auth, demo login, events/members/vendors/budget lines + tạo kitty (KIT-30) · web: sign in/up, app shell, theme (KIT-24) · runtime spike (KIT-10) · 647 test pass.
 
+**Sau re-plan (17/10, đã merge lên main):** test layout theo package `test/` (KIT-56, PR #18) · UI reset — shadcn cài trực tiếp trong `apps/web`, xoá `packages/ui`, `<Logo />` (KIT-55, PR #19) · `LinkButton` dùng chung (PR #20) · UI-QA — `proxy.ts` xác thực session thật thay vì chỉ tin cookie, nhãn nút demo rõ ("Try the demo (for judges)"), shell mobile gọn (PR #22).
+
 ### Tuần 0–1: Deploy + đóng vòng tiền ở gateway
 | Ngày | Việc | Output |
 |---|---|---|
-| Sat 17/10 | `render.yaml` + Dockerfiles (web, api, gateway) · deploy lên Render + Neon · `sandbox:check` pass · đăng ký webhook PayPal trỏ về gateway đã deploy · re-plan docs (ADR-024, ADR-025) | **M0** |
+| Sat 17/10 | `render.yaml` + Dockerfiles (web, api, gateway) · deploy lên Render + Neon · `sandbox:check` pass · đăng ký webhook PayPal trỏ về gateway đã deploy · re-plan docs (ADR-026, ADR-027) | **M0** |
 | Sun 18/10 | Spike ADR-007 (`@paypal/agent-toolkit` trong gateway: có `PayPal-Request-Id` không?) → chốt · approvals: `POST /v1/approvals/:id/approve` / `reject`, approve → execute, hết hạn 15' → release hold | ADR-007 chốt |
 | Mon 19/10 | `leash_create_invoice` (Toolkit hoặc REST) + webhook `INVOICING.INVOICE.PAID` → ledger `member_contribution` → `kitty.available` · endpoint "collect" cho organizer (manual mode) | Tiền vào được (R16) |
 | Tue 20/10 | `leash_send_reminder` (Invoicing `/remind`), `leash_request_refund`, `leash_delegate` (validator có sẵn) · MCP đúng spec: GET/DELETE `/mcp` → 405, tool annotations (`readOnlyHint` / `destructiveHint` / `idempotentHint`), resource `leash://status` | 9/9 tool |
@@ -46,7 +48,7 @@ Bộ docs 01–25 · monorepo Turborepo + Bun + CI · `packages/leash` (100% cov
 |---|---|
 | Thu 29/10 | `apps/agents`: loop qua **AI SDK**, MCP client ký bằng `createSignedFetch`, tool dispatcher theo vai, `agent_runs` trace · **BYOK** tối thiểu: `packages/crypto-box`, `ai_credentials`/`model_settings`/`llm_usage`, `resolveModel()`, màn hình S21 (Anthropic + OpenAI-compatible), demo key cho tài khoản `is_demo` |
 | Fri 30/10 | Treasurer (gate mở → payout intent) + Shopper (payout trong leash) · `apps/demo-sites`: trang "Hoodie Deals" có injection · luồng injection → DENY → banner đỏ → Revoke |
-| Sat 31/10 | **`packages/leash-mcp`** (`init` sinh keypair trên máy người dùng, stdio → `/mcp` có ký) + màn hình "Connect an external agent" · test với MCP Inspector, Claude Desktop, Claude Code (ADR-025) |
+| Sat 31/10 | **`packages/leash-mcp`** (`init` sinh keypair trên máy người dùng, stdio → `/mcp` có ký) + màn hình "Connect an external agent" · test với MCP Inspector, Claude Desktop, Claude Code (ADR-027) |
 | Sun 01/11 | Kích hoạt trial **AG Studio** (45 ngày → ~16/12, phủ judging) · Money Room: Kitty Gauge + Who still owes (custom widgets), theme, layout preset |
 | Mon 02/11 | Planner: prompt → structured plan → plan diff → tạo tasks/budget/gates | **M3** |
 
@@ -82,13 +84,13 @@ Bất kỳ trễ nào trên chuỗi này → cắt theo §4 ngay, không đợi.
 6. Settlement refunds tự động (giữ preview)
 7. Sub-leash (giữ leash gốc cho Shopper)
 
-**Đã bỏ khỏi scope hackathon ([ADR-024](20-risks-and-decisions.md)):** Zapier, Elastic, KERNEL, Astropods, Postman collection.
+**Đã bỏ khỏi scope hackathon ([ADR-026](20-risks-and-decisions.md)):** Zapier, Elastic, KERNEL, Astropods, Postman collection.
 
 **Không bao giờ cắt:** Leash Gateway + policy + signing · prefunded allocation · money loop invoice → payout với webhooks trên URL đã deploy · approve/reject step-up · injection-blocked demo · payment gate (timeline) · AG dashboard cơ bản · `leash-mcp` với ≥1 MCP client bên ngoài · BYOK tối thiểu (key mã hoá + chọn model) + demo key cho judges · manual mode · README + video.
 
 ## 5. Nhịp làm việc
 
-- Mỗi ngày: cuối ngày deploy demo + cập nhật bảng trạng thái + ghi quyết định mới vào [20-risks-and-decisions.md](20-risks-and-decisions.md).
+- Mỗi ngày: cuối ngày deploy demo + cập nhật [MILESTONES.md](../MILESTONES.md) / [PROGRESS.md](../PROGRESS.md) + ghi quyết định mới vào [20-risks-and-decisions.md](20-risks-and-decisions.md).
 - Mỗi milestone: quay một đoạn screen recording ngắn (dùng lại cho video, và làm bằng chứng tiến độ).
 - Kiểm tra Devpost **Updates** mỗi thứ Hai.
 
@@ -98,8 +100,10 @@ Bất kỳ trễ nào trên chuỗi này → cắt theo §4 ngay, không đợi.
 |---|---|---|
 | M0 | 🟡 | Monorepo, CI, script `sandbox:check` có; chưa có `render.yaml` / deploy |
 | M1 | 🟡 | Code lõi xong (policy, ledger, signing, MCP 5/9 tool, payout + webhook payout + reconcile); thiếu tiền vào (invoice), approvals, 4 tool, chạy live |
-| M2 | 🟡 | ~25%: API events/members/vendors/budget lines + tạo kitty; web mới có auth + shell |
+| M2 | 🟡 | ~25%: API events/members/vendors/budget lines + tạo kitty; web mới có auth + shell (đã qua UI reset PR #19 và UI-QA PR #22) |
 | M3 | ⏳ | `apps/agents`, `leash-mcp`, BYOK, AG Studio chưa bắt đầu |
 | M4 | ⏳ | Chỉ có delegation validator trong `packages/leash` |
 | M5 | ⏳ | LICENSE có; README còn sơ khai |
 | M6 | ⏳ | |
+
+> Trạng thái chi tiết theo từng task: [MILESTONES.md](../MILESTONES.md). Nhật ký đã làm: [PROGRESS.md](../PROGRESS.md).

@@ -61,7 +61,7 @@ available = allocation − settled_spend − reserved
 | `create_order` | IN organizer → Kitty (nạp quỹ) | Orders v2 | (chỉ organizer UI, không cấp cho agent trong MVP) |
 | `refund` | OUT Kitty → member | `POST /v2/payments/captures/{id}/refund` | Treasurer (settlement) |
 | `delegate` | — (cắt allocation sang sub-leash) | — | Planner |
-| `browser_booking` | — (hành động web có giá trị cam kết; giữ trong spec, **không build** trong hackathon — ADR-024) | — | — |
+| `browser_booking` | — (hành động web có giá trị cam kết; giữ trong spec, **không build** trong hackathon — ADR-026) | — | — |
 
 `amount` của `send_reminder`, `browser_booking` = 0 nhưng vẫn qua policy (action allowlist + rate limit).
 
@@ -318,7 +318,7 @@ Revoke cha → cascade revoke con (trong cùng transaction); tiền con về cha
 
 - Tạo `approval {id, intentId, expiresAt = now+15m, status: pending}`.
 - Tiền đã **reserved** khi tạo approval (để không bị leash khác tiêu mất trong lúc chờ).
-- Thông báo: in-app (SSE → badge Approvals + toast) với deep link `/events/:id/approvals/:approvalId`. Không có Slack/Zapier ([ADR-024](20-risks-and-decisions.md)).
+- Thông báo: in-app (SSE → badge Approvals + toast) với deep link `/events/:id/approvals/:approvalId`. Không có Slack/Zapier ([ADR-026](20-risks-and-decisions.md)).
 - Approve chỉ được bởi organizer của kitty (session web), **không bao giờ bởi agent** (agent không có endpoint approve).
 - Approve → `execute_intent`. Reject/timeout → `cancelled` + release hold.
 - Approval hiển thị: số tiền, payee, leash, reason step-up, `justification` của agent (đánh dấu "agent's claim — unverified").
@@ -358,7 +358,7 @@ Revoke cha → cascade revoke con (trong cùng transaction); tiền con về cha
 | `leash_intent_status` | Trạng thái một intent | object | ✅ KIT-5 |
 | `leash_activity` | 20 intent gần nhất của leash | list | ✅ KIT-5 |
 
-**Client:** agents của Kitty (`apps/agents`) và mọi MCP client bên ngoài nối qua `leash-mcp` ([ADR-025](20-risks-and-decisions.md)) thấy **cùng** bộ tool này — không có tool riêng hay quyền riêng cho agent ngoài.
+**Client:** agents của Kitty (`apps/agents`) và mọi MCP client bên ngoài nối qua `leash-mcp` ([ADR-027](20-risks-and-decisions.md)) thấy **cùng** bộ tool này — không có tool riêng hay quyền riêng cho agent ngoài.
 
 Mô tả tool cho LLM phải nói rõ: *"Denials are final for this request. Do not retry with modified payees or amounts to work around a denial; report the denial to the organizer."* — và Gateway cũng tự phát hiện "probing": ≥3 DENY liên tiếp trong 5 phút → tự `pause` leash + alert (tuỳ chọn cấu hình, bật trong demo).
 

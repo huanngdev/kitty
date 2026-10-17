@@ -94,7 +94,7 @@ Ngược lại: biến rủi ro mơ hồ thành con số nhỏ, cụ thể, ki�
 Presets + câu "Explain this leash" bằng ngôn ngữ thường; JSON chỉ hiện ở chế độ nâng cao.
 
 **E4. Vì sao Gantt chứ không phải checklist?**
-Tiền có *thời điểm* (cọc trước X ngày) và *phụ thuộc* (chưa đủ tiền thì chưa đặt xe). Timeline với payment gate thể hiện điều đó trực quan. Bản hackathon vẽ bằng component shadcn của mình; Bryntum Gantt chỉ là nâng cấp nếu dư thời gian ([ADR-024](20-risks-and-decisions.md)).
+Tiền có *thời điểm* (cọc trước X ngày) và *phụ thuộc* (chưa đủ tiền thì chưa đặt xe). Timeline với payment gate thể hiện điều đó trực quan. Bản hackathon vẽ bằng component shadcn của mình; Bryntum Gantt chỉ là nâng cấp nếu dư thời gian ([ADR-026](20-risks-and-decisions.md)).
 
 ## F. Hackathon & chiến lược
 
@@ -114,10 +114,10 @@ Có M2 (28/10): money loop + leash + step-up + revoke là đủ một bài nộp
 Quy tắc: chỉ liệt kê tool thực sự được gọi trong code chạy trên demo. Tool dùng lúc dev (APIMatic Context Plugin, PayPal AI-Toolkit plugin) ghi rõ là dev tooling. "PayPal Agent Toolkit" chỉ ghi khi gateway thật sự gọi nó (ADR-007).
 
 **F6. Vì sao cắt Zapier, Elastic, KERNEL, Astropods, Postman?**
-Không cái nào có giải sponsor, và luật chỉ cho thắng 1 giải sponsor. Mỗi tích hợp phụ là ngày công lấy từ đường găng (tiền vào, agents, web) — trong khi Design chấm *sự mạch lạc*, không chấm số logo. Chi tiết [ADR-024](20-risks-and-decisions.md).
+Không cái nào có giải sponsor, và luật chỉ cho thắng 1 giải sponsor. Mỗi tích hợp phụ là ngày công lấy từ đường găng (tiền vào, agents, web) — trong khi Design chấm *sự mạch lạc*, không chấm số logo. Chi tiết [ADR-026](20-risks-and-decisions.md).
 
 **F7. Vì sao làm `leash-mcp` thay vì OAuth cho remote MCP?**
-Luận điểm Impact "bất kỳ agent nào cũng dùng được Leash" cần bằng chứng chạy được, và rẻ nhất là một bridge stdio dùng lại `createSignedFetch` có sẵn. OAuth cho remote MCP đẹp hơn (consent screen = form tạo leash) nhưng bearer token đi ngược ADR-004 và tốn thời gian → để sau hackathon. Chi tiết [ADR-025](20-risks-and-decisions.md).
+Luận điểm Impact "bất kỳ agent nào cũng dùng được Leash" cần bằng chứng chạy được, và rẻ nhất là một bridge stdio dùng lại `createSignedFetch` có sẵn. OAuth cho remote MCP đẹp hơn (consent screen = form tạo leash) nhưng bearer token đi ngược ADR-004 và tốn thời gian → để sau hackathon. Chi tiết [ADR-027](20-risks-and-decisions.md).
 
 ## G. Bảo mật nâng cao
 

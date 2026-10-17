@@ -1,6 +1,6 @@
 # 13 — Sponsor Integrations
 
-> Cập nhật 17/10 theo [ADR-024](20-risks-and-decisions.md): thu hẹp sponsor theo luật cộng dồn giải. Tiêu chí từng giải sponsor kiểm trên Devpost ngày 17/10 ([01-hackathon.md](01-hackathon.md) §6).
+> Cập nhật 17/10 theo [ADR-026](20-risks-and-decisions.md): thu hẹp sponsor theo luật cộng dồn giải. Tiêu chí từng giải sponsor kiểm trên Devpost ngày 17/10 ([01-hackathon.md](01-hackathon.md) §6).
 
 ## 0. Chiến lược
 
@@ -13,7 +13,7 @@ A: Luật thưởng: tối đa **1 giải chính/Honorable Mention + 1 giải sp
 | **Tier 2 — tính năng thật** | **Render**, **Channel3** | Render: toàn bộ hosting. Channel3: Shopper discovery (Should) | Render dùng thật; Channel3 có giải nhưng chỉ khi gọi API thực chất |
 | **Tier 3 — dev tooling** | **APIMatic** | Dùng lúc build `packages/paypal` | Có giải; chỉ ghi khi dùng thật |
 | **Could** | **Bryntum** | Gantt thay timeline shadcn nếu dư thời gian sau M4 | Có giải nhưng luật chỉ cho 1 giải sponsor; payment gate vẫn có mà không cần Bryntum |
-| **Bỏ (ADR-024)** | Zapier, Elastic, KERNEL, Astropods, Postman | — | Không có giải sponsor; mỗi cái là một tích hợp phụ trên đường găng |
+| **Bỏ (ADR-026)** | Zapier, Elastic, KERNEL, Astropods, Postman | — | Không có giải sponsor; mỗi cái là một tích hợp phụ trên đường găng |
 
 **Giải sponsor ưu tiên:** AG Grid 1st ($5k) > AG Grid 2nd/3rd > Channel3 > APIMatic > Render credits.
 
@@ -98,7 +98,7 @@ Trang **`/events/:id/money` — "Kitty Money Room"** và một tab **"Leash Cont
 
 ---
 
-## 6. Đã bỏ khỏi scope hackathon (ADR-024)
+## 6. Đã bỏ khỏi scope hackathon (ADR-026)
 
 | Sponsor | Kế hoạch cũ | Thay bằng |
 |---|---|---|
@@ -106,7 +106,7 @@ Trang **`/events/:id/money` — "Kitty Money Room"** và một tab **"Leash Cont
 | Elastic | RAG báo giá vendor; index audit cho "Security view" | Planner làm việc với dữ liệu event + vendor đã nhập; "Security view" lọc `leash.audit_events` trực tiếp |
 | KERNEL | Browser agent đặt chỗ trên trang vendor demo | Shopper fetch trang demo bằng HTTP thường (đủ cho injection demo); action `browser_booking` giữ trong spec, không build |
 | Astropods | Host Collector agent | Collector chạy trong `apps/agents` |
-| Postman | Kitty Gateway collection có pre-request script ký Ed25519 | Judges test Gateway bằng **MCP Inspector + `leash-mcp`** ([ADR-025](20-risks-and-decisions.md)) — hướng dẫn trong README |
+| Postman | Kitty Gateway collection có pre-request script ký Ed25519 | Judges test Gateway bằng **MCP Inspector + `leash-mcp`** ([ADR-027](20-risks-and-decisions.md)) — hướng dẫn trong README |
 
 ---
 

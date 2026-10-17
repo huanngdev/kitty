@@ -141,7 +141,7 @@ Mỗi app parse env bằng Zod trong `src/env.ts` (schema riêng cho từng app)
 | `GATEWAY_URL`, `GATEWAY_ADMIN_TOKEN` | (kế hoạch) gọi admin API |
 | `AGENTS_URL`, `AGENTS_INTERNAL_TOKEN` | (kế hoạch) gọi agent runtime |
 | `AG_STUDIO_LICENSE_KEY` | (kế hoạch) trial |
-| `BRYNTUM_*` | (Could — ADR-024) trial dùng package trial, không cần key |
+| `BRYNTUM_*` | (Could — ADR-026) trial dùng package trial, không cần key |
 
 > Web **không** có `DATABASE_URL`: chỉ `apps/api` và `apps/gateway` được dùng `@kitty/db` (ESLint chặn import `@kitty/db` trong `apps/web`).
 
@@ -166,13 +166,13 @@ Mỗi app parse env bằng Zod trong `src/env.ts` (schema riêng cho từng app)
 | `WEB_APP_API_URL`, `WEB_APP_API_TOKEN` | app tools |
 | `CHANNEL3_API_KEY` | (Should) Shopper discovery |
 
-> Zapier, Elastic, KERNEL đã bỏ khỏi scope ([ADR-024](20-risks-and-decisions.md)) — không có biến môi trường cho chúng.
+> Zapier, Elastic, KERNEL đã bỏ khỏi scope ([ADR-026](20-risks-and-decisions.md)) — không có biến môi trường cho chúng.
 
 ### `kitty-worker`
 `DATABASE_URL` (đọc outbox), `GATEWAY_INTERNAL_TOKEN`, `AGENTS_URL`, `RENDER_*` (Workflows).
 
 ### `leash-mcp` (chạy trên máy người dùng, không deploy)
-Không có secret của Kitty. Cấu hình local (`--gateway <url>`, `--agent <agentId>`, file profile chứa private key quyền `600`) — xem [10-api-spec.md](10-api-spec.md) §2.3, [ADR-025](20-risks-and-decisions.md).
+Không có secret của Kitty. Cấu hình local (`--gateway <url>`, `--agent <agentId>`, file profile chứa private key quyền `600`) — xem [10-api-spec.md](10-api-spec.md) §2.3, [ADR-027](20-risks-and-decisions.md).
 
 Bun tự load file `.env` theo thư mục chạy. Vẫn phải parse bằng Zod để fail sớm, và **mỗi app có `.env` riêng**: không đặt PayPal secret ở `.env` gốc của repo, vì mọi service chạy từ gốc sẽ đọc được.
 
@@ -210,7 +210,7 @@ Bun tự load file `.env` theo thư mục chạy. Vẫn phải parse bằng Zod 
 | Channel3 | Sign up, key + promo `PAYPAL-HACKATHON-2026` | 28/10 (Should) |
 | Bryntum | Trial 45 ngày | Chỉ khi quyết định làm Gantt (Could, sau M4) |
 
-Đã bỏ ([ADR-024](20-risks-and-decisions.md)): Postman, Elastic, Zapier, KERNEL, Astropods.
+Đã bỏ ([ADR-026](20-risks-and-decisions.md)): Postman, Elastic, Zapier, KERNEL, Astropods.
 
 ⚠️ **Trial hết hạn trong judging (1–15/12) là rủi ro thật**: demo URL phải vẫn chạy. Giải pháp: (1) kích hoạt AG Studio đúng 01/11; (2) hỏi sponsor trên Discord về license cho hackathon; (3) app phải **degrade gracefully** — nếu AG license lỗi vẫn hiển thị (watermark trial chấp nhận được), core flow không phụ thuộc trial nào. Ghi trong [20-risks-and-decisions.md](20-risks-and-decisions.md) (R3).
 
@@ -219,7 +219,7 @@ Bun tự load file `.env` theo thư mục chạy. Vẫn phải parse bằng Zod 
 - Secrets nằm trong **Render Environment Groups**, mỗi service một group; không bao giờ commit `.env` (chỉ `.env.example`).
 - Agent keys: MVP sinh bằng `scripts/gen-agent-keys.ts`; private key vào `kitty-agents-secrets`; public key đăng ký vào Gateway khi tạo agent (`POST /v1/agents`). Mỗi event có 4 agent → derive bằng HKDF từ `AGENT_MASTER_SEED` + `agentId` để không phải quản lý nhiều key thủ công.
 - Rotation: `POST /v1/agents/:id/rotate-key` (COULD).
-- **Agent bên ngoài (`leash-mcp`):** keypair sinh **trên máy người dùng** bằng `bunx leash-mcp init`; chỉ public key được gửi lên (qua màn hình "Connect an external agent" → `POST /v1/agents`). Kitty không bao giờ thấy private key này ([ADR-025](20-risks-and-decisions.md)).
+- **Agent bên ngoài (`leash-mcp`):** keypair sinh **trên máy người dùng** bằng `bunx leash-mcp init`; chỉ public key được gửi lên (qua màn hình "Connect an external agent" → `POST /v1/agents`). Kitty không bao giờ thấy private key này ([ADR-027](20-risks-and-decisions.md)).
 
 ## 7. Observability
 
@@ -229,7 +229,7 @@ Bun tự load file `.env` theo thư mục chạy. Vẫn phải parse bằng Zod 
 | Audit (nghiệp vụ) | `leash.audit_events` (append-only) |
 | Agent traces | Bảng `app.agent_runs` (mỗi tool call, latency, tokens) — hiển thị trên Activity |
 | Health | `/health` mỗi service; Render health checks |
-| Alerts | Domain event `leash.intent_denied` severity high → banner đỏ in-app (không Slack — ADR-024) |
+| Alerts | Domain event `leash.intent_denied` severity high → banner đỏ in-app (không Slack — ADR-026) |
 
 ## 8. Backup & reset demo
 

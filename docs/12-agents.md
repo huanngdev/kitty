@@ -20,7 +20,7 @@
 
 ### 2.1 Agent bên ngoài (qua `leash-mcp`)
 
-Một MCP client có sẵn (Claude Desktop, Claude Code, Cursor…) nối vào Gateway qua `leash-mcp` ([ADR-025](20-risks-and-decisions.md)):
+Một MCP client có sẵn (Claude Desktop, Claude Code, Cursor…) nối vào Gateway qua `leash-mcp` ([ADR-027](20-risks-and-decisions.md)):
 - **Không** có vai, system prompt hay dispatcher của Kitty; model và prompt do client đó quyết định — đúng giả định "LLM sẽ bị lừa" của [14](14-security-threat-model.md).
 - Chỉ thấy `leash_*` tools (bất biến #3); không có `app.*`, không approve, không sửa leash (#9).
 - Leash do organizer cấp như mọi agent (preset mặc định nhỏ: $100, 24h); hiện trên Activity với nhãn **"External: <tên>"**; Revoke dùng được ngay.

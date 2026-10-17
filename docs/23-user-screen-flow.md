@@ -377,7 +377,7 @@ Nguyên tắc: **lỗi ở một widget không làm sập cả màn hình**; m�
 
 ## 7. Thông báo và deep link
 
-| Sự kiện | Trong app | Ngoài app (chỉ email PayPal — không Slack, ADR-024) | Deep link tới |
+| Sự kiện | Trong app | Ngoài app (chỉ email PayPal — không Slack, ADR-026) | Deep link tới |
 |---|---|---|---|
 | Approval requested | Badge + banner vàng + toast | — | S12 |
 | Approval sắp hết hạn (≤ 3') | Banner vàng nhấp nháy nhẹ | — | S12 |

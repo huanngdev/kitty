@@ -39,7 +39,7 @@ Organizer ──► Kitty app (Next.js) ──► Agents (Planner · Shopper · 
 | 10 | [docs/10-api-spec.md](docs/10-api-spec.md) | Gateway Admin API, MCP tools, Web App API, webhooks, internal API |
 | 11 | [docs/11-paypal-integration.md](docs/11-paypal-integration.md) | PayPal APIs, payloads, webhook handling, idempotency, fallbacks |
 | 12 | [docs/12-agents.md](docs/12-agents.md) | Vai agent, loop, prompts, tools, triggers, evals |
-| 13 | [docs/13-sponsor-integrations.md](docs/13-sponsor-integrations.md) | AG Studio (nhắm giải), Render, Channel3, APIMatic, Bryntum (Could); sponsor đã bỏ và lý do (ADR-024) |
+| 13 | [docs/13-sponsor-integrations.md](docs/13-sponsor-integrations.md) | AG Studio (nhắm giải), Render, Channel3, APIMatic, Bryntum (Could); sponsor đã bỏ và lý do (ADR-026) |
 | 14 | [docs/14-security-threat-model.md](docs/14-security-threat-model.md) | Threats → mitigations, bounded loss statement |
 | 15 | [docs/15-ui-ux.md](docs/15-ui-ux.md) | Brand, màn hình, copy reason codes (luồng đi giữa các màn hình ở 23) |
 | 16 | [docs/16-roadmap.md](docs/16-roadmap.md) | Milestones, kế hoạch theo ngày, critical path, cut list |
@@ -52,6 +52,8 @@ Organizer ──► Kitty app (Next.js) ──► Agents (Planner · Shopper · 
 | 23 | [docs/23-user-screen-flow.md](docs/23-user-screen-flow.md) | **User screen flow**: sitemap, từng luồng màn hình theo persona, trạng thái màn hình, deep link, edge cases |
 | 24 | [docs/24-byok-ai-models.md](docs/24-byok-ai-models.md) | **BYOK**: người dùng tự nhập API key và chọn model; mã hoá key, manual mode, demo key, gói trả phí tương lai |
 | 25 | [docs/25-code-architecture.md](docs/25-code-architecture.md) | **Code architecture**: monorepo, luồng request, cấu trúc web/api/shared/db/ui |
+| — | [MILESTONES.md](MILESTONES.md) | **Bảng việc theo mốc M0–M6**: task (ID `KIT-<n>`), trạng thái, PR, depends-on |
+| — | [PROGRESS.md](PROGRESS.md) | **Nhật ký đã làm** (mới nhất trước) + hiện trạng, việc kế tiếp, open questions |
 
 **Thứ tự đọc cho agent mới:** AGENTS.md → 02 → 05 → 06 → 16 → file liên quan tới task.
 
@@ -90,7 +92,7 @@ packages/leash    (exists) Pure policy engine, types, reason codes
 packages/ledger   (exists) Money (cents) + bucket ledger helpers
 packages/paypal   (exists) Typed PayPal REST client (gateway only)
 packages/signing  (exists) Ed25519 request signing/verification + createSignedFetch
-packages/leash-mcp  (planned) CLI bridge stdio → Gateway MCP for external MCP clients (ADR-025; no secrets)
+packages/leash-mcp  (planned) CLI bridge stdio → Gateway MCP for external MCP clients (ADR-027; no secrets)
 packages/crypto-box  (planned) Envelope encryption for user LLM API keys (agents only)
 packages/db       (exists) @kitty/db — Drizzle schema, client, migrations (chỉ apps/api và apps/gateway)
 packages/events   (planned) Domain event types (zod)
@@ -137,23 +139,18 @@ bun run --filter web dev         # chạy riêng một service
 - Tên gọi thống nhất: **Kitty** (app/quỹ), **Leash** (pass), **Leash Gateway**, **Spend Intent**, **Decision**, **Step-up**, vai **Planner/Shopper/Collector/Treasurer**. Xem [glossary](docs/22-glossary.md).
 - Commit nhỏ, mô tả rõ; không commit `.env`, secrets, dữ liệu thật.
 - Trước khi dùng API của thư viện/sponsor: kiểm docs hiện hành (version có thể đã đổi). Với Anthropic API: dùng skill `claude-api`.
-- **Linear (backlog & thực thi):** mọi issue của dự án nằm ở workspace **Kitty** (`huanngdev-kitty`), team **`KIT`**, project **`P-KIT-1` "Kitty — PayPal AI Hackathon"**.
-  - Agent **chỉ** dùng MCP server `kitty-linear`. **Không bao giờ** tạo/sửa issue ở server `linear` (workspace cá nhân `huanngdev`).
-  - Milestone = 7 mốc `M0 — Foundations` … `M6 — Submitted` của [16-roadmap.md](docs/16-roadmap.md) §1; không tạo mốc mới.
-  - Mỗi issue cần: title tiếng Anh không prefix · milestone · **ít nhất một** label `area:*` (cho phép nhiều nhãn khi đụng nhiều app/package), cộng nhãn cờ (`critical-path`, `never-cut`, `user-action`…) và `sponsor:*` khi liên quan · priority · estimate theo thang **Exponential** `1 2 4 8` · assignee · description mở đầu bằng block `## DoD`.
-  - Issue đường tiền (leash/ledger/signing/gateway/money loop) thêm block `## Invariants §3 chạm tới` và `## Test bắt buộc`.
-  - Quy ước đầy đủ (labels, priority, cycles, views): doc **"Kitty — Linear conventions"** trong project `P-KIT-1`.
+- **Theo dõi tiến độ:** [MILESTONES.md](MILESTONES.md) (việc theo mốc) và [PROGRESS.md](PROGRESS.md) (nhật ký đã làm). Mỗi PR xong → cập nhật cả hai trong cùng PR.
 
 ## 7. Cách làm một task
 
 0. **Đọc [CODE_RULES.md](CODE_RULES.md)** (bắt buộc) và [AGENTS.md](AGENTS.md) trước khi viết code.
-1. Xác định task thuộc milestone nào trong [16-roadmap.md](docs/16-roadmap.md) và có nằm trên critical path không.
+1. Xác định task thuộc milestone nào trong [16-roadmap.md](docs/16-roadmap.md) và [MILESTONES.md](MILESTONES.md), có nằm trên critical path không.
 2. Đọc spec liên quan (05 cho mọi thứ dính tới tiền).
 3. Viết/cập nhật test trước cho logic tiền (policy, ledger, webhook handler).
 4. Implement nhỏ nhất đủ chạy; giữ đúng bất biến §3.
 5. Chạy `bun run typecheck && bun run test` (+ `bun run test:integration` nếu đụng gateway/db).
 6. Nếu thay đổi hành vi/thiết kế → cập nhật doc tương ứng **trong cùng thay đổi**; quyết định mới → thêm ADR ở [20](docs/20-risks-and-decisions.md).
-7. Cập nhật bảng trạng thái milestone ở [16](docs/16-roadmap.md) khi xong mốc.
+7. Cập nhật [MILESTONES.md](MILESTONES.md) (trạng thái task) và [PROGRESS.md](PROGRESS.md) (nhật ký) khi xong mốc/task.
 
 ## 8. Definition of Done (mỗi feature)
 

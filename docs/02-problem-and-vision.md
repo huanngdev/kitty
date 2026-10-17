@@ -115,7 +115,7 @@ A: Ba bậc:
 2. **Leash as a platform** — bất kỳ agent nào (Claude, ChatGPT, agent tự build) kết nối Leash Gateway qua MCP để tiêu tiền PayPal **trong giới hạn**. Một "OAuth cho chi tiêu của agent".
 3. **Chuẩn mở** — định dạng Leash (policy JSON + delegation chỉ thu hẹp + bounded loss qua prefunding) như một đề xuất chuẩn cho agentic payments trên rails fiat.
 
-**Hackathon build bậc 1 và demo bậc 2 bằng code chạy thật:** Gateway là MCP server tách biệt, và `leash-mcp` (bridge stdio) cho Claude Desktop / Claude Code / Cursor nối vào một leash bằng một lệnh ([ADR-025](20-risks-and-decisions.md)). Bậc 3 chỉ nêu trong pitch.
+**Hackathon build bậc 1 và demo bậc 2 bằng code chạy thật:** Gateway là MCP server tách biệt, và `leash-mcp` (bridge stdio) cho Claude Desktop / Claude Code / Cursor nối vào một leash bằng một lệnh ([ADR-027](20-risks-and-decisions.md)). Bậc 3 chỉ nêu trong pitch.
 
 ## 7. Nguyên tắc sản phẩm
 

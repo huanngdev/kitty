@@ -64,7 +64,7 @@ flowchart LR
 | **worker** | `apps/worker` | Render Workflows (fallback: Background Worker + Cron Job) | Xử lý domain events, cron (expiry sweep, reminder sweep, reconcile PayPal), settlement trigger | ❌ (gọi Gateway internal API) |
 | **db** | — | **Neon** (ADR-018) | 2 schema: `app` (web/api) và `leash` (gateway) | — |
 | **demo-sites** | `apps/demo-sites` | Static Site | Trang "Hoodie Deals" có prompt injection (+ catalog demo nếu không dùng Channel3) | ❌ |
-| **leash-mcp** | `packages/leash-mcp` | Không deploy — chạy trên máy người dùng (`bunx`) | Bridge MCP stdio → `POST /mcp` của Gateway, ký Ed25519 bằng key sinh tại máy; không policy, không cache số dư ([ADR-025](20-risks-and-decisions.md)) | ❌ |
+| **leash-mcp** | `packages/leash-mcp` | Không deploy — chạy trên máy người dùng (`bunx`) | Bridge MCP stdio → `POST /mcp` của Gateway, ký Ed25519 bằng key sinh tại máy; không policy, không cache số dư ([ADR-027](20-risks-and-decisions.md)) | ❌ |
 
 **Q: Tại sao tách gateway thành service riêng thay vì route trong Next.js?**
 A: (1) Câu chuyện bảo mật chỉ đứng vững nếu secret thật sự nằm ở một process khác agent và UI. (2) Gateway là "platform" có thể dùng lại (tầm nhìn bậc 2) — một MCP server độc lập. (3) Process tối giản, không có LLM, dễ audit.
@@ -201,7 +201,7 @@ kitty/
 │  ├─ db/                      # Drizzle schemas (app, leash) + migrations + seed
 │  ├─ signing/                 # ed25519 request signing (agent side + verify side)
 │  ├─ events/                  # domain event types (zod)
-│  ├─ leash-mcp/               # CLI bridge stdio → Gateway MCP, ký Ed25519 (ADR-025)
+│  ├─ leash-mcp/               # CLI bridge stdio → Gateway MCP, ký Ed25519 (ADR-027)
 │  ├─ ui/                      # shared React components (shadcn)
 │  └─ config/                  # env schema (zod)
 └─ scripts/                    # sandbox setup, seed demo, reset demo

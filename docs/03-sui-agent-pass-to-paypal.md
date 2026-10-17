@@ -94,4 +94,4 @@ A: Đây là giới hạn trung thực của mô hình: Gateway là một bên p
 1. **Prompt injection bị chặn trực tiếp trên màn hình:** agent bị lừa gọi payout cho `refund-desk@scam.example` → Gateway trả `DENY: PAYEE_NOT_ALLOWED, AMOUNT_EXCEEDS_PER_TX` → banner đỏ trên dashboard → organizer bấm Revoke. *"Max possible loss: $500. Actual loss: $0."*
 2. **Delegation chỉ thu hẹp:** Planner (leash $3.000) cấp cho Shopper sub-leash $500 chỉ cho "merch" 48h; Shopper thử xin rộng hơn → bị từ chối `DELEGATION_EXCEEDS_PARENT`.
 3. **Tiền thật di chuyển và kế hoạch phản ứng:** thành viên trả invoice sandbox → webhook → Kitty tăng → task "Đặt cọc homestay" trên timeline mở khoá → Treasurer payout vendor → task ✅.
-4. **Agent bất kỳ cũng bị leash:** `bunx leash-mcp init` → Claude Desktop nối vào một leash → bị lừa trả cho payee lạ → cùng một DENY ([ADR-025](20-risks-and-decisions.md)).
+4. **Agent bất kỳ cũng bị leash:** `bunx leash-mcp init` → Claude Desktop nối vào một leash → bị lừa trả cho payee lạ → cùng một DENY ([ADR-027](20-risks-and-decisions.md)).

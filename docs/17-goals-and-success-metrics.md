@@ -7,7 +7,7 @@
 | 🎯 **Primary** | **Grand Prize (1st–3rd)** | Concept mới (agent pass → PayPal), demo mạnh, dùng PayPal sâu |
 | 🎯 **Fallback Primary** | **Best Use of Agentic Commerce** ($5k) — hoặc Best Use of PayPal + AI / Most Creative | Leash là đúng trọng tâm "agents that actually transact — safely" |
 | 🎯 **Sponsor** | **Best Use of AG Grid** (1st $5k; 2nd $2k; 3rd $1k ×3) | Custom widgets + theme + Studio Agent Framework + realtime tiền |
-| Sponsor dự phòng | Channel3 ($1.5k), APIMatic ($1k ×3 + 6 tháng), Render credits | Chỉ khi tích hợp thật, ghi rõ ([ADR-024](20-risks-and-decisions.md)) |
+| Sponsor dự phòng | Channel3 ($1.5k), APIMatic ($1k ×3 + 6 tháng), Render credits | Chỉ khi tích hợp thật, ghi rõ ([ADR-026](20-risks-and-decisions.md)) |
 | (Could) | Best Use of Bryntum ($1k ×3) | Chỉ nếu dư thời gian sau M4 và Gantt thay timeline payment gate |
 
 Kịch bản tốt nhất: **Grand Prize + AG Grid 1st = $17.000** (1st) — tuân luật "1 chính + 1 sponsor".
@@ -18,7 +18,7 @@ Kịch bản tốt nhất: **Grand Prize + AG Grid 1st = $17.000** (1st) — tu�
 |---|---|---|
 | **Technological Implementation** | 5 nhóm PayPal API + webhooks verified + JS SDK v6; **Payouts có leash** (thứ PayPal agent tools chưa có); policy engine deterministic có test; Ed25519 signing; MCP server đúng spec + `leash-mcp`; transactional outbox; idempotency đầu-cuối | Kiến trúc diagram, test coverage badge, link code `packages/leash` |
 | **Design** | Một sản phẩm liền mạch: tạo event → góp tiền → agents làm việc → dashboard → settle. UI nhất quán giữa Next.js (shadcn) và AG Studio | Screenshots, video |
-| **Potential Impact** | Hai tầng: (1) người tổ chức nhóm không ứng/đòi tiền; (2) **bất kỳ agent nào** có thể tiêu tiền PayPal an toàn qua Leash (MCP) — **chứng minh bằng demo thật**: Claude Desktop / Claude Code nối vào một leash qua `leash-mcp` ([ADR-025](20-risks-and-decisions.md)) | Câu chuyện Mai + phát biểu bounded loss + cảnh agent ngoài bị DENY |
+| **Potential Impact** | Hai tầng: (1) người tổ chức nhóm không ứng/đòi tiền; (2) **bất kỳ agent nào** có thể tiêu tiền PayPal an toàn qua Leash (MCP) — **chứng minh bằng demo thật**: Claude Desktop / Claude Code nối vào một leash qua `leash-mcp` ([ADR-027](20-risks-and-decisions.md)) | Câu chuyện Mai + phát biểu bounded loss + cảnh agent ngoài bị DENY |
 | **Innovation** | Đem concept agent-pass (Sui, 10/2026) sang fiat/PayPal; prefunded envelope = bounded loss; delegation chỉ thu hẹp; payment-gated timeline; leash cắm được vào MCP client có sẵn | Bảng so sánh Sui vs Kitty |
 | **Presentation** | Video < 3' với các "aha": tiền thật di chuyển, injection bị chặn, agent ngoài (Claude Desktop) cũng bị leash, delegation | Kịch bản [19](19-demo-and-submission.md) |
 
