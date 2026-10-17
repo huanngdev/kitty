@@ -75,6 +75,7 @@
 
 @theme inline {
     --font-sans: var(--font-sans);
+    --font-mono: var(--font-mono);
     --font-heading: var(--font-heading);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
