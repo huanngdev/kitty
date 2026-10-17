@@ -39,6 +39,19 @@ export const errorCodes = {
   webhookNotConfigured: "WEBHOOK_NOT_CONFIGURED",
   webhookSignatureInvalid: "WEBHOOK_SIGNATURE_INVALID",
   webhookPayloadInvalid: "WEBHOOK_PAYLOAD_INVALID",
+
+  // --- apps/api → Gateway Admin API client (docs/10-api-spec.md §1) ---
+  gatewayNotConfigured: "GATEWAY_NOT_CONFIGURED",
+  gatewayUnavailable: "GATEWAY_UNAVAILABLE",
+  gatewayError: "GATEWAY_ERROR",
+  gatewayResponseInvalid: "GATEWAY_RESPONSE_INVALID",
+
+  // --- apps/api Web App API (docs/10-api-spec.md §4) ---
+  eventNotFound: "EVENT_NOT_FOUND",
+  eventHasNoKitty: "EVENT_HAS_NO_KITTY",
+  memberNotFound: "MEMBER_NOT_FOUND",
+  memberEmailExists: "MEMBER_EMAIL_EXISTS",
+  vendorNotFound: "VENDOR_NOT_FOUND",
 } as const;
 
 export type ErrorCode = (typeof errorCodes)[keyof typeof errorCodes];

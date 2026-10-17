@@ -18,7 +18,10 @@
     "./auth": "./src/auth/index.ts",
     "./webhooks": "./src/webhooks/index.ts",
     "./leash-admin": "./src/leash-admin/index.ts",
-    "./leash-agent": "./src/leash-agent/index.ts"
+    "./leash-agent": "./src/leash-agent/index.ts",
+    "./events": "./src/events/index.ts",
+    "./members": "./src/members/index.ts",
+    "./vendors": "./src/vendors/index.ts"
   },
   "dependencies": {
     "@kitty/leash": "workspace:*",
