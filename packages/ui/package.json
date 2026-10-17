@@ -7,7 +7,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check-types": "tsc --noEmit",
-    "test": "bun test --pass-with-no-tests"
+    "test": "bun test --no-env-file --pass-with-no-tests"
   },
   "exports": {
     "./styles/globals.css": "./src/styles/globals.css",

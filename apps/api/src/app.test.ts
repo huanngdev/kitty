@@ -24,6 +24,9 @@ describe("GET /api/health", () => {
   });
 });
 
+// NOTE: `bun run test` runs `bun test --no-env-file`, so a developer's local
+// `apps/api/.env` is never loaded. This suite therefore exercises the
+// "auth not configured" branch deterministically (see apps/gateway too).
 describe("GET /api/auth/ok", () => {
   test("returns the shared error shape when auth is not configured", async () => {
     const response = await app.request("/api/auth/ok");
