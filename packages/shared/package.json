@@ -15,6 +15,7 @@
     "./health": "./src/health/index.ts",
     "./internal": "./src/internal/index.ts",
     "./api-paths": "./src/api-paths.ts",
+    "./auth": "./src/auth/index.ts",
     "./leash-admin": "./src/leash-admin/index.ts"
   },
   "dependencies": {
