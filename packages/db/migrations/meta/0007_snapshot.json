@@ -96,12 +96,8 @@
           "tableFrom": "account",
           "tableTo": "user",
           "schemaTo": "app",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -174,12 +170,8 @@
           "tableFrom": "session",
           "tableTo": "user",
           "schemaTo": "app",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -189,9 +181,7 @@
         "session_token_unique": {
           "name": "session_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -262,9 +252,7 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -372,12 +360,8 @@
           "tableFrom": "agent_keys",
           "tableTo": "kitties",
           "schemaTo": "leash",
-          "columnsFrom": [
-            "kitty_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["kitty_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -444,12 +428,8 @@
           "tableFrom": "approvals",
           "tableTo": "spend_intents",
           "schemaTo": "leash",
-          "columnsFrom": [
-            "intent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["intent_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -458,12 +438,8 @@
           "tableFrom": "approvals",
           "tableTo": "kitties",
           "schemaTo": "leash",
-          "columnsFrom": [
-            "kitty_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["kitty_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -473,9 +449,7 @@
         "approvals_intent_id_unique": {
           "name": "approvals_intent_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "intent_id"
-          ]
+          "columns": ["intent_id"]
         }
       },
       "policies": {},
@@ -599,12 +573,8 @@
           "tableFrom": "contributions",
           "tableTo": "kitties",
           "schemaTo": "leash",
-          "columnsFrom": [
-            "kitty_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["kitty_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -614,16 +584,12 @@
         "contributions_paypal_invoice_id_unique": {
           "name": "contributions_paypal_invoice_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "paypal_invoice_id"
-          ]
+          "columns": ["paypal_invoice_id"]
         },
         "contributions_paypal_capture_id_unique": {
           "name": "contributions_paypal_capture_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "paypal_capture_id"
-          ]
+          "columns": ["paypal_capture_id"]
         }
       },
       "policies": {},
@@ -690,9 +656,7 @@
         "kitties_event_id_unique": {
           "name": "kitties_event_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "event_id"
-          ]
+          "columns": ["event_id"]
         }
       },
       "policies": {},
@@ -875,12 +839,8 @@
           "tableFrom": "leashes",
           "tableTo": "kitties",
           "schemaTo": "leash",
-          "columnsFrom": [
-            "kitty_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["kitty_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -889,12 +849,8 @@
           "tableFrom": "leashes",
           "tableTo": "leashes",
           "schemaTo": "leash",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["parent_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -903,12 +859,8 @@
           "tableFrom": "leashes",
           "tableTo": "agent_keys",
           "schemaTo": "leash",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "agent_id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["agent_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1105,10 +1057,7 @@
       "compositePrimaryKeys": {
         "nonces_agent_id_nonce_pk": {
           "name": "nonces_agent_id_nonce_pk",
-          "columns": [
-            "agent_id",
-            "nonce"
-          ]
+          "columns": ["agent_id", "nonce"]
         }
       },
       "uniqueConstraints": {},
@@ -1479,12 +1428,8 @@
           "tableFrom": "spend_intents",
           "tableTo": "leashes",
           "schemaTo": "leash",
-          "columnsFrom": [
-            "leash_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["leash_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1537,12 +1482,8 @@
           "tableFrom": "verified_payees",
           "tableTo": "kitties",
           "schemaTo": "leash",
-          "columnsFrom": [
-            "kitty_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["kitty_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1550,10 +1491,7 @@
       "compositePrimaryKeys": {
         "verified_payees_kitty_id_email_pk": {
           "name": "verified_payees_kitty_id_email_pk",
-          "columns": [
-            "kitty_id",
-            "email"
-          ]
+          "columns": ["kitty_id", "email"]
         }
       },
       "uniqueConstraints": {},
@@ -1662,12 +1600,7 @@
     "leash.approval_status": {
       "name": "approval_status",
       "schema": "leash",
-      "values": [
-        "pending",
-        "approved",
-        "rejected",
-        "expired"
-      ]
+      "values": ["pending", "approved", "rejected", "expired"]
     },
     "leash.leash_action": {
       "name": "leash_action",
@@ -1685,13 +1618,7 @@
     "leash.leash_status": {
       "name": "leash_status",
       "schema": "leash",
-      "values": [
-        "active",
-        "paused",
-        "revoked",
-        "expired",
-        "exhausted"
-      ]
+      "values": ["active", "paused", "revoked", "expired", "exhausted"]
     },
     "leash.spend_intent_status": {
       "name": "spend_intent_status",
