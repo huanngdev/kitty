@@ -30,6 +30,10 @@ const envSchema = z.object({
   // Public origin of the web app, allowed to call this API.
   WEB_ORIGIN: z.preprocess(unsetIfEmpty, z.url().optional()),
 
+  // Password of the seeded demo accounts (organizer@demo.kitty). Powers the
+  // "Continue as demo organizer" button; never exposed to the browser.
+  DEMO_USER_PASSWORD: z.preprocess(unsetIfEmpty, z.string().min(8).optional()),
+
   // Leash Gateway Admin API.
   GATEWAY_URL: z.preprocess(unsetIfEmpty, z.url().optional()),
   GATEWAY_ADMIN_TOKEN: z.preprocess(unsetIfEmpty, z.string().min(1).optional()),
