@@ -62,7 +62,7 @@ A: Trang `/pay` public cần SSR nhanh; AG Studio và Bryntum có wrapper React 
 |---|---|
 | Version | `hono@4.13.x` |
 | Services | `apps/gateway` (Leash Gateway), `apps/agents` (agent runtime), `apps/worker` (jobs/outbox) |
-| Entry | `export default { port: Number(process.env.PORT ?? 8787), fetch: app.fetch }` → Bun tự `serve` |
+| Entry | `export default { port: env.PORT, fetch: app.fetch }` → Bun tự `serve`. Mỗi app khai báo default trong `src/env.ts` (api 8787, gateway 8788) |
 | Middleware dùng | `hono/logger` (thay bằng pino), `hono/secure-headers`, `hono/body-limit`, `hono/timeout`, `zValidator` (`@hono/zod-validator`), middleware tự viết `leashSignature()` cho Ed25519 |
 | MCP | **`@hono/mcp@0.3.x` + `@modelcontextprotocol/sdk@1.32.x`**: Streamable HTTP transport gắn vào route `POST /mcp` của gateway |
 | Type sharing | Contract là Zod schema trong **`@kitty/shared`** (`z.infer` cho type). Không dùng Hono RPC `hc<AppType>` (xem ADR-016) |
@@ -163,10 +163,11 @@ Tài khoản demo/judge dùng **demo key** của team, có hạn mức ([24](24-
 
 ```bash
 bun install                         # cài toàn bộ workspace
-bun run dev                         # turbo run dev → web :3000, gateway :8787, agents :8788, worker
+bun run dev                         # turbo run dev → web :3000, api :8787, gateway :8788, agents :8789 (sau), worker
 bun run build                       # turbo run build
 bun run test                        # turbo run test (bun test trong từng package)
-bun run typecheck                   # turbo run typecheck (tsc --noEmit)
+bun run check-types                 # turbo run check-types (tsc --noEmit)
+bun run check:env-isolation         # fail nếu PAYPAL_CLIENT_SECRET lọt ra ngoài apps/gateway
 bun run lint                        # eslint .
 bun run --filter gateway dev        # chạy riêng một service
 bunx drizzle-kit migrate            # migrate DB

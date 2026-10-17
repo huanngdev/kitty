@@ -113,7 +113,7 @@ CMD ["bun", "apps/gateway/src/index.ts"]
 
 ## 3. Biến môi trường
 
-Mọi service parse env bằng Zod trong `packages/config` — thiếu biến là crash ngay khi khởi động.
+Mỗi app parse env bằng Zod trong `src/env.ts` (schema riêng cho từng app) — thiếu biến là crash ngay khi khởi động.
 
 ### `kitty-gateway` (DUY NHẤT có PayPal secret)
 | Biến | Mô tả |
@@ -159,6 +159,10 @@ Mọi service parse env bằng Zod trong `packages/config` — thiếu biến l�
 `DATABASE_URL` (đọc outbox), `GATEWAY_INTERNAL_TOKEN`, `AGENTS_URL`, `ELASTIC_*`, `RENDER_*` (Workflows).
 
 Bun tự load file `.env` theo thư mục chạy. Vẫn phải parse bằng Zod để fail sớm, và **mỗi app có `.env` riêng**: không đặt PayPal secret ở `.env` gốc của repo, vì mọi service chạy từ gốc sẽ đọc được.
+
+**File mẫu:** mỗi app có `.env.example` riêng — `apps/web/.env.example`, `apps/api/.env.example`, `apps/gateway/.env.example` (`packages/db` thêm ở task sau) — copy thành `.env` khi dev. **Không có `.env.example` ở gốc repo.** `.gitignore` bỏ qua `.env*` nhưng giữ `.env.example`.
+
+**Port local:** `apps/web` :3000 · `apps/api` :8787 · `apps/gateway` :8788 (agents đặt sau, dự kiến :8789). Mỗi service đọc `PORT` từ env; Render tự inject khi deploy.
 
 **Kiểm tra tự động (CI):** script `scripts/check-env-isolation.ts` — fail nếu `PAYPAL_CLIENT_SECRET` xuất hiện trong env schema của bất kỳ app nào ngoài gateway.
 
