@@ -1,1 +1,2 @@
 @AGENTS.md
+@CODE_RULES.md

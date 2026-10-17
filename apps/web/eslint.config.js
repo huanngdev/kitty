@@ -1,3 +1,9 @@
-import { nextConfig } from "@kitty/eslint-config";
+import { nextConfig, shadcnConfig, tailwindConfig } from "@kitty/eslint-config";
 
-export default nextConfig;
+const config = [
+  ...nextConfig,
+  ...tailwindConfig({ entryPoint: "src/app/globals.css" }),
+  ...shadcnConfig({ uiDir: "src/components/ui" }),
+];
+
+export default config;

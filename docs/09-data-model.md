@@ -1,6 +1,6 @@
 # 09 — Data Model
 
-> Postgres 16, Drizzle ORM. Hai schema: `app` (owner: web) và `leash` (owner: gateway). Tiền luôn là `bigint` **cents**. Thời gian `timestamptz` UTC. ID là text ULID có prefix.
+> Postgres 16 trên **Neon**, Drizzle ORM. Hai schema: `app` (owner: web) và `leash` (owner: gateway). Tiền luôn là `bigint` **cents**. Thời gian `timestamptz` UTC. ID là text ULID có prefix.
 
 ## 1. ERD tổng quan
 

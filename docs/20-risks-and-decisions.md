@@ -83,6 +83,34 @@
 - **Quyết định:** `DEMO_LLM_API_KEY` của team chỉ dùng cho `is_demo = true`, có hạn mức run/ngày và token/run. Ghi rõ trên UI và README.
 - **Lý do:** Rules yêu cầu judges dùng thử miễn phí; BYOK không được làm judges kẹt lại.
 
+### ADR-016 — Frontend data layer: axios + TanStack Query, logic trong hooks, contract ở @kitty/shared
+- **Bối cảnh:** cần một cách gọi API type-safe, nhất quán giữa `apps/web` và `apps/api`; tránh logic rải trong component.
+- **Quyết định:** HTTP qua **axios** (một instance/app, interceptor + `withCredentials` cho cookie Better Auth); server state qua **TanStack Query v5**; **mọi logic ở hooks** (`use-*`), component chỉ JSX; contract là **Zod schema trong `@kitty/shared`** (type = `z.infer`), parse cả request (server) lẫn response (client).
+- **Thay thế bị loại:** Hono RPC `hc<AppType>` (type phụ thuộc shape router Hono, không validate runtime, không dùng chung được cho response ở client), `fetch` trực tiếp, nhiều thư viện state.
+- **Hệ quả:** + một nguồn sự thật cho contract, validate runtime hai đầu, dễ test (hook tách khỏi UI). − thêm 2 dependency; phải giữ schema đồng bộ khi đổi API.
+
+### ADR-017 — Cloudflare R2 cho object storage qua S3 API với presigned URL
+- **Bối cảnh:** cần lưu file (ảnh/PDF báo giá…) nhưng không muốn proxy file lớn qua API.
+- **Quyết định:** dùng **Cloudflare R2** qua **S3 API** (`@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`); `apps/api` sinh **presigned URL**; browser upload **trực tiếp** lên R2; bucket key + metadata lưu ở Postgres. R2 credentials **không bao giờ** ra browser hay service khác.
+- **Thay thế bị loại:** S3/GCS (chi phí/egress), proxy upload qua API (tốn băng thông, timeout).
+- **Hệ quả:** + không proxy file, không lộ credential. − thêm AWS SDK; cần cấu hình CORS cho bucket.
+
+### ADR-018 — Neon serverless Postgres với Drizzle + postgres.js
+- **Bối cảnh:** cần Postgres có branch cho dev/preview/test mà không tự vận hành DB.
+- **Quyết định:** dùng **Neon** (serverless Postgres). ORM giữ **Drizzle**; driver **`postgres` (postgres.js)** qua TCP: **pooled** URL (`DATABASE_URL`, `prepare: false` cho PgBouncer transaction mode) cho app, **direct/unpooled** URL (`DATABASE_URL_UNPOOLED`) cho `drizzle-kit` migrations. `@neondatabase/serverless` (HTTP) chỉ dùng cho edge/serverless runtime, **không** trong `apps/api`. Better Auth vẫn **self-host ở `apps/api`** với Drizzle adapter; Neon Auth / Data API / object storage **không** dùng (trừ khi có ADR mới).
+- **Thay thế bị loại:** Render Postgres (không có branch), Neon HTTP driver (không hỗ trợ transaction tương tác `SELECT … FOR UPDATE` mà Leash cần).
+- **Hệ quả:** + branch theo môi trường, scale-to-zero, PITR. − thêm nhà cung cấp; phải phân biệt pooled/unpooled.
+
+### ADR-019 — ESLint sở hữu thứ tự class Tailwind (better-tailwindcss) + @shadcn/lint; bỏ prettier-plugin-tailwindcss
+- **Bối cảnh:** Prettier plugin và ESLint cùng sort class sẽ đánh nhau; cần rule cho design system mà agent kiểm được.
+- **Quyết định:** dùng **`eslint-plugin-better-tailwindcss`** (class order, duplicate, whitespace, conflicting, unknown) và **`@shadcn/lint`** (no-raw-colors, no-arbitrary-values, no-inline-styles, require-static-classes, no-restyle) ở mức `error`, auto-fix qua `bun run lint:fix` / fix-on-save. **Bỏ** `prettier-plugin-tailwindcss`. `no-unknown-classes` chỉ bật ở better-tailwindcss (một nguồn duy nhất, tránh report hai lần).
+- **Hệ quả:** + một nguồn duy nhất cho thứ tự class, + rule design system cho agent. − dev phải bật ESLint fix-on-save (đã commit `.vscode/settings.json`).
+
+### ADR-020 — Chỉ dùng agent skill chính thức, load khi task liên quan
+- **Bối cảnh:** nhiều agentic tool cung cấp "skill"; skill lạ có thể mâu thuẫn quy ước repo.
+- **Quyết định:** chỉ cài **skill chính thức của nhà cung cấp công nghệ** (Neon, shadcn/ui, Turborepo, Better Auth, Vercel React). Skill là tài liệu tham khảo: `CODE_RULES.md` và `AGENTS.md` **thắng** khi mâu thuẫn (ví dụ skill Neon gợi ý Neon Auth → bỏ qua, ta dùng Better Auth). Chỉ load skill khớp công nghệ task đang đụng. Thêm skill mới cần ADR. Cập nhật bằng CLI (`bunx skills update`, `bunx neon@latest skills update`), không sửa tay.
+- **Hệ quả:** + agent có hướng dẫn chính thức, đúng phiên bản. − có vendor content trong repo (`.agents/skills`, `.claude/skills`) → ignore khỏi lint/format.
+
 ## 3. Open questions (cần trả lời, có hạn)
 
 | # | Câu hỏi | Ai/cách trả lời | Hạn |
