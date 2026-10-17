@@ -3,10 +3,13 @@ import { type NextRequest, NextResponse } from "next/server";
 import { isAuthRoute, resolveAuthRedirect, resolveSignedInRedirect } from "@/lib/auth-redirect";
 import { readSession } from "@/lib/server-session";
 
-/** Better Auth's cookie, plus the `__Secure-` variant used over HTTPS. */
+/** Cookie prefix configured in apps/api (`advanced.cookiePrefix`, ADR-029). */
+const COOKIE_PREFIX = "kitty";
+
+/** Better Auth's session cookie, plus the `__Secure-` variant used over HTTPS. */
 const SESSION_COOKIE_NAMES = [
-  "better-auth.session_token",
-  "__Secure-better-auth.session_token",
+  `${COOKIE_PREFIX}.session_token`,
+  `__Secure-${COOKIE_PREFIX}.session_token`,
 ] as const;
 
 /**
@@ -25,7 +28,7 @@ const SESSION_COOKIE_NAMES = [
  */
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname, search } = request.nextUrl;
-  const hasSessionCookie = getSessionCookie(request) !== null;
+  const hasSessionCookie = getSessionCookie(request, { cookiePrefix: COOKIE_PREFIX }) !== null;
 
   const redirect = resolveAuthRedirect({ pathname, search, hasSessionCookie });
 

@@ -64,6 +64,13 @@
       "when": 1792229114997,
       "tag": "0008_natural_mongu",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792239857235,
+      "tag": "0009_previous_nightshade",
+      "breakpoints": true
     }
   ]
 }

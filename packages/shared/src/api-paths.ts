@@ -6,6 +6,8 @@ export const apiPaths = {
   health: "/health",
   /** Base path of the Better Auth handler mounted by `apps/api`. */
   auth: "/api/auth",
+  /** Which sign-in methods this deployment configured (public, no secrets). */
+  authConfig: "/auth-config",
   /** Server-side demo login: sets the session cookie without exposing the password. */
   authDemoSignIn: "/demo-sign-in",
   /** Reports whether this deployment enabled the one-click demo login. */

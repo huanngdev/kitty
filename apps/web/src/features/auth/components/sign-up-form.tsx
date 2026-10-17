@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import type { JSX } from "react";
 import { useSignUpForm } from "../hooks/use-sign-up-form";
+import { PasswordStrengthMeter } from "./password-strength-meter";
 
-/** Account creation with email + password. */
+/** Account creation with email + password (docs/23 F1). */
 export function SignUpForm(): JSX.Element {
-  const { form, onSubmit, isSubmitting, formError } = useSignUpForm();
+  const { form, onSubmit, isSubmitting, formError, strength } = useSignUpForm();
   const errors = form.formState.errors;
 
   return (
@@ -24,9 +25,10 @@ export function SignUpForm(): JSX.Element {
             autoComplete="name"
             placeholder="Mai"
             aria-invalid={errors.name !== undefined}
+            aria-describedby={errors.name === undefined ? undefined : "name-error"}
             {...form.register("name")}
           />
-          <FieldError errors={[errors.name]} />
+          <FieldError id="name-error" errors={[errors.name]} />
         </Field>
 
         <Field data-invalid={errors.email !== undefined}>
@@ -37,9 +39,10 @@ export function SignUpForm(): JSX.Element {
             autoComplete="email"
             placeholder="you@example.com"
             aria-invalid={errors.email !== undefined}
+            aria-describedby={errors.email === undefined ? undefined : "email-error"}
             {...form.register("email")}
           />
-          <FieldError errors={[errors.email]} />
+          <FieldError id="email-error" errors={[errors.email]} />
         </Field>
 
         <Field data-invalid={errors.password !== undefined}>
@@ -49,10 +52,27 @@ export function SignUpForm(): JSX.Element {
             type="password"
             autoComplete="new-password"
             aria-invalid={errors.password !== undefined}
+            aria-describedby={errors.password === undefined ? "password-hint" : "password-error"}
             {...form.register("password")}
           />
-          <FieldDescription>At least 8 characters.</FieldDescription>
-          <FieldError errors={[errors.password]} />
+          <FieldDescription id="password-hint">At least 8 characters.</FieldDescription>
+          <PasswordStrengthMeter strength={strength} />
+          <FieldError id="password-error" errors={[errors.password]} />
+        </Field>
+
+        <Field data-invalid={errors.confirmPassword !== undefined}>
+          <FieldLabel htmlFor="confirmPassword">Confirm password</FieldLabel>
+          <Input
+            id="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            aria-invalid={errors.confirmPassword !== undefined}
+            aria-describedby={
+              errors.confirmPassword === undefined ? undefined : "confirm-password-error"
+            }
+            {...form.register("confirmPassword")}
+          />
+          <FieldError id="confirm-password-error" errors={[errors.confirmPassword]} />
         </Field>
       </FieldGroup>
 

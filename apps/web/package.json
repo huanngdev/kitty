@@ -11,7 +11,8 @@
     "lint:fix": "eslint . --fix",
     "check-types": "next typegen && tsc --noEmit",
     "test": "bun test --no-env-file --pass-with-no-tests",
-    "test:e2e": "bun run test/e2e/console-errors.e2e.ts"
+    "test:e2e": "bun run test/e2e/console-errors.e2e.ts",
+    "test:e2e:auth": "bun run test/e2e/auth.e2e.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

@@ -152,10 +152,16 @@ flowchart TD
 | # | Màn hình | Người dùng thấy | Người dùng làm | Hệ thống làm | ⟶ |
 |---|---|---|---|---|---|
 | 1 | S01 Landing | Tagline "Let your agents spend. On a leash.", 3 bước How it works | `[Try the demo]` hoặc `[Sign in]` | Demo: đăng nhập bằng tài khoản demo | S03 hoặc S02 |
-| 2 | S02 Sign in | Form email/password, gợi ý tài khoản judge | Nhập, `[Sign in]` | Better Auth tạo session | S03 |
-| 3 | S03 My events | Lần đầu: empty state "No events yet" + `[Plan an event with AI]`. Judge: thấy sẵn "Judge Playground N" | Chọn event hoặc `[New event]` | — | S05 hoặc S04 |
+| 2 | S02 Sign in | Form email/password + `[Forgot password?]`; nút `[Continue with GitHub]` / `[Continue with PayPal]` **chỉ hiện khi deployment cấu hình** (đọc `/api/auth-config`); gợi ý tài khoản judge; nút demo **tách riêng**, nhãn "Try the demo (for judges)" | Nhập, `[Sign in]`, hoặc bấm một provider | Email: Better Auth tạo session. Provider: Better Auth redirect sang GitHub/PayPal rồi tạo session khi quay lại | S03 |
+| 2b | S02 sau khi bấm provider | Spinner đúng nút đó, các nút khác disabled | Chờ | Provider huỷ/lỗi → về `/auth/error` (copy thân thiện, `[Try again]`). Email provider chưa verify trùng account local → "account exists — sign in with your password, then link from Settings" | S02 hoặc S03 |
+| 2c | S02 lỗi | Dưới form: sai mật khẩu → "Email or password is incorrect." (không xoá email); 429 → "Too many attempts. Try again in N seconds."; email chưa verify → gợi ý + `[Resend verification email]` | Sửa và thử lại | Không enumerate account; reset luôn trả cùng thông báo | S02 |
+| 3 | S03 My events | Lần đầu: empty state "No events yet" + `[Plan an event with AI]`. Judge: thấy sẵn "Judge Playground N"; nếu email chưa verify: banner "Verify your email" + `[Resend email]` | Chọn event hoặc `[New event]` | — | S05 hoặc S04 |
+| 4 | S02b Sign up | Name, Email, Password + Confirm + gợi ý độ mạnh | `[Create account]` | Better Auth tạo account. Verification ON → gửi link + sang `/verify-email?sent=1`; OFF (dev) → vào thẳng app kèm banner | S02c/S03 |
+| 5 | S02c Verify email | "Check your inbox" (+ gợi ý dev: link nằm trong console API) hoặc kết quả khi bấm link trong mail | `[Resend verification email]` | `GET /api/auth/verify-email?token=` — token 24 h, dùng một lần; hết hạn → "invalid or expired" + xin link mới | S03 |
+| 6 | S02d Forgot / Reset (*) | Email → "Nếu account tồn tại, đã gửi link" (không tiết lộ account có hay không); link mở `[Choose a new password]` | Nhập mật khẩu mới | Token 1 h, dùng một lần; đổi xong **revoke mọi session khác** | S02 |
+| 7 | S02a Settings → Account | Profile (tên), Email (read-only + badge Verified), Password (cần mật khẩu hiện tại), Sign-in methods (Link/Unlink GitHub·PayPal, chặn unlink method cuối), Active sessions (`[Revoke]`, `[Sign out of all other devices]`), Delete account (gõ `DELETE`) | Sửa từng mục | Tài khoản `is_demo` read-only → `403 DEMO_READ_ONLY`; thao tác nhạy cảm cần session "fresh" (< 1 ngày) | giữ màn hình |
 
-**Trạng thái:** sai mật khẩu → lỗi dưới form, không xoá email đã nhập. Session hết hạn ở bất kỳ màn hình nào → về S02 rồi quay lại đúng trang cũ (`?next=`).
+**Trạng thái:** sai mật khẩu → lỗi dưới form, không xoá email đã nhập. Session hết hạn ở bất kỳ màn hình nào → về S02 rồi quay lại đúng trang cũ (`?next=` CHỈ nhận path same-origin bắt đầu bằng `/`, không `//` — mọi biến thể encoded bị chặn, ADR-029). Provider buttons hiện/ẩn theo `/api/auth-config`; deployment không có credential vẫn đăng nhập email/password bình thường.
 
 ---
 
@@ -370,6 +376,11 @@ Click một con số bất kỳ ⟶ S13 Activity đã lọc sẵn theo con số 
 | S13 Activity | "Nothing yet" | Infinite scroll loader | Retry | Mọi event |
 | S15 Chat | Gợi ý @mention | Typing indicator theo agent | Message lỗi + Retry | Agent messages |
 | S17 Pay | — | Nút PayPal loading | Lỗi PayPal, không trừ tiền | Đã trả → S18 |
+| S02 Sign in / S02b Sign up | — | Per-button spinner (chỉ nút provider đang chạy), form disabled khi submit | Lỗi map sẵn (sai mật khẩu, 429 + retry-after, chưa verify + resend, account exists + link hint, OAuth cancelled) | Session mới → về `?next=` hợp lệ hoặc S03 |
+| S02c Verify email | "Check your inbox" + dev hint | "Verifying your email…" | Link invalid/expired → xin link mới | Verify xong → "Email verified" → S03 |
+| S02d Forgot / Reset | Deployment không có mailer (production) → "Password reset is not available on this deployment" + `[Back to sign in]` (sign-in ẩn luôn "Forgot password?") | Nút spinner | Reset: token sai/hết hạn → `[Request a new link]` | Reset xong → "Password updated" |
+| S02a Settings → Account | — | Skeleton cho list sessions/accounts | Lỗi riêng từng card; demo read-only giải thích rõ | Sau change password → các session khác biến mất |
+| S02e `/auth/error` | — | — | Mọi code OAuth → copy thân thiện + `[Try again]` + `[Reset your password]` | — |
 
 Nguyên tắc: **lỗi ở một widget không làm sập cả màn hình**; mọi trạng thái lỗi đều có hành động tiếp theo (Retry, Sync now, link hướng dẫn).
 

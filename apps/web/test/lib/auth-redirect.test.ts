@@ -85,3 +85,37 @@ describe("readNextPath", () => {
     expect(readNextPath({})).toBeNull();
   });
 });
+
+describe("open-redirect guard on ?next=", () => {
+  const unsafe = [
+    "//evil.example",
+    "/\\evil.example",
+    "https://evil.example",
+    "http://evil.example/events",
+    "/%2F%2Fevil.example",
+    "/%252F%252Fevil.example",
+    "%2F%2Fevil.example",
+    "javascript:alert(1)",
+    "/events ",
+    " /events",
+  ];
+
+  test("buildSignInPath drops every unsafe target", () => {
+    for (const value of unsafe) {
+      expect(buildSignInPath(value)).toBe("/sign-in");
+    }
+  });
+
+  test("readNextPath drops every unsafe target", () => {
+    for (const value of unsafe) {
+      expect(readNextPath({ next: value })).toBeNull();
+    }
+  });
+
+  test("keeps a safe same-origin path", () => {
+    expect(buildSignInPath("/events/evt_1?tab=members")).toBe(
+      "/sign-in?next=%2Fevents%2Fevt_1%3Ftab%3Dmembers",
+    );
+    expect(readNextPath({ next: "/settings/account" })).toBe("/settings/account");
+  });
+});

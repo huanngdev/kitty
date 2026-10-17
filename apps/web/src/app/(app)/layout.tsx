@@ -23,7 +23,11 @@ export default async function AppLayout({
   }
 
   return (
-    <AppShell name={session.user.name} email={session.user.email}>
+    <AppShell
+      name={session.user.name}
+      email={session.user.email}
+      emailVerified={session.user.emailVerified === true}
+    >
       {children}
     </AppShell>
   );

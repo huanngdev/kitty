@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Email/password contracts shared by the web forms and the API.
+ * Auth contracts shared by the web forms and the API.
  *
  * Better Auth owns password hashing, sessions and cookies; these schemas only
  * validate what the user typed before it leaves the browser. The same schemas
@@ -31,6 +31,55 @@ export const signUpSchema = z.object({
   password: authPasswordSchema,
 });
 
+/** Sign-up form: the API only needs `signUpSchema`, the confirm field is UI-side. */
+export const signUpFormSchema = signUpSchema
+  .extend({ confirmPassword: z.string().min(1, "Confirm your password") })
+  .refine((values) => values.password === values.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords don't match",
+  });
+
+/** Requests a reset link. The response is always the same (no enumeration). */
+export const forgotPasswordSchema = z.object({
+  email: authEmailSchema,
+});
+
+/** Consumes the single-use token from the reset email. */
+export const resetPasswordSchema = z
+  .object({
+    newPassword: authPasswordSchema,
+    confirmPassword: z.string().min(1, "Confirm your new password"),
+  })
+  .refine((values) => values.newPassword === values.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords don't match",
+  });
+
+/** Social sign-in providers Kitty supports (docs/23 F1, ADR-028). */
+export const socialProviderIds = ["github", "paypal"] as const;
+
+export const socialProviderIdSchema = z.enum(socialProviderIds);
+
+export type SocialProviderId = z.infer<typeof socialProviderIdSchema>;
+
+/**
+ * `GET /api/auth-config` — which sign-in methods this deployment configured.
+ * The UI renders only the buttons listed in `providers`; `emailPassword` is
+ * always available. `emailVerification` tells the UI whether to show the
+ * "verify your email" banner (verification is off in development), and
+ * `passwordReset` is false in production when no transactional mailer can
+ * deliver the link, so the UI hides the "Forgot password?" entry point.
+ */
+export const authConfigSchema = z.object({
+  emailPassword: z.literal(true),
+  providers: z.array(socialProviderIdSchema),
+  demo: z.boolean(),
+  emailVerification: z.boolean(),
+  passwordReset: z.boolean(),
+});
+
+export type AuthConfig = z.infer<typeof authConfigSchema>;
+
 /** User object returned by `GET /api/auth/get-session`. */
 export const authUserSchema = z.object({
   id: z.string(),
@@ -59,27 +108,72 @@ export const authSessionSchema = z.object({
   user: authUserSchema,
 });
 
-/**
- * `GET /api/demo-sign-in/status`. The web app only shows the one-click demo
- * button when the deployment explicitly enabled demo login.
- */
+/** `GET /api/demo-sign-in/status`. Only show the demo button when enabled. */
 export const demoLoginStatusSchema = z.object({
   enabled: z.boolean(),
 });
 
+/** Settings → Account: change the display name. */
+export const updateProfileSchema = z.object({
+  name: z.string().trim().min(2, "Enter your name").max(80, "Name is too long"),
+});
+
+/** Settings → Account: change the password with the current one. */
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password"),
+    newPassword: authPasswordSchema,
+    confirmPassword: z.string().min(1, "Confirm your new password"),
+  })
+  .refine((values) => values.newPassword === values.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords don't match" as const,
+  })
+  .refine((values) => values.newPassword !== values.currentPassword, {
+    path: ["newPassword"],
+    message: "Choose a different password" as const,
+  });
+
+/** Settings → Account: delete the account (type the word to confirm). */
+export const deleteAccountSchema = z
+  .object({
+    confirm: z.string().min(1, 'Type "DELETE" to confirm'),
+  })
+  .refine((values) => values.confirm === "DELETE", {
+    path: ["confirm"],
+    message: 'Type "DELETE" to confirm',
+  });
+
 /**
- * Accepts only same-origin relative paths as a post-auth redirect target.
- * Rejects absolute URLs, scheme-relative URLs and backslash tricks so `?next=`
- * cannot bounce a freshly signed-in user off-site.
+ * Password strength hint for the sign-up form. Purely presentational — the
+ * server enforces the length limits above, this only guides the user.
  */
-export function safeNextPath(value: string | null | undefined): string | null {
-  if (value === null || value === undefined) {
-    return null;
+export type PasswordStrength = {
+  score: 0 | 1 | 2 | 3 | 4;
+  label: "too short" | "weak" | "fair" | "good" | "strong";
+};
+
+export function passwordStrength(password: string): PasswordStrength {
+  if (password.length < 8) {
+    return { score: 0, label: "too short" };
   }
 
-  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
-    return null;
-  }
+  const classes =
+    Number(/[a-z]/.test(password)) +
+    Number(/[A-Z]/.test(password)) +
+    Number(/[0-9]/.test(password)) +
+    Number(/[^A-Za-z0-9]/.test(password));
+  const long = password.length >= 12 ? 1 : 0;
+  const raw = Math.min(4, Math.max(1, classes + long));
 
-  return value;
+  switch (raw) {
+    case 1:
+      return { score: 1, label: "weak" };
+    case 2:
+      return { score: 2, label: "fair" };
+    case 3:
+      return { score: 3, label: "good" };
+    default:
+      return { score: 4, label: "strong" };
+  }
 }

@@ -10,6 +10,12 @@ import { z } from "zod";
 export const errorCodes = {
   badRequest: "BAD_REQUEST",
   unauthorized: "UNAUTHORIZED",
+  /** No session at all (Better Auth session missing/expired). */
+  unauthenticated: "UNAUTHENTICATED",
+  /** Signed in, but this deployment requires a verified email first (ADR-029). */
+  emailNotVerified: "EMAIL_NOT_VERIFIED",
+  /** Demo (`is_demo`) accounts are read-only (ADR-029). */
+  demoReadOnly: "DEMO_READ_ONLY",
   forbidden: "FORBIDDEN",
   notFound: "NOT_FOUND",
   conflict: "CONFLICT",

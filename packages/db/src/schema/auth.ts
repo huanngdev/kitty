@@ -1,4 +1,4 @@
-import { boolean, text, timestamp } from "drizzle-orm/pg-core";
+import { bigint, boolean, integer, text, timestamp } from "drizzle-orm/pg-core";
 import { appSchema } from "./app-schema";
 
 /**
@@ -75,4 +75,16 @@ export const verification = appSchema.table("verification", {
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
+});
+
+/**
+ * Better Auth rate-limit counters (`rateLimit.storage: "database"`, ADR-029).
+ * The limits have to survive a restart and be shared across instances, so the
+ * in-memory default is not good enough. `last_request` is epoch milliseconds.
+ */
+export const rateLimit = appSchema.table("rate_limit", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  count: integer("count").notNull(),
+  lastRequest: bigint("last_request", { mode: "number" }).notNull(),
 });

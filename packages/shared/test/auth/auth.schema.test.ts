@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import type { AuthConfigPayload } from "../../src/auth/auth.types";
+import { safeNextPath } from "../../src/auth/auth-redirect";
 import {
+  authConfigSchema,
   demoLoginStatusSchema,
-  safeNextPath,
   signInSchema,
   signUpSchema,
 } from "../../src/auth/auth.schema";
@@ -66,6 +68,43 @@ describe("demoLoginStatusSchema", () => {
   test("rejects anything that is not a boolean flag", () => {
     expect(demoLoginStatusSchema.safeParse({ enabled: "true" }).success).toBe(false);
     expect(demoLoginStatusSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("authConfigSchema", () => {
+  test("requires the deployment capability flags", () => {
+    const valid: AuthConfigPayload = {
+      emailPassword: true,
+      providers: ["github", "paypal"],
+      demo: false,
+      emailVerification: true,
+      passwordReset: false,
+    };
+
+    expect(authConfigSchema.parse(valid)).toEqual(valid);
+  });
+
+  test("rejects a payload without passwordReset", () => {
+    const result = authConfigSchema.safeParse({
+      emailPassword: true,
+      providers: [],
+      demo: false,
+      emailVerification: false,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects an unknown provider id", () => {
+    const result = authConfigSchema.safeParse({
+      emailPassword: true,
+      providers: ["myspace"],
+      demo: false,
+      emailVerification: false,
+      passwordReset: true,
+    });
+
+    expect(result.success).toBe(false);
   });
 });
 
