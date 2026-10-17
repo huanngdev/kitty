@@ -2,6 +2,7 @@ import { healthResponseSchema } from "@kitty/shared/health";
 import { Hono, type Context } from "hono";
 import { AppError } from "./lib/errors";
 import { logger } from "./lib/logger";
+import { v1Routes } from "./modules/v1";
 
 /**
  * The single Hono error handler (CODE_RULES.md §D): `AppError` becomes the shared
@@ -36,5 +37,8 @@ app.onError(handleError);
 app.get("/health", (c) => {
   return c.json(healthResponseSchema.parse({ ok: true }));
 });
+
+// Gateway Admin API (docs/10-api-spec.md §1). Bearer token + HMAC signature.
+app.route("/v1", v1Routes);
 
 export type GatewayApp = typeof app;

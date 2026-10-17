@@ -11,6 +11,7 @@
     "lint:fix": "turbo run lint:fix",
     "check-types": "turbo run check-types",
     "test": "turbo run test",
+    "test:integration": "bun run --filter gateway test:integration",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:env-isolation": "bun scripts/check-env-isolation.ts",

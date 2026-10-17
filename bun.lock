@@ -34,10 +34,15 @@
       "name": "gateway",
       "version": "0.0.0",
       "dependencies": {
+        "@hono/zod-validator": "^0.9.1",
         "@kitty/db": "workspace:*",
+        "@kitty/leash": "workspace:*",
+        "@kitty/ledger": "workspace:*",
         "@kitty/paypal": "workspace:*",
         "@kitty/shared": "workspace:*",
+        "@kitty/signing": "workspace:*",
         "axios": "^1.20.0",
+        "drizzle-orm": "^0.45.4",
         "hono": "^4.13.13",
         "pino": "^10.4.0",
         "zod": "^4.6.7",
@@ -170,6 +175,7 @@
       "name": "@kitty/shared",
       "version": "0.0.0",
       "dependencies": {
+        "@kitty/leash": "workspace:*",
         "zod": "^4.6.7",
       },
       "devDependencies": {
@@ -412,6 +418,8 @@
     "@floating-ui/utils": ["@floating-ui/utils@0.2.12", "", {}, "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww=="],
 
     "@hono/node-server": ["@hono/node-server@2.1.5", "", { "peerDependencies": { "hono": "^4 || ^5.0.0-0" } }, "sha512-MgP/I06GdvsilDspMk/qmRzpk8LOUStP6jFAbSRi40W09DhoyUn+Mj7eyKICPqeYKybOjVFLVIAQzvu1bfIa7Q=="],
+
+    "@hono/zod-validator": ["@hono/zod-validator@0.9.1", "", { "peerDependencies": { "hono": ">=4.11.2", "zod": "^3.25.0 || ^4.0.0" } }, "sha512-iiv6w0qrIc0arfvCtUqBWsvl4fXjzaTcQcCJTTtCnkawF9HHGE+KjEl0ox3gQJ6rKZEgE3mLExlQCF72M+mNuw=="],
 
     "@humanfs/core": ["@humanfs/core@0.19.2", "", { "dependencies": { "@humanfs/types": "^0.15.0" } }, "sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA=="],
 
