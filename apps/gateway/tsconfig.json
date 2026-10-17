@@ -1,0 +1,4 @@
+{
+  "extends": "@kitty/typescript-config/bun.json",
+  "include": ["src"]
+}
