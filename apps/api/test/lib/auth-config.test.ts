@@ -5,6 +5,7 @@ import {
   type AuthEnvInput,
   buildSocialProviders,
   enabledProviders,
+  isPasswordResetAvailable,
   isRealMailerConfigured,
   readProviderCredentials,
   shouldRequireEmailVerification,
@@ -160,7 +161,45 @@ describe("toPublicAuthConfig", () => {
       providers: ["github", "paypal"],
       demo: true,
       emailVerification: false,
+      passwordReset: true,
     });
     expect(JSON.stringify(config)).not.toContain("secret");
+  });
+
+  test("production without a transactional mailer turns reset off (ADR-029)", () => {
+    const config = toPublicAuthConfig(baseEnv({ NODE_ENV: "production" }));
+
+    expect(config).toEqual({
+      emailPassword: true,
+      providers: [],
+      demo: false,
+      emailVerification: false,
+      passwordReset: false,
+    });
+  });
+
+  test("production with Resend keeps both verification and reset on", () => {
+    const config = toPublicAuthConfig(
+      baseEnv({ NODE_ENV: "production", RESEND_API_KEY: "k", MAIL_FROM: "a@b.c" }),
+    );
+
+    expect(config.emailVerification).toBe(true);
+    expect(config.passwordReset).toBe(true);
+  });
+});
+
+describe("isPasswordResetAvailable", () => {
+  test("is on in development and test regardless of the mailer", () => {
+    expect(isPasswordResetAvailable(baseEnv())).toBe(true);
+    expect(isPasswordResetAvailable(baseEnv({ NODE_ENV: "test" }))).toBe(true);
+  });
+
+  test("is off in production without a real mailer, on with one", () => {
+    expect(isPasswordResetAvailable(baseEnv({ NODE_ENV: "production" }))).toBe(false);
+    expect(
+      isPasswordResetAvailable(
+        baseEnv({ NODE_ENV: "production", RESEND_API_KEY: "k", MAIL_FROM: "a@b.c" }),
+      ),
+    ).toBe(true);
   });
 });

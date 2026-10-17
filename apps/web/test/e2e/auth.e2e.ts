@@ -151,6 +151,7 @@ async function main(): Promise<void> {
   const config = (await (await fetch(`${baseUrl}/api/auth-config`)).json()) as {
     providers: string[];
     emailVerification: boolean;
+    passwordReset: boolean;
   };
 
   for (const path of ["/sign-in", "/sign-up", "/forgot-password"]) {
@@ -168,6 +169,16 @@ async function main(): Promise<void> {
     }
   }
   step("provider buttons match /api/auth-config", JSON.stringify(config.providers));
+
+  const forgotLink = await page.getByRole("link", { name: "Forgot password?" }).count();
+  const expectedForgotLink = config.passwordReset ? 1 : 0;
+
+  if (forgotLink !== expectedForgotLink) {
+    throw new Error(
+      `Forgot password? shown ${forgotLink}x but /api/auth-config says passwordReset=${config.passwordReset}`,
+    );
+  }
+  step("forgot-password entry point matches /api/auth-config", String(config.passwordReset));
 
   // 2. Sign up.
   await page.goto(`${baseUrl}/sign-up`, { waitUntil: "networkidle" });

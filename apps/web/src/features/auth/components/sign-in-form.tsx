@@ -10,8 +10,14 @@ import type { JSX } from "react";
 import { useSignInForm } from "../hooks/use-sign-in-form";
 import { routes } from "@/lib/routes";
 
+interface SignInFormProps {
+  nextPath: string | null;
+  /** Hidden when the deployment cannot deliver reset emails (ADR-029). */
+  passwordReset: boolean;
+}
+
 /** Email + password sign-in (docs/23-user-screen-flow.md F1). */
-export function SignInForm({ nextPath }: { nextPath: string | null }): JSX.Element {
+export function SignInForm({ nextPath, passwordReset }: SignInFormProps): JSX.Element {
   const {
     form,
     onSubmit,
@@ -44,12 +50,14 @@ export function SignInForm({ nextPath }: { nextPath: string | null }): JSX.Eleme
         <Field data-invalid={errors.password !== undefined}>
           <div className="flex items-center justify-between gap-3">
             <FieldLabel htmlFor="password">Password</FieldLabel>
-            <Link
-              href={routes.forgotPassword}
-              className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              Forgot password?
-            </Link>
+            {passwordReset ? (
+              <Link
+                href={routes.forgotPassword}
+                className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Forgot password?
+              </Link>
+            ) : null}
           </div>
           <Input
             id="password"

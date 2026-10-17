@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import Link from "next/link";
 import { AuthShell } from "@/features/auth/components/auth-shell";
-import { ForgotPasswordForm } from "@/features/auth/components/forgot-password-form";
+import { ForgotPasswordScreen } from "@/features/auth/components/forgot-password-screen";
 import { routes } from "@/lib/routes";
 
 export const instant = false;
@@ -24,7 +24,7 @@ export default function ForgotPasswordPage(): JSX.Element {
         </p>
       }
     >
-      <ForgotPasswordForm showDevHint={process.env.NODE_ENV !== "production"} />
+      <ForgotPasswordScreen showDevHint={process.env.NODE_ENV !== "production"} />
     </AuthShell>
   );
 }

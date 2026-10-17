@@ -66,13 +66,16 @@ export type SocialProviderId = z.infer<typeof socialProviderIdSchema>;
  * `GET /api/auth-config` — which sign-in methods this deployment configured.
  * The UI renders only the buttons listed in `providers`; `emailPassword` is
  * always available. `emailVerification` tells the UI whether to show the
- * "verify your email" banner (verification is off in development).
+ * "verify your email" banner (verification is off in development), and
+ * `passwordReset` is false in production when no transactional mailer can
+ * deliver the link, so the UI hides the "Forgot password?" entry point.
  */
 export const authConfigSchema = z.object({
   emailPassword: z.literal(true),
   providers: z.array(socialProviderIdSchema),
   demo: z.boolean(),
   emailVerification: z.boolean(),
+  passwordReset: z.boolean(),
 });
 
 export type AuthConfig = z.infer<typeof authConfigSchema>;

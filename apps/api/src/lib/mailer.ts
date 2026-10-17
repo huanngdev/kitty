@@ -37,22 +37,65 @@ function firstLink(text: string): string | null {
   return ACTION_URL.exec(text)?.[0] ?? null;
 }
 
+/**
+ * `jane@example.com` → `j***@example.com`. Used when a message has to be logged
+ * outside development: enough to correlate a support report, not enough to leak
+ * an address (AGENTS.md invariant #11).
+ */
+export function maskEmail(email: string): string {
+  const at = email.lastIndexOf("@");
+
+  if (at <= 0 || at === email.length - 1) {
+    return "***";
+  }
+
+  return `${email.slice(0, 1)}***@${email.slice(at + 1)}`;
+}
+
+export interface ConsoleMailerOptions {
+  /**
+   * Log the action link (single-use token). Development only — the token is a
+   * credential and must never reach a production log (invariant #11).
+   */
+  readonly logLinks?: boolean;
+}
+
 export class ConsoleMailer implements Mailer {
   readonly kind = "console" as const;
   readonly #logger: MailerLogger;
   readonly #captured: CapturedEmail[] = [];
+  #logLinks: boolean;
 
-  constructor(logger: MailerLogger) {
+  constructor(logger: MailerLogger, options: ConsoleMailerOptions = {}) {
     this.#logger = logger;
+    this.#logLinks = options.logLinks ?? false;
+  }
+
+  /** Whether the action link is printed. Set from `NODE_ENV` by `selectMailer`. */
+  get logLinks(): boolean {
+    return this.#logLinks;
+  }
+
+  setLogLinks(enabled: boolean): void {
+    this.#logLinks = enabled;
   }
 
   async send(message: MailMessage): Promise<void> {
     const captured: CapturedEmail = { ...message, sentAt: new Date().toISOString() };
     this.#captured.push(captured);
 
-    // Log the action link (a single-use token) but never credentials.
+    // The link carries a single-use token: log it in development only.
+    if (this.#logLinks) {
+      this.#logger.info(
+        { to: maskEmail(message.to), subject: message.subject, link: firstLink(message.text) },
+        "auth email (console mailer)",
+      );
+
+      return;
+    }
+
     this.#logger.info(
-      { to: message.to, subject: message.subject, link: firstLink(message.text) },
+      { to: maskEmail(message.to), subject: message.subject },
       "auth email (console mailer)",
     );
   }
@@ -144,9 +187,12 @@ export function selectMailer(
   if (env.NODE_ENV === "production") {
     logger.warn(
       { mailer: "console" },
-      "no transactional mailer configured: auth emails go to the server log and email verification stays off",
+      "no transactional mailer configured: auth emails go to the server log, email verification stays off and password reset is unavailable",
     );
   }
+
+  // Never log action links (single-use tokens) outside development.
+  consoleMailer.setLogLinks(env.NODE_ENV === "development");
 
   return { mailer: consoleMailer, transactional: false };
 }
@@ -163,7 +209,9 @@ interface ConsoleMailerRegistry {
  */
 export function consoleMailerSingleton(): ConsoleMailer {
   const registry = globalThis as ConsoleMailerRegistry;
-  registry[CONSOLE_MAILER_KEY] ??= new ConsoleMailer(baseLogger);
+  registry[CONSOLE_MAILER_KEY] ??= new ConsoleMailer(baseLogger, {
+    logLinks: process.env.NODE_ENV === "development",
+  });
 
   return registry[CONSOLE_MAILER_KEY];
 }

@@ -1,48 +1,128 @@
 import type { Db } from "@kitty/db";
 import { account, rateLimit, session, user, verification } from "@kitty/db/schema";
 import { betterAuth, type BetterAuthPlugin } from "better-auth";
-import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import {
+  APIError,
+  type AuthMiddleware,
+  createAuthMiddleware,
+  getSessionFromCtx,
+} from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { eq } from "drizzle-orm";
 import type { Env } from "../env";
 import { env } from "../env";
-import { buildSocialProviders, shouldRequireEmailVerification } from "./auth-config";
+import {
+  buildSocialProviders,
+  isPasswordResetAvailable,
+  shouldRequireEmailVerification,
+} from "./auth-config";
+import { resolveGuardAction } from "./auth-guard";
 import { buildPasswordResetEmail, buildVerificationEmail } from "./auth-emails";
 import { getDb } from "./db";
 import { AppError } from "./errors";
 import { type Mailer, type SelectedMailer, selectMailer } from "./mailer";
 
-/** Sensitive Better Auth endpoints a demo (`is_demo`) account may never call. */
-const DEMO_BLOCKED_PATHS = new Set([
-  "/change-password",
-  "/change-email",
-  "/update-user",
-  "/delete-user",
-  "/unlink-account",
-]);
+/**
+ * Better Auth's answer for a reset request, whether or not the address exists.
+ * The demo no-op and the "no mailer in production" case return exactly this, so
+ * a caller cannot tell the difference (no enumeration, docs/14).
+ */
+const GENERIC_RESET_RESPONSE = {
+  status: true,
+  message: "If this email exists in our system, check your email for the reset link",
+} as const;
+
+interface GuardContext {
+  /** Parsed request body, when Better Auth already validated it. */
+  readonly body?: unknown;
+  readonly request?: Request | undefined;
+}
+
+function emailFromBody(body: unknown): string | null {
+  if (
+    typeof body === "object" &&
+    body !== null &&
+    "email" in body &&
+    typeof body.email === "string"
+  ) {
+    return body.email.trim().toLowerCase();
+  }
+
+  return null;
+}
 
 /**
- * Endpoint hook: demo accounts are read-only (ADR-029). The hook runs before
- * Better Auth resolves the endpoint, so it needs the session itself — cheaper
- * than resolving a session for every request, and it only runs for auth paths.
+ * Reads `email` from the request body. Better Auth usually hands the parsed
+ * body to the hook context; the `Request` clone is a fallback so the guard still
+ * works if the body is only on the wire. Neither path consumes the real stream.
  */
-const demoReadOnlyGuard = createAuthMiddleware(async (ctx) => {
-  const path = ctx.path ?? "";
+async function readEmail(ctx: GuardContext): Promise<string | null> {
+  const parsed = emailFromBody(ctx.body);
 
-  if (!DEMO_BLOCKED_PATHS.has(path)) {
-    return;
+  if (parsed !== null) {
+    return parsed;
   }
 
-  const current = await getSessionFromCtx(ctx);
-
-  if (current?.user.isDemo !== true) {
-    return;
+  if (ctx.request === undefined) {
+    return null;
   }
 
-  throw new APIError("FORBIDDEN", {
-    code: "DEMO_READ_ONLY",
-    message: "Demo accounts cannot change credentials or be deleted.",
+  try {
+    return emailFromBody(await ctx.request.clone().json());
+  } catch {
+    // Unparseable body: let Better Auth answer with its own validation error.
+    return null;
+  }
+}
+
+/**
+ * The `hooks.before` guard (ADR-029):
+ *
+ * - demo (`is_demo`) accounts are read-only → `403 DEMO_READ_ONLY`;
+ * - a reset request for a demo address, or any reset request on a deployment
+ *   that cannot send mail, silently answers with the generic success and sends
+ *   nothing. The database lookup happens **only** for the two reset paths.
+ *
+ * The demo lookup is injected so the guard is unit-testable without a database.
+ */
+export function createAuthGuardHooks(input: {
+  readonly passwordResetEnabled: boolean;
+  readonly isDemoEmail: (email: string) => Promise<boolean>;
+}): AuthMiddleware {
+  return createAuthMiddleware(async (ctx) => {
+    const path = ctx.path ?? "";
+
+    const email =
+      path === "/request-password-reset" || path === "/forget-password"
+        ? await readEmail(ctx)
+        : null;
+    const emailIsDemo = email === null ? null : await input.isDemoEmail(email);
+    const current = await getSessionFromCtx(ctx);
+    const action = resolveGuardAction({
+      path,
+      passwordResetAvailable: input.passwordResetEnabled,
+      sessionIsDemo: current === null ? null : current.user.isDemo === true,
+      emailIsDemo,
+    });
+
+    switch (action.type) {
+      case "silent_reset_success":
+        return ctx.json(GENERIC_RESET_RESPONSE);
+      case "demo_read_only":
+        throw new APIError("FORBIDDEN", {
+          code: "DEMO_READ_ONLY",
+          message: "Demo accounts cannot change credentials or be deleted.",
+        });
+      case "allow":
+        return;
+      default: {
+        const exhaustiveness: never = action;
+
+        return exhaustiveness;
+      }
+    }
   });
-});
+}
 
 export interface CreateAuthOptions {
   /** Env to read. Defaults to the process env; tests pass fixtures. */
@@ -82,25 +162,29 @@ function createAuth(options: CreateAuthOptions = {}) {
     throw new AppError("AUTH_NOT_CONFIGURED", 503, { missing });
   }
 
-  const mailer: Mailer = (options.mailer ?? selectMailer(authEnv)).mailer;
+  const selectedMailer: SelectedMailer = options.mailer ?? selectMailer(authEnv);
+  const mailer: Mailer = selectedMailer.mailer;
   const requireEmailVerification = shouldRequireEmailVerification(authEnv);
-  const database =
-    options.db === undefined
-      ? drizzleAdapter(getDb(), {
-          provider: "pg",
-          schema: { user, session, account, verification, rateLimit },
-        })
-      : drizzleAdapter(options.db, {
-          provider: "pg",
-          schema: { user, session, account, verification, rateLimit },
-        });
+  const passwordResetEnabled = isPasswordResetAvailable(authEnv);
+  const db: Db = options.db ?? getDb();
+  const database = drizzleAdapter(db, {
+    provider: "pg",
+    schema: { user, session, account, verification, rateLimit },
+  });
 
   /**
-   * Verification is honoured only when the deployment can actually deliver the
-   * link (ADR-029). `requireEmailVerification` behind `sendVerificationEmail`
-   * would otherwise lock every new account out.
+   * Demo lookup for the guard. Goes through our own Drizzle client (not
+   * Better Auth's adapter) because `is_demo` is a Kitty additional field.
    */
-  const canSendEmail = mailer.kind === "resend" || mailer.kind === "console";
+  const isDemoEmail = async (email: string): Promise<boolean> => {
+    const [row] = await db
+      .select({ isDemo: user.isDemo })
+      .from(user)
+      .where(eq(user.email, email))
+      .limit(1);
+
+    return row?.isDemo === true;
+  };
 
   return betterAuth({
     appName: "Kitty",
@@ -116,7 +200,12 @@ function createAuth(options: CreateAuthOptions = {}) {
       minPasswordLength: 8,
       maxPasswordLength: 128,
       autoSignIn: true,
-      requireEmailVerification: requireEmailVerification && canSendEmail,
+      /**
+       * `shouldRequireEmailVerification` already refuses to require verification
+       * on a deployment that cannot deliver the link (ADR-029); requiring it
+       * anyway would lock every new account out.
+       */
+      requireEmailVerification,
       resetPasswordTokenExpiresIn: 60 * 60,
       // A reset must lock everybody else out (docs/14: stolen-password recovery).
       revokeSessionsOnPasswordReset: true,
@@ -245,7 +334,7 @@ function createAuth(options: CreateAuthOptions = {}) {
       },
     },
     hooks: {
-      before: demoReadOnlyGuard,
+      before: createAuthGuardHooks({ passwordResetEnabled, isDemoEmail }),
     },
     plugins: options.plugins ?? [],
   });

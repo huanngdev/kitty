@@ -8,6 +8,8 @@ export interface UseAuthConfigResult {
   providers: SocialProviderId[];
   demo: boolean;
   emailVerification: boolean;
+  /** False when this deployment cannot deliver reset emails (ADR-029). */
+  passwordReset: boolean;
   isLoading: boolean;
 }
 
@@ -23,6 +25,9 @@ export function useAuthConfig(): UseAuthConfigResult {
     providers: query.data?.providers ?? [],
     demo: query.data?.demo ?? false,
     emailVerification: query.data?.emailVerification ?? false,
+    // Optimistic while loading: a deployment that cannot reset will still show
+    // the entry point for a moment, and its own screen explains the state.
+    passwordReset: query.data?.passwordReset ?? true,
     isLoading: query.isPending,
   };
 }

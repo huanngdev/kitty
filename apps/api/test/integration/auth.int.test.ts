@@ -11,7 +11,9 @@
  * so a previous run can never make this one flaky.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import { z } from "zod";
+import { user } from "@kitty/db/schema";
 import { app } from "../../src/app";
 import { env } from "../../src/env";
 import { getDb } from "../../src/lib/db";
@@ -25,6 +27,18 @@ const secondPassword = "Correct-Horse-3";
 const createdEmails: string[] = [email];
 const ipFor = (suffix: string): string =>
   `10.${runId.length}.${suffix.length}.${suffix.charCodeAt(0)}`;
+
+/**
+ * A distinct client IP per request. Counters live in the database and repeated
+ * local runs would otherwise start already rate limited.
+ */
+let requestCounter = 0;
+
+function nextIp(): string {
+  requestCounter += 1;
+
+  return `10.${runId.length}.${(requestCounter % 200) + 1}.${(requestCounter % 250) + 1}`;
+}
 
 /**
  * A fresh IP per run for the rate-limit test: counters live in the database
@@ -49,7 +63,7 @@ async function authRequest(path: string, options: RequestOptions = {}): Promise<
 
   if (options.body !== undefined) headers.set("content-type", "application/json");
   headers.set("origin", env.WEB_ORIGIN ?? "http://localhost:3000");
-  headers.set("x-forwarded-for", options.ip ?? ipFor(path));
+  headers.set("x-forwarded-for", options.ip ?? nextIp());
   if (options.cookie !== undefined && options.cookie !== null && options.cookie.length > 0) {
     headers.set("cookie", options.cookie);
   }
@@ -106,6 +120,35 @@ afterAll(async () => {
     await db.execute(sql`delete from app."user" where email = ${address}`);
   }
 });
+
+/**
+ * HTTP-reachable endpoints a demo account may never call (ADR-029).
+ * `/set-password` is also blocked, but Better Auth marks it `serverOnly` so it
+ * has no HTTP route (the unit matrix in test/lib/auth-guard.test.ts covers it).
+ */
+const DEMO_BLOCKED_PATHS = [
+  "/change-password",
+  "/change-email",
+  "/update-user",
+  "/delete-user",
+  "/unlink-account",
+  "/link-social",
+  "/revoke-sessions",
+  "/revoke-other-sessions",
+  "/revoke-session",
+] as const;
+
+/** Creates a verified account and flags it as a demo (judge) account. */
+async function createDemoUser(address: string, secret: string): Promise<string> {
+  const cookie = await signUp(address, secret);
+
+  await getDb()
+    .update(user)
+    .set({ isDemo: true, emailVerified: true })
+    .where(eq(user.email, address));
+
+  return cookie;
+}
 
 describe("email + password lifecycle", () => {
   test("sign-up sends a verification link the console mailer captured", async () => {
@@ -201,6 +244,66 @@ describe("email + password lifecycle", () => {
 
     expect(statuses.slice(0, 5).every((status) => status === 401)).toBe(true);
     expect(statuses[5]).toBe(429);
+  });
+});
+
+describe("demo guard", () => {
+  const demoEmail = `auth-demo-${runId}@kitty.test`;
+  const demoPassword = "Demo-Guard-1";
+
+  test("a demo session gets 403 DEMO_READ_ONLY on every blocked path", async () => {
+    const cookie = await createDemoUser(demoEmail, demoPassword);
+
+    const errorBody = z.object({ code: z.string().optional() });
+
+    for (const path of DEMO_BLOCKED_PATHS) {
+      const response = await authRequest(`/api/auth${path}`, { cookie, body: {} });
+      const text = await response.text();
+      const parsed = text.length === 0 ? null : errorBody.safeParse(JSON.parse(text));
+      const code = parsed?.success === true ? (parsed.data.code ?? "") : "";
+
+      expect(`${path} ${response.status} ${code}`).toBe(`${path} 403 DEMO_READ_ONLY`);
+    }
+  });
+
+  test("a normal user is not blocked on those paths", async () => {
+    const cookie = await signInAndGetCookie(email, newPassword);
+
+    for (const path of ["/revoke-sessions", "/revoke-other-sessions", "/update-user"]) {
+      const response = await authRequest(`/api/auth${path}`, { cookie, body: {} });
+
+      expect(`${path} ${response.status}`).not.toContain("403");
+    }
+  });
+
+  test("a reset request for a demo address is silent and sends no email", async () => {
+    consoleMailerSingleton().clear();
+
+    const response = await authRequest("/api/auth/request-password-reset", {
+      body: { email: demoEmail, redirectTo: "/reset-password" },
+      ip: ipFor("demo-reset"),
+    });
+
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as { status?: boolean; message?: string };
+
+    expect(payload.status).toBe(true);
+    expect(payload.message).toContain("If this email exists");
+    // Same answer as an unknown address — and nothing was sent.
+    expect(consoleMailerSingleton().lastFor(demoEmail)).toBeUndefined();
+    expect(consoleMailerSingleton().all()).toHaveLength(0);
+  });
+
+  test("a reset request for a normal address still sends", async () => {
+    consoleMailerSingleton().clear();
+
+    const response = await authRequest("/api/auth/request-password-reset", {
+      body: { email, redirectTo: "/reset-password" },
+      ip: ipFor("normal-reset"),
+    });
+
+    expect(response.status).toBe(200);
+    expect(consoleMailerSingleton().lastFor(email)?.subject).toBe("Reset your Kitty password");
   });
 });
 

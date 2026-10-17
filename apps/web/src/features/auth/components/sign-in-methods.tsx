@@ -9,10 +9,11 @@ import { SignInForm } from "./sign-in-form";
 /**
  * Sign-in methods for `/sign-in`: social buttons first (only the configured
  * ones), then the email + password form. Kept in one client component so the
- * divider does not render when no provider is configured.
+ * divider does not render when no provider is configured, and so the
+ * "Forgot password?" link can follow `/api/auth-config`.
  */
 export function SignInMethods({ nextPath }: { nextPath: string | null }): JSX.Element {
-  const { providers } = useAuthConfig();
+  const { providers, passwordReset } = useAuthConfig();
 
   return (
     <div className="flex flex-col gap-6">
@@ -22,7 +23,7 @@ export function SignInMethods({ nextPath }: { nextPath: string | null }): JSX.El
           <AuthDivider label="or continue with email" />
         </>
       )}
-      <SignInForm nextPath={nextPath} />
+      <SignInForm nextPath={nextPath} passwordReset={passwordReset} />
     </div>
   );
 }

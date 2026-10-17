@@ -19,6 +19,7 @@ describe("GET /api/auth-config", () => {
       providers: [],
       demo: false,
       emailVerification: false,
+      passwordReset: true,
     });
   });
 
@@ -36,6 +37,16 @@ describe("GET /api/auth-config", () => {
       PAYPAL_LOGIN_CLIENT_SECRET: "secret",
     }).request("/api/auth-config");
     expect(authConfigSchema.parse(await paypal.json()).providers).toEqual(["paypal"]);
+  });
+
+  test("reports reset off in production without a transactional mailer", async () => {
+    const app = buildApp({ NODE_ENV: "production" });
+
+    const response = await app.request("/api/auth-config");
+    const config = authConfigSchema.parse(await response.json());
+
+    expect(config.passwordReset).toBe(false);
+    expect(config.emailVerification).toBe(false);
   });
 
   test("reports verification on in production with a real mailer", async () => {

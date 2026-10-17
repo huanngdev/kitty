@@ -83,6 +83,15 @@ export function shouldRequireEmailVerification(env: AuthEnvInput): boolean {
   return env.NODE_ENV === "production" && isRealMailerConfigured(env);
 }
 
+/**
+ * Password reset needs a way to deliver the link. Production without a
+ * transactional mailer cannot reset anything, so the public config says so and
+ * the reset endpoints answer with the generic success without sending (ADR-029).
+ */
+export function isPasswordResetAvailable(env: AuthEnvInput): boolean {
+  return env.NODE_ENV !== "production" || isRealMailerConfigured(env);
+}
+
 /** The public `GET /api/auth-config` payload — never contains secrets. */
 export function toPublicAuthConfig(env: AuthEnvInput): AuthConfigPayload {
   return {
@@ -90,6 +99,7 @@ export function toPublicAuthConfig(env: AuthEnvInput): AuthConfigPayload {
     providers: enabledProviders(env),
     demo: env.DEMO_LOGIN_ENABLED ?? false,
     emailVerification: shouldRequireEmailVerification(env),
+    passwordReset: isPasswordResetAvailable(env),
   };
 }
 
