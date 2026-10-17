@@ -108,7 +108,7 @@ export default { port: env.PORT, fetch: app.fetch };
 | Dashboard | **AG Studio (React) + Studio Agent Framework** | Recharts | Sponsor; NL → widget |
 | Backend HTTP | **Hono 4.13 trên Bun** | Express, Fastify, Elysia | Web-standard, nhẹ, RPC types, middleware gọn |
 | MCP | **`@hono/mcp` + `@modelcontextprotocol/sdk`** (Streamable HTTP) | stdio | Gateway là MCP server từ xa |
-| DB | **PostgreSQL 16 (Render Postgres)** | SQLite | `SELECT … FOR UPDATE`, `LISTEN/NOTIFY` |
+| DB | **Neon** (serverless PostgreSQL 16) | Render Postgres, SQLite | Branch theo dev/preview/test; pooled URL cho app, unpooled cho migrations; `SELECT … FOR UPDATE` cần TCP |
 | Object storage | **Cloudflare R2** (S3 API + presigned URL) | S3, GCS | Chỉ khi cần file; browser upload trực tiếp, key/metadata ở Postgres |
 | ORM / driver | **Drizzle ORM 0.45 + `postgres` (postgres.js)** | Prisma, `Bun.sql` | Chạy cả Bun lẫn Node (giữ được fallback); kiểm soát transaction/lock |
 | Migrations | **drizzle-kit** (`bunx drizzle-kit generate/migrate`) | | |

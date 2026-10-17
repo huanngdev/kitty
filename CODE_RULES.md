@@ -5,6 +5,7 @@
 File này chốt **tech stack chuẩn** và **quy ước code** cho toàn monorepo. Kiến trúc chi tiết ở [docs/25-code-architecture.md](docs/25-code-architecture.md); bất biến bảo mật/tiền ở [AGENTS.md](AGENTS.md) §3.
 
 **Mức độ rule:**
+
 - **MUST** — bắt buộc. Vi phạm = chặn merge (review/CI).
 - **SHOULD** — nên làm; bỏ thì phải nói lý do trong PR.
 
@@ -18,27 +19,27 @@ File này chốt **tech stack chuẩn** và **quy ước code** cho toàn monore
 
 Chỉ dùng những thứ dưới đây. **Thêm một thư viện khác làm cùng một việc = MUST có ADR mới ở [docs/20-risks-and-decisions.md](docs/20-risks-and-decisions.md)** trước khi merge.
 
-| Layer                                | Library / chuẩn                                                                                                                                                        |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime · package manager · monorepo | **Bun 1.3** · **Turborepo 2**. MUST NOT dùng `npm`/`pnpm`/`yarn` (chỉ `bun`/`bunx`)                                                                                    |
-| Language                             | **TypeScript strict** qua `@kitty/typescript-config`                                                                                                                   |
-| Frontend framework                   | **Next.js 16 App Router** · **React 19**                                                                                                                               |
-| UI components                        | **shadcn/ui** (thêm bằng shadcn CLI). Mọi component UI đến từ shadcn/ui hoặc compose từ shadcn/ui primitives. MUST NOT thêm component library khác (MUI, Chakra, Ant…) |
-| Icons                                | **lucide-react**                                                                                                                                                       |
-| Styling                              | **Tailwind CSS 4** + helper `cn()` (`clsx` + `tailwind-merge`)                                                                                                         |
-| HTTP client                          | **axios** — một instance đã cấu hình cho mỗi app                                                                                                                       |
-| Server state                         | **TanStack Query v5**                                                                                                                                                  |
-| Forms                                | **react-hook-form** + **@hookform/resolvers/zod**                                                                                                                      |
-| Validation                           | **Zod v4** — schema nằm ở `@kitty/shared`                                                                                                                              |
-| Client-only UI state                 | React state trước; **Zustand** chỉ cho cross-component client state                                                                                                    |
-| Backend framework                    | **Hono** chạy trên Bun + `@hono/zod-validator`                                                                                                                         |
-| Auth                                 | **Better Auth** (server ở `apps/api`, client `better-auth/react`)                                                                                                      |
-| Database                             | **PostgreSQL 16** + **Drizzle ORM** + **drizzle-kit** (driver `postgres.js`)                                                                                           |
-| Object storage                       | **Cloudflare R2** qua S3 API (`@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`)                                                                                  |
-| Testing                              | **`bun test`** (unit/integration) · **fast-check** (property) · **Playwright** (e2e)                                                                                   |
-| Lint · format                        | **ESLint 10** flat config (`@kitty/eslint-config`) · **Prettier 3** (`@kitty/prettier-config`)                                                                         |
-| Env                                  | Mỗi app validate env bằng Zod schema lúc startup                                                                                                                       |
-| Dates · Money                        | ISO string qua wire, `Date` chỉ bên trong function; **money = integer cents** (xem AGENTS.md §3)                                                                       |
+| Layer                                | Library / chuẩn                                                                                                                                                                    |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime · package manager · monorepo | **Bun 1.3** · **Turborepo 2**. MUST NOT dùng `npm`/`pnpm`/`yarn` (chỉ `bun`/`bunx`)                                                                                                |
+| Language                             | **TypeScript strict** qua `@kitty/typescript-config`                                                                                                                               |
+| Frontend framework                   | **Next.js 16 App Router** · **React 19**                                                                                                                                           |
+| UI components                        | **shadcn/ui** (thêm bằng shadcn CLI). Mọi component UI đến từ shadcn/ui hoặc compose từ shadcn/ui primitives. MUST NOT thêm component library khác (MUI, Chakra, Ant…)             |
+| Icons                                | **lucide-react**                                                                                                                                                                   |
+| Styling                              | **Tailwind CSS 4** + helper `cn()` (`clsx` + `tailwind-merge`)                                                                                                                     |
+| HTTP client                          | **axios** — một instance đã cấu hình cho mỗi app                                                                                                                                   |
+| Server state                         | **TanStack Query v5**                                                                                                                                                              |
+| Forms                                | **react-hook-form** + **@hookform/resolvers/zod**                                                                                                                                  |
+| Validation                           | **Zod v4** — schema nằm ở `@kitty/shared`                                                                                                                                          |
+| Client-only UI state                 | React state trước; **Zustand** chỉ cho cross-component client state                                                                                                                |
+| Backend framework                    | **Hono** chạy trên Bun + `@hono/zod-validator`                                                                                                                                     |
+| Auth                                 | **Better Auth** (server ở `apps/api`, client `better-auth/react`)                                                                                                                  |
+| Database                             | **Neon** (serverless PostgreSQL) + **Drizzle ORM** + **drizzle-kit**, driver `postgres.js` (pooled URL, `prepare: false`); migrations dùng unpooled URL                            |
+| Object storage                       | **Cloudflare R2** qua S3 API (`@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`)                                                                                              |
+| Testing                              | **`bun test`** (unit/integration) · **fast-check** (property) · **Playwright** (e2e)                                                                                               |
+| Lint · format                        | **ESLint 10** flat config (`@kitty/eslint-config`) + **better-tailwindcss** (class order) + **@shadcn/lint**; **Prettier 3** (`@kitty/prettier-config`, không còn Tailwind plugin) |
+| Env                                  | Mỗi app validate env bằng Zod schema lúc startup                                                                                                                                   |
+| Dates · Money                        | ISO string qua wire, `Date` chỉ bên trong function; **money = integer cents** (xem AGENTS.md §3)                                                                                   |
 
 Quy tắc bắt buộc kèm theo stack:
 
@@ -48,6 +49,8 @@ Quy tắc bắt buộc kèm theo stack:
 - **MUST** — Contract: schema Zod sống ở `@kitty/shared`; type là `z.infer` của schema đó. MUST NOT khai báo lại DTO/interface ở app.
 - **MUST** — Auth: dùng Better Auth. MUST NOT tự viết session, JWT hay password hashing.
 - **MUST** — DB: chỉ Drizzle. Raw SQL chỉ qua template tag `sql` của drizzle.
+- **MUST** — DB connection: app dùng `DATABASE_URL` (**Neon pooled**, driver `postgres` với `prepare: false`); migrations (`drizzle-kit`) dùng `DATABASE_URL_UNPOOLED` (direct). Chi tiết [ADR-018](docs/20-risks-and-decisions.md).
+- **MUST** — Tailwind/design system: mọi class phải qua `better-tailwindcss` + `@shadcn/lint` — **không raw color** (dùng theme token trong `globals.css`), **không arbitrary value** (`p-[13px]`, `bg-[#ff0000]`), **không inline style**. Chạy `bun run lint:fix` hoặc bật fix-on-save trước khi commit (§C, [ADR-019](docs/20-risks-and-decisions.md)).
 - **MUST** — Mọi bất biến trong AGENTS.md §3 vẫn áp dụng và **đứng trên** file này.
 
 ---
@@ -244,10 +247,8 @@ import { Hono } from "hono";
 import { createEventSchema } from "@kitty/shared/events";
 import * as eventsService from "./events.service";
 
-export const eventsRoutes = new Hono().post(
-  "/",
-  zValidator("json", createEventSchema),
-  async (c) => c.json(await eventsService.create(c.req.valid("json")), 201),
+export const eventsRoutes = new Hono().post("/", zValidator("json", createEventSchema), async (c) =>
+  c.json(await eventsService.create(c.req.valid("json")), 201),
 );
 ```
 
@@ -273,10 +274,7 @@ import { db } from "@/lib/db";
 
 export type EventRow = typeof events.$inferSelect;
 
-export async function insert(input: {
-  title: string;
-  budgetCents: number;
-}): Promise<EventRow> {
+export async function insert(input: { title: string; budgetCents: number }): Promise<EventRow> {
   const [row] = await db.insert(events).values(input).returning();
   if (!row) {
     throw new AppError("EVENT_INSERT_FAILED", 500, { title: input.title });
@@ -388,7 +386,37 @@ export const apiPaths = {
 - [ ] Gọi API qua axios instance; read/write qua TanStack Query, có invalidation
 - [ ] API: route → service → repository; input `zValidator`; lỗi qua `AppError` + `onError`
 - [ ] Contract thay đổi thì sửa ở `@kitty/shared` trước
+- [ ] Tailwind/shadcn lint pass (không raw color, không arbitrary value, không inline style; dùng theme token) — `bun run lint:fix`
+- [ ] UI text là **tiếng Anh** (không tiếng Việt trong UI) — §G
+- [ ] Chỉ dùng agent skill khớp công nghệ đang đụng (§H)
 - [ ] Không vi phạm bất biến AGENTS.md §3; không log secret/PII
 - [ ] Docs cập nhật nếu thay đổi hành vi/thiết kế; ADR nếu thêm thư viện/quyết định mới
 - [ ] Conventional Commits; không commit secret hay build artifact
 ```
+
+---
+
+## G. Ngôn ngữ (MUST)
+
+- **MUST** — Tài liệu và rules trong `docs/`, `CODE_RULES.md`, `AGENTS.md` viết **tiếng Việt** (giữ thuật ngữ kỹ thuật tiếng Anh).
+- **MUST** — **Code** (tên biến/hàm/file/type), **comment**, **commit message**, **PR title/body**, **log**, **error message**, và **toàn bộ UI text của app** viết **tiếng Anh**.
+- **MUST NOT** — UI copy có tiếng Việt. Ví dụ: ✅ `"Pay your share"`, ❌ `"Trả phần của bạn"`.
+
+---
+
+## H. Agent skills (MUST)
+
+Chỉ dùng **skill chính thức** của nhà cung cấp công nghệ. Skill là tài liệu tham khảo — file này và [AGENTS.md](AGENTS.md) **thắng** khi mâu thuẫn.
+
+| Công nghệ                                 | Skill (official)                                                    | Khi nào load                                                           |
+| ----------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Neon / Postgres / migrations / connection | `neon`, `neon-postgres`                                             | Chỉ khi task đụng DB, Neon, migrations, connection string, SQL, schema |
+| shadcn/ui                                 | `shadcn`                                                            | Chỉ khi thêm/sửa UI component hoặc dùng shadcn CLI                     |
+| Turborepo                                 | `turborepo`                                                         | Chỉ khi sửa `turbo.json`, task graph, cấu trúc workspace, CI cache     |
+| Better Auth                               | `better-auth-best-practices`, `better-auth-security-best-practices` | Chỉ khi làm auth, session, role/permission                             |
+| React / Next.js                           | `vercel-react-best-practices`                                       | Chỉ khi viết/sửa React/Next component hoặc hook                        |
+
+- **MUST** — Chỉ load skill khớp với công nghệ task đang đụng; MUST NOT load skill không liên quan.
+- **MUST** — Skill **không** override rules: ví dụ skill Neon gợi ý **Neon Auth** → bỏ qua, ta dùng **Better Auth** ([ADR-018](docs/20-risks-and-decisions.md)).
+- **MUST** — Chỉ cài skill **official**; thêm skill mới cần ADR ở [docs/20](docs/20-risks-and-decisions.md).
+- **MUST** — Cập nhật skill bằng CLI (`bunx skills update`, `bunx neon@latest skills update`), MUST NOT sửa tay file vendor trong `.agents/skills` / `.claude/skills`.

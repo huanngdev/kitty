@@ -109,8 +109,8 @@ bun install                      # cài toàn bộ workspace (bun.lock)
 bun run dev                      # turbo run dev → web :3000 · api :8787
 bun run build                    # turbo run build
 bun run start                    # turbo run start (sau build)
-bun run lint                     # turbo run lint (ESLint)
-bun run lint:fix                 # turbo run lint:fix
+bun run lint                     # turbo run lint (ESLint 10: next, tailwind, shadcn)
+bun run lint:fix                 # turbo run lint:fix — sắp xếp class Tailwind + fix các rule
 bun run check-types              # turbo run check-types (tsc --noEmit)
 bun run format                   # prettier --write .
 bun run format:check             # prettier --check .
@@ -124,7 +124,8 @@ bun run --filter web dev         # chạy riêng một service
 
 ## 6. Quy ước
 
-- **Ngôn ngữ:** code, comments, commit messages, README, UI, video → **tiếng Anh** (yêu cầu hackathon). Tài liệu nội bộ `docs/` → tiếng Việt (giữ thuật ngữ kỹ thuật tiếng Anh).
+- **Ngôn ngữ:** code, comments, commit messages, README, UI, video → **tiếng Anh** (yêu cầu hackathon). Tài liệu nội bộ `docs/` → tiếng Việt (giữ thuật ngữ kỹ thuật tiếng Anh). Chi tiết + UI copy ở [CODE_RULES.md](CODE_RULES.md) §G.
+- **Agent skills:** chỉ dùng skill **official** của nhà cung cấp công nghệ, và chỉ load skill khớp task đang làm — xem [CODE_RULES.md](CODE_RULES.md) §H.
 - TypeScript strict, ESM, không `any`; Zod tại mọi biên.
 - ID: ULID có prefix (`evt_`, `kty_`, `lsh_`, `int_`, `agt_`, `apr_`, `mem_`, `ven_`, `tsk_`).
 - Thời gian: `timestamptz` UTC; hiển thị theo timezone event.

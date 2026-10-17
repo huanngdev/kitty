@@ -162,13 +162,13 @@ packages/shared/
 ```
 packages/db/
 ├─ src/
-│  ├─ client.ts                    # drizzle(postgres(DATABASE_URL))
+│  ├─ client.ts                    # drizzle(postgres(DATABASE_URL, { prepare: false })) — Neon pooled
 │  ├─ schema/
 │  │  ├─ events.ts
 │  │  └─ index.ts
 │  └─ index.ts
 ├─ migrations/
-├─ drizzle.config.ts
+├─ drizzle.config.ts               # đọc DATABASE_URL_UNPOOLED (direct) cho migrations
 └─ package.json
 
 packages/ui/

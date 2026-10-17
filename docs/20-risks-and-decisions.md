@@ -95,6 +95,22 @@
 - **Thay thế bị loại:** S3/GCS (chi phí/egress), proxy upload qua API (tốn băng thông, timeout).
 - **Hệ quả:** + không proxy file, không lộ credential. − thêm AWS SDK; cần cấu hình CORS cho bucket.
 
+### ADR-018 — Neon serverless Postgres với Drizzle + postgres.js
+- **Bối cảnh:** cần Postgres có branch cho dev/preview/test mà không tự vận hành DB.
+- **Quyết định:** dùng **Neon** (serverless Postgres). ORM giữ **Drizzle**; driver **`postgres` (postgres.js)** qua TCP: **pooled** URL (`DATABASE_URL`, `prepare: false` cho PgBouncer transaction mode) cho app, **direct/unpooled** URL (`DATABASE_URL_UNPOOLED`) cho `drizzle-kit` migrations. `@neondatabase/serverless` (HTTP) chỉ dùng cho edge/serverless runtime, **không** trong `apps/api`. Better Auth vẫn **self-host ở `apps/api`** với Drizzle adapter; Neon Auth / Data API / object storage **không** dùng (trừ khi có ADR mới).
+- **Thay thế bị loại:** Render Postgres (không có branch), Neon HTTP driver (không hỗ trợ transaction tương tác `SELECT … FOR UPDATE` mà Leash cần).
+- **Hệ quả:** + branch theo môi trường, scale-to-zero, PITR. − thêm nhà cung cấp; phải phân biệt pooled/unpooled.
+
+### ADR-019 — ESLint sở hữu thứ tự class Tailwind (better-tailwindcss) + @shadcn/lint; bỏ prettier-plugin-tailwindcss
+- **Bối cảnh:** Prettier plugin và ESLint cùng sort class sẽ đánh nhau; cần rule cho design system mà agent kiểm được.
+- **Quyết định:** dùng **`eslint-plugin-better-tailwindcss`** (class order, duplicate, whitespace, conflicting, unknown) và **`@shadcn/lint`** (no-raw-colors, no-arbitrary-values, no-inline-styles, require-static-classes, no-restyle) ở mức `error`, auto-fix qua `bun run lint:fix` / fix-on-save. **Bỏ** `prettier-plugin-tailwindcss`. `no-unknown-classes` chỉ bật ở better-tailwindcss (một nguồn duy nhất, tránh report hai lần).
+- **Hệ quả:** + một nguồn duy nhất cho thứ tự class, + rule design system cho agent. − dev phải bật ESLint fix-on-save (đã commit `.vscode/settings.json`).
+
+### ADR-020 — Chỉ dùng agent skill chính thức, load khi task liên quan
+- **Bối cảnh:** nhiều agentic tool cung cấp "skill"; skill lạ có thể mâu thuẫn quy ước repo.
+- **Quyết định:** chỉ cài **skill chính thức của nhà cung cấp công nghệ** (Neon, shadcn/ui, Turborepo, Better Auth, Vercel React). Skill là tài liệu tham khảo: `CODE_RULES.md` và `AGENTS.md` **thắng** khi mâu thuẫn (ví dụ skill Neon gợi ý Neon Auth → bỏ qua, ta dùng Better Auth). Chỉ load skill khớp công nghệ task đang đụng. Thêm skill mới cần ADR. Cập nhật bằng CLI (`bunx skills update`, `bunx neon@latest skills update`), không sửa tay.
+- **Hệ quả:** + agent có hướng dẫn chính thức, đúng phiên bản. − có vendor content trong repo (`.agents/skills`, `.claude/skills`) → ignore khỏi lint/format.
+
 ## 3. Open questions (cần trả lời, có hạn)
 
 | # | Câu hỏi | Ai/cách trả lời | Hạn |

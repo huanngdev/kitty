@@ -12,12 +12,9 @@
 
 ## 2. Render Blueprint (`render.yaml`) — phác thảo
 
-```yaml
-databases:
-  - name: kitty-db
-    plan: basic-256mb        # đủ cho demo; nâng nếu cần
-    postgresMajorVersion: "16"
+> Postgres **không** nằm trong Render: dùng **Neon** (xem §2.1). `render.yaml` chỉ khai báo service.
 
+```yaml
 services:
   - type: web
     name: kitty-web
@@ -27,7 +24,9 @@ services:
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
-        fromDatabase: { name: kitty-db, property: connectionString }
+        sync: false                                # Neon pooled connection string
+      - key: DATABASE_URL_UNPOOLED
+        sync: false                                # Neon direct connection string (migrations only)
       - key: GATEWAY_URL
         fromService: { type: web, name: kitty-gateway, envVarKey: RENDER_EXTERNAL_URL }
       - key: AGENTS_URL
@@ -42,7 +41,9 @@ services:
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        fromDatabase: { name: kitty-db, property: connectionString }
+        sync: false                                # Neon pooled connection string
+      - key: DATABASE_URL_UNPOOLED
+        sync: false                                # Neon direct connection string (migrations only)
       - fromGroup: kitty-gateway-secrets      # PAYPAL_CLIENT_SECRET chỉ ở đây
 
   - type: pserv
@@ -73,6 +74,15 @@ services:
     buildCommand: curl -fsSL https://bun.sh/install | bash && ~/.bun/bin/bun install && ~/.bun/bin/bun run --filter demo-sites build
     staticPublishPath: apps/demo-sites/dist
 ```
+
+### 2.1 Neon (serverless Postgres)
+
+Không còn `databases:` trong `render.yaml` — Postgres chạy trên **Neon**:
+
+- Một **Neon project**, mỗi môi trường một **branch**: `main` (prod), `dev`, `preview`, `test`.
+- App (web BFF, gateway, worker) kết nối bằng **pooled** connection string → `DATABASE_URL`, driver `postgres` (postgres.js) với `prepare: false` (PgBouncer transaction mode).
+- Migrations (`drizzle-kit`) dùng **direct/unpooled** connection string → `DATABASE_URL_UNPOOLED`.
+- `@neondatabase/serverless` (HTTP driver) **không** dùng trong `apps/api`: Leash cần transaction tương tác với `SELECT … FOR UPDATE`.
 
 ### Dockerfile mẫu cho service Hono/Bun (dùng `turbo prune`)
 ```dockerfile
@@ -108,7 +118,8 @@ Mọi service parse env bằng Zod trong `packages/config` — thiếu biến l�
 ### `kitty-gateway` (DUY NHẤT có PayPal secret)
 | Biến | Mô tả |
 |---|---|
-| `DATABASE_URL` | role `kitty_gateway` |
+| `DATABASE_URL` | Neon pooled (role `kitty_gateway`) |
+| `DATABASE_URL_UNPOOLED` | Neon direct — **chỉ** cho migrations |
 | `PAYPAL_ENV` | `sandbox` |
 | `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | app sandbox |
 | `PAYPAL_WEBHOOK_ID` | id webhook đã đăng ký (dùng verify signature) |
@@ -121,7 +132,8 @@ Mọi service parse env bằng Zod trong `packages/config` — thiếu biến l�
 ### `kitty-web`
 | Biến | Mô tả |
 |---|---|
-| `DATABASE_URL` | role `kitty_web` |
+| `DATABASE_URL` | Neon pooled (role `kitty_web`) |
+| `DATABASE_URL_UNPOOLED` | Neon direct — **chỉ** cho migrations |
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | auth |
 | `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | public, cho JS SDK v6 |
 | `GATEWAY_URL`, `GATEWAY_ADMIN_TOKEN` | gọi admin API |
@@ -202,12 +214,13 @@ Bun tự load file `.env` theo thư mục chạy. Vẫn phải parse bằng Zod 
 ## 8. Backup & reset demo
 
 - `bun run demo:reset` — xoá dữ liệu event demo, seed lại "Da Lat Offsite" ở trạng thái đầu video. Dùng trước mỗi lần quay và trước judging.
-- Render Postgres có backup hằng ngày (plan trả phí) — với demo, script seed là đủ.
+- Neon có **branch + point-in-time restore** (theo plan); với demo, script seed là đủ.
 
 ## 9. Chi phí ước tính (tháng 11–12)
 
 | Hạng mục | Ước tính |
 |---|---|
-| Render (web + gateway + pserv + worker + Postgres basic) | ~$30–50/tháng → phủ một phần bởi $50 credits |
+| Render (web + gateway + pserv + worker) | ~$30–45/tháng → phủ một phần bởi $50 credits |
+| Neon Postgres | Free tier đủ cho demo; ~$19/tháng nếu cần plan trả phí (branch + PITR) |
 | LLM (demo key của team, dùng cho dev, video, judges) | ~$20–60. Người dùng thật tự trả qua key của họ (BYOK) |
 | Sponsors khác | Free/trial/credits |
