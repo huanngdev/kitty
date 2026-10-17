@@ -117,13 +117,12 @@ CREATE TABLE app.agents (
   UNIQUE (event_id, role)
 );
 
-CREATE TABLE app.documents (                   -- báo giá / hợp đồng upload
+CREATE TABLE app.documents (                   -- báo giá / hợp đồng upload (chưa dùng trong hackathon: S6 bỏ — ADR-024)
   id            text PRIMARY KEY,
   event_id      text NOT NULL REFERENCES app.events(id) ON DELETE CASCADE,
   vendor_id     text REFERENCES app.vendors(id),
   filename      text NOT NULL,
   storage_url   text NOT NULL,
-  elastic_doc_id text,
   uploaded_at   timestamptz NOT NULL DEFAULT now()
 );
 

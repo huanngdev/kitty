@@ -133,7 +133,7 @@ A: Được. Phần tiền là lõi và không cần LLM:
 
 | Việc | Có key (agents bật) | Không có key (manual mode) |
 |---|---|---|
-| Tạo event | Chat với Planner | Form tạo event + thêm task tay trên Gantt |
+| Tạo event | Chat với Planner | Form tạo event + thêm task tay trên timeline |
 | Thu tiền | Collector gửi invoice + nhắc | Nút **Send invoices** (organizer gọi Gateway admin API) |
 | Trả vendor | Treasurer tự đề xuất khi gate mở | Organizer bấm **Pay vendor** trên task |
 | Mua sắm | Shopper + Channel3 | Không có |

@@ -177,7 +177,36 @@ Input: `{ limit?: number }` → 20 intent gần nhất của leash của agent.
 - **Auth trước tầng MCP:** mọi request verify bằng `@kitty/signing` `verifyRequest` trên **đúng byte thân request** (đọc một lần, truyền lại cho transport); `resolvePublicKey` = `leash.agent_keys` (key `active`), `nonceStore` = `leash.nonces` (`INSERT … ON CONFLICT DO UPDATE … WHERE expires_at <= now() RETURNING` — không cần migration mới). Lỗi → `401` shape chung với `code` là mã verify (`MALFORMED_HEADERS`, `STALE_TIMESTAMP`, `UNKNOWN_AGENT`, `BAD_SIGNATURE`, `NONCE_REPLAY`). `agentId` truyền vào tool handler qua closure — tool **không** nhận `leashId`/`agentId` từ input.
 - **Tool trong scope:** `leash_status`, `leash_check`, `leash_request_payout`, `leash_intent_status`, `leash_activity`. Kết quả là structured content + text summary. `leash_check` chỉ evaluate + ghi audit `intent.check` (không tạo intent, không reserve). `leash_request_payout` gọi `reserveIntent` (KIT-16) và trả `available` sau khi giữ chỗ. Tool ngoài scope (invoice, reminder, refund, delegate) chưa được đăng ký.
 - **Idempotency:** cùng `intentId` + body khác → `INTENT_ID_REUSED` (một tên duy nhất, ở `@kitty/shared` `errorCodes`).
-- **Client helper:** `createSignedFetch({ agentId, privateKey })` export từ `@kitty/signing` để `apps/agents` ký mọi request MCP.
+- **Client helper:** `createSignedFetch({ agentId, privateKey })` export từ `@kitty/signing` để `apps/agents` (và `leash-mcp`, §2.3) ký mọi request MCP.
+
+### 2.2 Việc còn lại (lịch ở [16](16-roadmap.md))
+
+- **4 tool chưa đăng ký:** `leash_create_invoice` (19/10), `leash_send_reminder`, `leash_request_refund`, `leash_delegate` (20/10).
+- **Theo spec MCP hiện hành (2026-07-28):** `GET` / `DELETE /mcp` đang trả `404` → phải trả **`405 Method Not Allowed`** (server stateless, không có SSE stream hay session). Thêm **tool annotations**: `readOnlyHint` cho `leash_status`, `leash_check`, `leash_intent_status`, `leash_activity`; `destructiveHint` + `idempotentHint` (theo `intentId`) cho các tool tạo intent. Thêm resource `leash://status` (cùng dữ liệu `leash_status`) để client đọc ngữ cảnh mà không cần gọi tool.
+- **Auth:** giữ Ed25519 per-request (ADR-004). Trong hackathon không quảng bá OAuth metadata (`/.well-known/oauth-protected-resource`); MCP client có sẵn nối qua `leash-mcp`.
+
+### 2.3 `leash-mcp` — bridge cho MCP client bên ngoài ([ADR-025](20-risks-and-decisions.md), lịch 31/10)
+
+| Lệnh | Việc |
+|---|---|
+| `bunx leash-mcp init [--profile <name>]` | Sinh keypair Ed25519 tại máy; lưu private key vào file profile (`~/.config/leash-mcp/<profile>.json`, quyền `600`); in **public key** để dán vào "Connect an external agent" |
+| `bunx leash-mcp --gateway <url> --agent <agentId> [--profile <name>]` | Chạy MCP server **stdio**; mỗi JSON-RPC từ client → `POST {gateway}/mcp` qua `createSignedFetch`; trả nguyên kết quả cho client |
+
+Luồng đăng ký: organizer dán public key + tên ("Claude Desktop") ở trang Leashes → web `POST /api/events/:id/external-agents` → `apps/api` gọi Gateway `POST /v1/agents` → trả `agentId` + snippet cấu hình (không chứa secret) → organizer cấp leash như mọi agent.
+
+Snippet cho Claude Desktop (`claude_desktop_config.json`):
+```json
+{ "mcpServers": { "kitty-leash": {
+    "command": "bunx",
+    "args": ["leash-mcp", "--gateway", "https://<gateway-host>", "--agent", "agt_01J…"] } } }
+```
+
+Yêu cầu:
+- Không log private key, chữ ký hay header ký (bất biến #11).
+- Chỉ gửi tới đúng gateway URL đã cấu hình; bắt buộc `https` (trừ `localhost` khi dev).
+- Không thêm/bớt/sửa tool, không cache kết quả, không tự tính số dư (bất biến #5).
+- Gateway trả `401` (`UNKNOWN_AGENT`, `BAD_SIGNATURE`…) → bridge trả MCP error dễ hiểu: *"leash-mcp: this agent key is not registered or was revoked."*
+- Contract với Gateway **không đổi** — cùng header và chuỗi ký ở [05](05-leash-spec.md) §5.
 
 ---
 

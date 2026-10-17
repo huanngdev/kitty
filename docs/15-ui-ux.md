@@ -13,7 +13,7 @@
 | Font | Inter (UI), JetBrains Mono (số tiền, ID) |
 | Icon | lucide-react; biểu tượng leash = dây xích nhỏ 🔗 |
 
-Tokens định nghĩa một lần (Tailwind v4 `@theme`) và map sang theme AG Studio + Bryntum để ba hệ trông như một.
+Tokens định nghĩa một lần (Tailwind v4 `@theme`) và map sang theme AG Studio (và Bryntum nếu dùng) để các hệ trông như một.
 
 > **Cập nhật (ADR-024):** token brand riêng đã bỏ. Theme giờ là **mặc định của preset shadcn `b4VmS9QxUG`** trong `apps/web/src/app/globals.css` (CLI generate, không sửa tay). Bảng màu phía trên là **định hướng**, không còn biến `--kitty-*`/`--success`/`--warning` riêng.
 
@@ -53,12 +53,12 @@ Tokens định nghĩa một lần (Tailwind v4 `@theme`) và map sang theme AG S
 - Danh sách card mỗi leash: agent, allocation thanh tiến độ (available/held/spent), limits, payees chips, expiry countdown, nút **Pause / Revoke / Top-up**.
 - Cây delegation (Planner → Shopper) hiển thị lồng.
 - **Create leash** sheet với presets + "Explain this leash" (render câu tiếng Anh từ policy: *"Shopper can pay up to $400 at a time, $500 in total, only to Hoodie Lab, only for merch, until Nov 4 08:00."*).
-- (Could) Bryntum Scheduler "Leash timeline".
+- **Connect an external agent** sheet ([ADR-025](20-risks-and-decisions.md)): (1) chạy `bunx leash-mcp init`, (2) dán public key + đặt tên ("Claude Desktop"), (3) cấp leash (preset nhỏ: $100, 24h), (4) copy snippet cấu hình cho Claude Desktop / Claude Code / Cursor. Agent ngoài có badge **External**.
 
 ### 3.3 Approval Inbox `/events/:id/approvals`
 Card: số tiền lớn, payee (verified ✓), leash + lý do step-up, task liên quan, *agent's justification (unverified)*, countdown 15', **Approve / Reject**.
 
-### 3.4 Plan `/events/:id/plan` — Bryntum Gantt
+### 3.4 Plan `/events/:id/plan` — timeline payment gate (shadcn; Bryntum Gantt nếu dư thời gian)
 - Cột: task, owner (avatar agent/organizer), budget line, gate.
 - Gate milestones "💰 Kitty ≥ $1,200" — 🔒 xám khi đóng, 🔓 cam khi mở (animation nhẹ khi mở do webhook).
 
@@ -70,7 +70,7 @@ Timeline hợp nhất: chat agent, intents + decisions, PayPal calls, webhooks, 
 
 ### 3.7 Chat `/events/:id/chat`
 - @planner, @shopper, @collector, @treasurer.
-- Cards: plan diff (accept/edit), product cards (Channel3), decision card (ALLOW/STEP_UP/DENY), KERNEL live view.
+- Cards: plan diff (accept/edit), product cards (Channel3 hoặc catalog demo), decision card (ALLOW/STEP_UP/DENY).
 
 ### 3.8 Member pay `/pay/:requestId` (public)
 ```

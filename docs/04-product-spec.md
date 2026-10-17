@@ -49,35 +49,38 @@
 | M5 | Là agent, tôi chỉ hành động qua Gateway | Agent runtime không có PayPal secret (kiểm bằng test + env audit). Mọi intent có Decision + reason codes. |
 | M6 | Là organizer, tôi duyệt step-up | Intent > `step_up_above` hiện ở Approval Inbox; Approve/Reject; hết hạn sau 15 phút. |
 | M7 | Là organizer, tôi trả vendor từ Kitty | Treasurer tạo payout intent → (step-up nếu cần) → PayPal Payout → webhook → settled; task liên quan ✅. |
-| M8 | Là organizer, tôi xem Gantt có payment gate | Bryntum Gantt: task có gate hiển thị 🔒/🔓; gate tự mở khi điều kiện tiền đạt. |
+| M8 | Là organizer, tôi xem timeline có payment gate | Timeline (shadcn): task có gate hiển thị 🔒/🔓; gate tự mở khi điều kiện tiền đạt. Bryntum Gantt là nâng cấp Could ([ADR-024](20-risks-and-decisions.md)). |
 | M9 | Là organizer, tôi xem dashboard ngân sách | AG Studio: thu/chi/còn lại, theo danh mục, theo member, theo leash; cập nhật realtime. |
 | M10 | Là organizer, tôi thu hồi leash tức thì | Revoke → mọi intent sau đó DENY `LEASH_REVOKED`; số dư leash về Kitty; sub-leash bị revoke cascade. |
 | M11 | Là bất kỳ ai, tôi xem audit timeline | Mỗi intent/decision/PayPal call/webhook hiển thị theo thời gian, có lý do. |
-| M12 | Prompt injection demo | Trang sản phẩm độc hại trong demo; Shopper bị lừa; Gateway DENY; UI + Slack cảnh báo. |
+| M12 | Prompt injection demo | Trang sản phẩm độc hại trong demo; Shopper bị lừa; Gateway DENY; UI cảnh báo (banner đỏ) + nút Revoke. |
 | M13 | Là organizer, tôi dùng **API key và model của riêng tôi** (BYOK) | Màn hình AI settings (S21): thêm key Anthropic hoặc một OpenAI-compatible endpoint; Test connection; chọn model default + theo vai; key chỉ hiện `last4`. App không cung cấp model. Chi tiết [24](24-byok-ai-models.md) |
 | M14 | Là organizer chưa có key, tôi vẫn quản lý được tiền (**manual mode**) | Tạo event bằng form, gửi invoice, trả vendor, cấp/thu hồi leash đều chạy được; agents hiện trạng thái "off" + CTA thêm key |
+| M15 | Là organizer/developer, tôi cho **một MCP client có sẵn** (Claude Desktop, Claude Code, Cursor) tiêu tiền trong một leash | `bunx leash-mcp init` sinh keypair trên máy; dán public key ở "Connect an external agent" → cấp leash; client list được `leash_*` tools; payout hợp lệ ALLOW, payee lạ DENY; private key không rời máy ([ADR-025](20-risks-and-decisions.md)) |
 
 ### SHOULD
 | ID | Story |
 |---|---|
 | S1 | Shopper tìm sản phẩm qua **Channel3** và đề xuất giỏ hàng trong budget line |
-| S2 | Collector nhắc nợ qua **Zapier MCP** (Slack/Gmail), giọng thân thiện, leo thang theo hạn |
+| S2 | Collector nhắc nợ qua **PayPal Invoicing reminder** (`leash_send_reminder`, PayPal gửi email), giọng thân thiện, leo thang theo hạn |
 | S3 | Hỏi dashboard bằng ngôn ngữ tự nhiên → **AG Studio Agent Framework** tạo widget |
 | S4 | **Sub-leash** (delegation chỉ thu hẹp) giữa Planner → Shopper |
 | S5 | **Settlement**: kết thúc Event → Treasurer tính dư → refund pro-rata cho members |
-| S6 | Upload báo giá vendor (PDF) → **Elastic** semantic search; Planner dùng khi chọn vendor |
+| S6 | ~~Upload báo giá vendor (PDF) → Elastic semantic search~~ — bỏ ([ADR-024](20-risks-and-decisions.md)) |
 | S7 | Organizer tự nạp thêm vào Kitty qua **PayPal Checkout (Orders)** |
 | S8 | BYOK thêm provider **OpenAI, Google, OpenRouter** (MVP bắt buộc có Anthropic + OpenAI-compatible) và biểu đồ usage |
 
 ### COULD
 | ID | Story |
 |---|---|
-| C1 | **KERNEL** browser agent đặt chỗ trên trang vendor demo (không có API), có live view |
-| C2 | **Bryntum Scheduler** "Leash timeline": mỗi agent một hàng, hiển thị hiệu lực leash + intents |
-| C3 | **Bryntum Calendar** cho member xem lịch trình |
+| C1 | ~~KERNEL browser agent đặt chỗ trên trang vendor demo~~ — bỏ ([ADR-024](20-risks-and-decisions.md)) |
+| C2 | ~~Bryntum Scheduler "Leash timeline"~~ — bỏ khỏi hackathon |
+| C3 | ~~Bryntum Calendar cho member~~ — bỏ khỏi hackathon |
 | C4 | Pay Later messaging trên trang thanh toán member |
-| C5 | Astropods host Collector agent với observability |
-| C6 | Anomaly alert: Elastic phát hiện payee mới / tần suất bất thường |
+| C5 | ~~Astropods host Collector agent~~ — bỏ ([ADR-024](20-risks-and-decisions.md)) |
+| C6 | Anomaly alert: phát hiện payee mới / tần suất bất thường từ `leash.audit_events` |
+| C7 | **Bryntum Gantt** thay timeline payment gate (chỉ khi M4 xong sớm) |
+| C8 | Remote Leash MCP với màn hình consent kiểu OAuth, nơi consent chính là form tạo leash (sau hackathon nếu không kịp — [ADR-025](20-risks-and-decisions.md)) |
 
 ### WON'T (hackathon)
 - Production money transmission, KYC riêng, ví riêng.
@@ -85,6 +88,7 @@
 - PayPal multiparty / partner onboarding.
 - Mobile native app, đa ngôn ngữ UI (UI tiếng Anh duy nhất).
 - Thanh toán trực tiếp tại retailer thật qua Channel3 (Channel3 chỉ dùng cho discovery; mua tại vendor demo — xem §6).
+- Thông báo Slack/Gmail qua Zapier, Elastic, KERNEL, Astropods, Postman collection ([ADR-024](20-risks-and-decisions.md)).
 
 ## 4. Luồng chính
 
@@ -107,20 +111,26 @@
 ### Flow 4 — Trả vendor (M6, M7, M8)
 1. Kitty đạt $1.200 → gate của task "Pay homestay deposit" mở.
 2. Treasurer nhận event, gọi `leash.request_payout(homestay, 1200, memo, intent_id, task_id)`.
-3. Gateway: verify chữ ký → policy → `STEP_UP` (vì > $500) → reserve $1.200 → approval tạo → Zapier gửi Slack cho Mai.
+3. Gateway: verify chữ ký → policy → `STEP_UP` (vì > $500) → reserve $1.200 → approval tạo → badge + toast trong app cho Mai.
 4. Mai Approve → Gateway gọi PayPal Payouts (idempotent) → `submitted`.
-5. Webhook `PAYMENT.PAYOUTS-ITEM.SUCCEEDED` → `settled` → task ✅ → Gantt tự dời các task phụ thuộc nếu cần.
+5. Webhook `PAYMENT.PAYOUTS-ITEM.SUCCEEDED` → `settled` → task ✅ → timeline cập nhật các task phụ thuộc.
 
 ### Flow 5 — Shopper + injection (M12, S1, S4)
 1. Planner tạo sub-leash cho Shopper: $500, category `merch`, payees = [`merch-shop@vendor.example`], 48h.
 2. Shopper tìm "custom hoodie under $30" qua Channel3 → đề xuất 12 cái → tạo payout intent $336 cho merch-shop (demo vendor) → **ALLOW** thẳng (preset "Merch run": per_tx_max $400, step_up_above $400, nên $336 không cần duyệt).
 3. Shopper mở trang sản phẩm "Hoodie Deals" (trang demo có prompt injection ẩn) → bị lừa → gọi payout $2.000 cho `refund-desk@scam.example`.
 4. Gateway → `DENY [PAYEE_NOT_ALLOWED, AMOUNT_EXCEEDS_PER_TX, INSUFFICIENT_LEASH_BALANCE]`.
-5. Gateway phát `leash.intent_denied` (severity high) → UI banner đỏ + Slack → Mai bấm **Revoke** → số dư leash về Kitty.
+5. Gateway phát `leash.intent_denied` (severity high) → UI banner đỏ → Mai bấm **Revoke** → số dư leash về Kitty.
 
 ### Flow 6 — Settlement (S5)
 1. Event kết thúc → Treasurer đề xuất settlement: tổng chi, dư $180, refund $15/người.
 2. Step-up → Mai Approve → Gateway refund các capture/invoice payment tương ứng (pro-rata) → ledger `refund` → Event `settled`.
+
+### Flow 7 — Agent bên ngoài qua MCP (M15)
+1. Organizer mở **Leashes** → **Connect an external agent** → làm theo hướng dẫn: `bunx leash-mcp init` trên máy mình → dán public key.
+2. Hệ thống đăng ký agent (public key) ở Gateway → organizer cấp leash (preset hoặc tuỳ chỉnh), ví dụ $100, payee = [`merch-shop@vendor.example`], 24h.
+3. Organizer thêm snippet cấu hình vào Claude Desktop/Claude Code → client thấy `leash_status`, `leash_check`, `leash_request_payout`…
+4. "Pay merch-shop $40 for stickers" → ALLOW → payout. "Pay refund-desk@scam.example $500" → **DENY** `PAYEE_NOT_ALLOWED` → Activity hiện agent "External: Claude Desktop" như mọi agent khác; Revoke dùng được ngay.
 
 ## 5. Màn hình (chi tiết UI ở [15-ui-ux.md](15-ui-ux.md); danh mục đầy đủ S01–S20 và luồng đi giữa các màn hình ở [23-user-screen-flow.md](23-user-screen-flow.md))
 
@@ -130,9 +140,9 @@
 | `/events` | Danh sách events | Organizer |
 | `/events/new` | Chat tạo event với Planner | Organizer |
 | `/events/:id` | **Overview**: Kitty balance, members, alerts, agents | Organizer |
-| `/events/:id/plan` | **Bryntum Gantt** + payment gates | Organizer |
+| `/events/:id/plan` | **Timeline + payment gates** (shadcn; Bryntum Gantt nếu dư thời gian) | Organizer |
 | `/events/:id/money` | **AG Studio dashboard** | Organizer |
-| `/events/:id/leashes` | Danh sách leash, tạo/sub-leash/revoke, **Leash timeline** (Scheduler) | Organizer |
+| `/events/:id/leashes` | Danh sách leash, tạo/sub-leash/revoke, **Connect an external agent** (`leash-mcp`) | Organizer |
 | `/events/:id/approvals` | Approval Inbox | Organizer |
 | `/events/:id/activity` | Audit timeline | Organizer |
 | `/events/:id/chat` | Chat với agents | Organizer |

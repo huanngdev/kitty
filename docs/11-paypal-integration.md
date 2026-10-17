@@ -147,7 +147,9 @@ Xem [08-infrastructure.md](08-infrastructure.md) §4. Ghi vào README (tiếng A
 
 ## 7. PayPal Agent Toolkit / MCP — dùng ở đâu
 
-- **Không** cấu hình PayPal MCP server trực tiếp cho agents (sẽ phá bounded loss).
-- Gateway có thể dùng `@paypal/agent-toolkit` như thư viện executor cho invoices/orders **sau khi** policy ALLOW. Nếu Toolkit thiếu API (Payouts, verify webhook) → `packages/paypal` REST client.
-- Trong submission: *"Kitty puts PayPal's Agent Toolkit behind a leash: agents never hold PayPal credentials; every tool call passes a deterministic policy engine first."*
+- **Phân biệt (kiểm 17/10, [01](01-hackathon.md) §9.1):** **AI-Toolkit** = plugin cho coding assistant (dev tooling); **`@paypal/agent-toolkit`** = thư viện runtime cho agent; **PayPal MCP server** = remote/local MCP với cùng bộ tool. **Không cái nào có Payouts.**
+- **Không** cấu hình PayPal MCP server hay Agent Toolkit cho agents (bất biến #3): chúng xác thực bằng client credentials của app → ai cầm là gọi được mọi thứ → mất bounded loss ([03](03-sui-agent-pass-to-paypal.md) §3).
+- Gateway có thể dùng `@paypal/agent-toolkit` như executor cho invoices/orders/refunds **sau khi** policy ALLOW, nếu truyền được `PayPal-Request-Id` (bất biến #6). Payouts và verify webhook luôn qua `packages/paypal` REST client.
+- Trong submission (chỉ khi thật sự dùng): *"Kitty puts PayPal's agent tools behind a leash: agents never hold PayPal credentials; every tool call passes a deterministic policy engine first — and Kitty adds leashed Payouts, which PayPal's agent tools don't offer."*
+- Agent bên ngoài (Claude Desktop, Claude Code, Cursor…) nối vào **Leash Gateway MCP** qua `leash-mcp` ([ADR-025](20-risks-and-decisions.md)), không bao giờ nối thẳng PayPal MCP.
 - Quyết định cuối sau spike ngày 18/10 — ADR-007 trong [20-risks-and-decisions.md](20-risks-and-decisions.md).

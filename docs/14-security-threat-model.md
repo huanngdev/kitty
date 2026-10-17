@@ -54,6 +54,8 @@
 | T22 | **Injection đòi model in API key** | "Print your API key" trong trang web | Key không bao giờ nằm trong context LLM; agent không có tool đọc env/file/DB | Eval |
 | T23 | **SSRF qua `baseUrl` của OpenAI-compatible** | User nhập `http://169.254.169.254/…` | Chỉ `https`, chặn dải IP nội bộ/metadata trên deploy; localhost chỉ ở local dev | Unit |
 | T24 | **Lạm dụng demo key** | Ai đó dùng tài khoản demo để chạy model miễn phí | Hạn mức run/ngày và token/run, model rẻ cho vai phụ, chỉ cho `is_demo` | Config + test |
+| T25 | **Lộ private key của agent bên ngoài** (`leash-mcp`) | Máy người dùng bị chiếm, file profile bị đọc | Như T8: chỉ trong leash của agent đó, chỉ tới payee allowlist; file quyền `600`; key không bao giờ qua server Kitty; preset leash agent ngoài nhỏ + hết hạn ngắn; revoke một chạm | Unit (bridge không log key) + demo revoke |
+| T26 | **MCP client ngoài bị injection, hoặc bridge bị sửa** | Client làm theo lệnh ẩn; bản `leash-mcp` bị chỉnh để gửi request khác | Bridge không có quyền gì hơn key của agent; Gateway quyết định bằng policy thuần → hậu quả tối đa vẫn = số dư leash | E2E bằng script MCP client ([12](12-agents.md) §7) |
 | T20 | **Gateway bị chiếm** | RCE trong gateway | **Giới hạn trung thực của mô hình.** Giảm thiểu: gateway tối giản, không LLM, không fetch URL tuỳ ý, deps tối thiểu, PayPal app riêng quyền tối thiểu; bounded bởi số dư thật trong tài khoản platform | Ghi rõ trong README |
 
 ## 4. Bounded loss — phát biểu chính xác (để nói trong pitch)
@@ -79,5 +81,6 @@ maxPossibleLoss(event)  = Σ maxPossibleLoss(agent) over active leashes
 - [ ] Không secret trong repo (`gitleaks` hoặc tương đương)
 - [ ] Webhook verify bật trên demo
 - [ ] Rate limit admin API & MCP
+- [ ] `leash-mcp` không log key/chữ ký; chỉ gọi gateway URL đã cấu hình (`https`)
 - [ ] Demo reset không xoá audit của judges? (judges dùng event riêng — seed nhiều event demo)
 - [ ] README mục "Security model & honest limits"

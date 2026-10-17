@@ -74,7 +74,7 @@ A: Năm lớp bảo vệ:
 1. **Credential isolation:** agent không bao giờ thấy PayPal secret. Chỉ Gateway giữ.
 2. **Prefunded envelope:** mỗi Leash được **cấp một khoản tiền cụ thể** từ Kitty (đã nằm trong tài khoản platform). Tiêu hết là dừng. ⇒ **Thiệt hại tối đa = số đã cấp** — đây là "bounded loss" phiên bản PayPal.
 3. **Policy:** hạn mức/giao dịch, /ngày, tổng; allowlist người nhận; allowlist hành động; allowlist danh mục; rate limit; chống trùng (idempotency).
-4. **Step-up:** vượt ngưỡng → người thật duyệt (qua app hoặc Slack/email qua Zapier).
+4. **Step-up:** vượt ngưỡng → người thật duyệt (qua Approval Inbox trong app).
 5. **Kill switch + expiry:** thu hồi tức thì, tự hết hạn, tiền chưa tiêu trở về Kitty.
 
 Cộng thêm **sub-leash (delegation chỉ thu hẹp):** agent cha cấp cho agent con một leash hẹp hơn — không bao giờ rộng hơn.
@@ -85,8 +85,8 @@ A:
 |---|---|
 | Ứng tiền | Thành viên góp vào Kitty trước (PayPal Invoice / Pay link); vendor được trả **từ Kitty**, không từ túi organizer |
 | Theo dõi | Ledger tự động từ PayPal webhooks; dashboard realtime |
-| Đòi nợ | **Collector agent** gửi nhắc thân thiện qua Slack/email; leo thang giọng theo hạn |
-| Việc lặt vặt | **Planner** lập kế hoạch + Gantt; **Shopper** tìm đồ (Channel3), đặt chỗ (KERNEL) |
+| Đòi nợ | **Collector agent** gửi PayPal invoice và nhắc thân thiện (PayPal gửi email); leo thang giọng theo hạn |
+| Việc lặt vặt | **Planner** lập kế hoạch + timeline có payment gate; **Shopper** tìm đồ (Channel3) và mua trong leash |
 | Vượt ngân sách | Budget lines + AG Studio dashboard + leash per category |
 | Quyết toán | **Treasurer** tính dư và refund pro-rata qua PayPal |
 
@@ -115,7 +115,7 @@ A: Ba bậc:
 2. **Leash as a platform** — bất kỳ agent nào (Claude, ChatGPT, agent tự build) kết nối Leash Gateway qua MCP để tiêu tiền PayPal **trong giới hạn**. Một "OAuth cho chi tiêu của agent".
 3. **Chuẩn mở** — định dạng Leash (policy JSON + delegation chỉ thu hẹp + bounded loss qua prefunding) như một đề xuất chuẩn cho agentic payments trên rails fiat.
 
-**Hackathon chỉ build bậc 1 và chứng minh bậc 2 bằng kiến trúc** (Gateway là MCP server tách biệt, có tài liệu API riêng).
+**Hackathon build bậc 1 và demo bậc 2 bằng code chạy thật:** Gateway là MCP server tách biệt, và `leash-mcp` (bridge stdio) cho Claude Desktop / Claude Code / Cursor nối vào một leash bằng một lệnh ([ADR-025](20-risks-and-decisions.md)). Bậc 3 chỉ nêu trong pitch.
 
 ## 7. Nguyên tắc sản phẩm
 
