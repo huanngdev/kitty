@@ -5,12 +5,12 @@
 | ID | Rủi ro | Khả năng | Ảnh hưởng | Giảm thiểu | Trigger hành động |
 |---|---|---|---|---|---|
 | R1 | **Payouts không dùng được trong sandbox app** | Trung bình | Rất cao | `sandbox-check` ngày 17/10; hỏi Discord; fallback [11](11-paypal-integration.md) §6 | sandbox-check fail |
-| R2 | Ôm quá nhiều sponsor → không xong core | Cao | Cao | Tier hoá; cut list; feature freeze 05/11 | Trễ milestone > 1 ngày |
-| R3 | Trial AG/Bryntum/Elastic/Zapier hết trong judging (1–15/12) | Cao | Trung bình | Kích hoạt muộn; xin license hackathon trên Discord; degrade gracefully; feature flags | 7 ngày trước hết hạn |
+| R2 | Ôm quá nhiều sponsor → không xong core | Cao | Cao | **ADR-024**: chỉ AG Grid nhắm giải; bỏ Zapier/Elastic/KERNEL/Astropods/Postman; Bryntum → Could; cut list; feature freeze 05/11 | Trễ milestone > 1 ngày |
+| R3 | Trial AG Studio hết trong judging (1–15/12) | Trung bình | Trung bình | Kích hoạt **01/11** (45 ngày → hết ~16/12); xin license hackathon trên Discord; degrade gracefully | 7 ngày trước hết hạn |
 | R4 | Webhook sandbox chậm/không đến khi quay video | Trung bình | Trung bình | Reconcile sweep + "Sync now"; quay nhiều take | Webhook > 30s |
 | R5 | LLM không ổn định khi demo (plan khác nhau mỗi lần) | Trung bình | Trung bình | Seed + temperature thấp; prompt cố định trong video; cache plan | Eval fail |
 | R6 | Render Workflows chưa sẵn/khác kỳ vọng | Trung bình | Thấp | Outbox + worker + cron tương đương | Spike 17/10 |
-| R7 | Bryntum + AG Studio + Next.js SSR xung đột | Trung bình | Trung bình | Dynamic import `ssr:false`; spike 20/10 | Build lỗi |
+| R7 | AG Studio (và Bryntum nếu dùng) + Next.js SSR xung đột | Trung bình | Trung bình | Dynamic import `ssr:false`; spike khi kích hoạt trial | Build lỗi |
 | R8 | Bug double-spend / ledger lệch | Thấp | Rất cao (mất uy tín) | Property tests, concurrency tests, job kiểm I1 | Bất kỳ test fail |
 | R9 | Judges không chạy được local | Trung bình | Trung bình | Hosted demo là chính; Docker compose; README thử trên máy sạch | — |
 | R10 | Vấn đề pháp lý (money transmission) bị judges hỏi | Thấp | Thấp | Nói rõ: sandbox; production cần licensed partner / PayPal-native mechanisms | — |
@@ -19,6 +19,9 @@
 | R13 | Judges không có API key nên không thử được agents | Cao | Cao | Demo key có hạn mức cho tài khoản `is_demo` (ADR-015); manual mode | — |
 | R14 | Provider khác nhau xử lý tool calling khác nhau → agent chạy lệch | Trung bình | Trung bình | AI SDK chuẩn hoá; eval chạy với ≥2 provider; chặn model không hỗ trợ tools | Eval fail trên một provider |
 | R15 | Lộ API key người dùng | Thấp | Rất cao (uy tín) | Envelope encryption, redaction test, không trả plaintext ([24](24-byok-ai-models.md) §5) | — |
+| R16 | **Chưa có đường tiền vào Kitty** (audit 17/10): chưa có invoice/top-up, webhook `INVOICING.*` bị bỏ qua → `kitty.available` luôn 0 → mọi leash có allocation > 0 bị `ALLOCATION_EXCEEDS_KITTY_AVAILABLE` | **Đang xảy ra** | Rất cao (chặn M2) | Ưu tiên số 1 tuần này: `leash_create_invoice` + webhook `INVOICING.INVOICE.PAID` → ledger ([16](16-roadmap.md) 18–19/10) | Chưa xong 20/10 |
+| R17 | MCP client bên ngoài (Claude Desktop, Claude Code, Cursor) đổi hành vi hoặc spec MCP đổi → `leash-mcp` hỏng khi quay video/judging | Trung bình | Trung bình | Test với MCP Inspector + ≥2 client; pin version MCP SDK; README ghi version đã test (ADR-025) | Client không list được tools |
+| R18 | Đối thủ cùng ý tưởng "spend limit cho agent" (vd repo PayGuard Agent dùng Agent Toolkit) | Trung bình | Trung bình | Nhấn điểm khác biệt: quỹ nhóm, delegation chỉ thu hẹp, ledger + bounded loss bằng prefunding, Payouts có leash, kill switch, agent ngoài qua `leash-mcp` | — |
 
 ## 2. Architecture Decision Records
 
@@ -46,9 +49,11 @@
 ### ADR-006 — Ledger double-entry dạng bucket, tiền là cents bigint
 - **Quyết định:** Xem [05](05-leash-spec.md) §8. Số dư luôn tính từ ledger.
 
-### ADR-007 — PayPal Agent Toolkit ở sau leash *(chờ spike 18/10)*
-- **Đề xuất:** Gateway dùng Agent Toolkit như executor cho invoices/orders nếu API khớp; Payouts/verify webhook qua REST client riêng. Agents **không bao giờ** nhận Toolkit/MCP PayPal trực tiếp.
-- **Tiêu chí quyết:** Toolkit có hỗ trợ `PayPal-Request-Id`/idempotency và các field cần không? Nếu không → REST client cho tất cả, chỉ nhắc Toolkit nếu thực sự dùng (không "khai khống").
+### ADR-007 — Công cụ AI của PayPal (Agent Toolkit / MCP server) chỉ chạy sau leash *(cập nhật 17/10; chờ spike 18/10)*
+- **Bối cảnh (kiểm 17/10):** PayPal có hai thứ khác nhau: (1) **PayPal AI-Toolkit** (https://github.com/paypal/AI-Toolkit) — plugin cho coding assistant (Claude Code, Codex, Cursor) nối vào MCP sandbox; (2) **`@paypal/agent-toolkit`** (v1.11, 09/2026, https://github.com/paypal/agent-toolkit) — thư viện runtime cho agent. Toolkit và PayPal MCP server (remote `mcp.sandbox.paypal.com`, local `@paypal/mcp`) có tool cho Invoices, Orders/Refunds, Disputes, Shipment, Catalog, Subscriptions, Reporting — **không có Payouts**. Auth bằng client credentials của app → đưa cho agent là phá bounded loss.
+- **Quyết định:** Agents **không bao giờ** nhận Toolkit/MCP của PayPal (bất biến #3). Gateway dùng `@paypal/agent-toolkit` làm executor cho invoice/order/refund **sau khi** policy ALLOW **nếu** spike xác nhận truyền được `PayPal-Request-Id` (idempotency, bất biến #6) và đủ field cần; nếu không → `packages/paypal` REST cho tất cả. Payouts và verify webhook luôn qua `packages/paypal`.
+- **Submission:** chỉ ghi "PayPal Agent Toolkit" trong Built With khi code chạy trên demo thật sự gọi nó ([21](21-design-questions.md) F5). Pitch: *"PayPal's agent tools, on a leash"* + Kitty bổ sung **Payouts có leash** — thứ Toolkit/MCP của PayPal chưa có.
+- **Dev tooling:** AI-Toolkit plugin + APIMatic Context Plugin dùng trong Claude Code khi code `packages/paypal`; ghi rõ là dev tooling.
 
 ### ADR-008 — Turborepo + Bun + Next.js (latest) + Hono trên Bun
 - **Quyết định:** Monorepo TypeScript do **Turborepo** điều phối; **Bun 1.3** là package manager, runtime và test runner; `apps/web` dùng **Next.js 16 (latest)**; gateway/agents/worker dùng **Hono 4 chạy trên Bun**; Postgres + Drizzle (driver postgres.js). Chi tiết ở [07](07-tech-stack.md).
@@ -131,6 +136,27 @@
 - **Quyết định:** insert event (chưa có `kitty_id`) → gọi `POST /v1/kitties` → ghi `kitty_id`. Nếu bước 2/3 lỗi thì **xoá lại event** rồi ném lỗi. Gateway giữ idempotency/ownership như thường. Bất biến "một event = một kitty" giữ được ở phía event (không có event thiếu kitty).
 - **Hệ quả:** + đơn giản, không cần 2PC/saga hạ tầng; lỗi gateway phổ biến (chưa cấu hình, mạng) → event không được tạo, đúng kỳ vọng. − trường hợp hiếm kitty tạo xong nhưng ghi `kitty_id` lỗi để lại kitty mồ côi (xem Q13); không ảnh hưởng tiền vì kitty rỗng.
 
+### ADR-024 — Thu hẹp sponsor theo luật cộng dồn giải (17/10)
+- **Bối cảnh:** Rules: một project thắng tối đa 1 Grand Prize/Honorable Mention **+ 1** giải sponsor. Kiểm Devpost 17/10: Zapier, Elastic, KERNEL, Astropods, Postman **không có giải sponsor**. Audit code 17/10: gateway lõi đã xong nhưng chưa có đường tiền vào (R16), `apps/agents`, `apps/worker`, màn hình nghiệp vụ trên web, deploy — trong khi plan cũ còn 10 sponsor.
+- **Quyết định:**
+  1. **Sponsor nhắm giải: AG Grid (AG Studio)** — 5 suất giải (1st $5k), tiêu chí "polish + Studio Agent Framework", có judge của AG Grid.
+  2. **Giữ (tính năng thật):** Render (hosting — dùng thật), Channel3 (Shopper discovery — chỉ khi gọi API thật; không kịp → catalog demo), APIMatic (dev tooling).
+  3. **Bryntum → Could.** Payment gate vẫn "không bao giờ cắt" nhưng render bằng timeline shadcn của mình; Bryntum Gantt chỉ là bản nâng cấp nếu dư thời gian sau M4.
+  4. **Bỏ khỏi scope hackathon:** Zapier (nhắc nợ = PayPal Invoicing `/remind` qua `leash_send_reminder`; thông báo step-up/DENY = in-app), Elastic, KERNEL (action `browser_booking` giữ trong spec nhưng không build), Astropods, Postman collection (thay bằng hướng dẫn MCP Inspector + `leash-mcp` trong README).
+- **Thay thế bị loại:** giữ 10 sponsor (không tăng tổng tiền tối đa, kéo trễ critical path); bỏ cả AG Grid (mất giải sponsor lớn nhất).
+- **Hệ quả:** + thời gian dồn vào money loop, agents, MCP; + Design mạch lạc hơn. − Thông báo ngoài app chỉ còn email của PayPal (invoice, reminder), không có Slack. − Ít sponsor được xét hơn (không ảnh hưởng tổng tiền tối đa).
+
+### ADR-025 — `leash-mcp`: bridge stdio để MCP client bên ngoài dùng một leash (17/10)
+- **Bối cảnh:** Gateway MCP yêu cầu ký Ed25519 từng request (ADR-004: nonce + timestamp + hash body). MCP client phổ biến (Claude Desktop, Claude Code, Cursor, MCP Inspector) chỉ gửi header cố định hoặc OAuth → **không kết nối được**. Luận điểm "Leash cho mọi agent" ([02](02-problem-and-vision.md) §6, tiêu chí Impact ở [17](17-goals-and-success-metrics.md)) chưa có bằng chứng chạy được.
+- **Quyết định:** package `packages/leash-mcp` (CLI có `bin`, chạy bằng `bunx`/`npx`, chỉ dùng API Node-compatible):
+  1. `leash-mcp init` sinh keypair Ed25519 **trên máy người dùng**, lưu private key ở file cấu hình local (quyền `600`), in public key.
+  2. Organizer dán public key vào màn hình **"Connect an external agent"** (trang Leashes) → `apps/api` gọi Gateway `POST /v1/agents` (đăng ký key) → cấp leash như mọi agent khác.
+  3. `leash-mcp` (mặc định) chạy MCP server **stdio**, chuyển tiếp mọi JSON-RPC sang `POST /mcp` của Gateway, ký bằng `createSignedFetch` (`@kitty/signing`). Bridge không có PayPal credential, không có logic policy, không cache số dư (bất biến #5) — chỉ là đường ống ký.
+  4. README có snippet cấu hình cho Claude Desktop, Claude Code, Cursor, MCP Inspector.
+- **Thay thế bị loại:** bearer token / OAuth 2.1 cho remote MCP ngay trong hackathon (ngược ADR-004: token lộ là dùng được; xem lại sau hackathon với token ràng buộc khoá như DPoP); cho agent ngoài gọi Admin API (sai trust boundary).
+- **Hệ quả:** + chứng minh "any agent" bằng demo thật (cảnh "Claude Desktop bị lừa → DENY"); + judges thử agent bằng client của họ, không cần BYOK; + private key không rời máy người dùng. − thêm một package public (publish npm hay chạy từ repo — Q14); − phải bám spec MCP hiện hành (2026-07-28).
+- **Bất biến giữ nguyên:** agent ngoài chỉ có `leash_*` tools (#3), không approve, không sửa leash của mình (#9), mọi quyết định tiền vẫn qua policy thuần (#2).
+
 ## 3. Open questions (cần trả lời, có hạn)
 
 | # | Câu hỏi | Ai/cách trả lời | Hạn |
@@ -138,13 +164,15 @@
 | Q1 | Payouts sandbox có cần bật thêm gì? | sandbox-check + Discord | 17/10 |
 | Q2 | Invoicing sandbox có gửi email/payer-view link dùng được để demo? | sandbox-check | 18/10 |
 | Q3 | Refund invoice payment qua `captures/{id}/refund` có chạy với invoice? Capture id lấy ở đâu trong webhook? | spike | 19/10 |
-| Q4 | Agent Toolkit hỗ trợ những tool nào, có idempotency? | spike | 18/10 |
+| Q4 | `@paypal/agent-toolkit` có cho truyền `PayPal-Request-Id` (idempotency) và đủ field cho invoice/order/refund không? (Đã biết 17/10: không có Payouts — ADR-007) | spike | 18/10 |
 | Q5 | Render Workflows SDK TypeScript có sẵn cho account? | spike | 17/10 |
 | Q6 | AG Studio license trial có watermark? Có gia hạn cho judging? | Discord AG Grid | 20/10 |
-| Q7 | Bryntum trial có hạn chế render production build? | docs/Discord | 20/10 |
-| Q8 | Zapier MCP free plan đủ cho demo trong judging? | thử | 01/11 |
-| Q9 | Elastic Jina inference endpoint id chính xác? | setup | 28/10 |
+| Q7 | Bryntum trial có hạn chế render production build? | **Chỉ hỏi nếu dùng Bryntum** (Could — ADR-024) | — |
+| Q8 | ~~Zapier MCP free plan đủ cho demo trong judging?~~ | **Đóng** — bỏ Zapier (ADR-024) | — |
+| Q9 | ~~Elastic Jina inference endpoint id chính xác?~~ | **Đóng** — bỏ Elastic (ADR-024) | — |
 | Q11 | AI SDK v7 tool calling ổn định với Anthropic + một OpenAI-compatible endpoint (OpenRouter/Ollama) trên Bun? | spike | 29/10 |
 | Q12 | Payout `RETURNED`/`REFUNDED` đến **sau khi** intent đã `settled`: tiền đã rời ledger sang `external:payee` nên không thể hoàn tác bằng bút toán nội bộ (KIT-7 chỉ ghi `paypal_objects` + audit alert, không đụng ledger). Xử lý thế nào: bút toán bù `external:payee → kitty:available` với txn riêng, hay chỉnh tay ở trang settling? | spike + ADR | 01/11 |
 | Q10 | Làm solo hay team? Nếu team: chia vai (Gateway/ledger · Web/UI · Agents/sponsors) | quyết định của bạn | 17/10 |
 | Q13 | Nếu tạo kitty xong mà `apps/api` ghi `kitty_id` lỗi (event đã xoá), kitty mồ côi trong `leash.kitties`. Cần endpoint `DELETE /v1/kitties/:id` (organizer, chưa có ledger) hay reconcile sweep? | quyết định + issue sau | 25/10 |
+| Q14 | `leash-mcp` phát hành thế nào: publish npm (cần scope/tên public) hay chạy từ repo (`bunx github:…`)? | quyết định | 30/10 |
+| Q15 | Remote PayPal MCP có tool commerce (`search_product`, `create_cart`, `checkout_cart`, header `x-feature-flags: commerce:true`, hiện chỉ gift card) — có chạy trong sandbox không? Nếu có, Shopper dùng qua leash được không? (không chặn critical path) | thử | 25/10 |
