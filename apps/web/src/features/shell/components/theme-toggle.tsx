@@ -14,7 +14,7 @@ export function ThemeToggle(): JSX.Element {
       variant="ghost"
       size="icon"
       onClick={toggleTheme}
-      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      aria-label={isMounted && isDark ? "Switch to light theme" : "Switch to dark theme"}
     >
       {isMounted && isDark ? <Sun aria-hidden /> : <Moon aria-hidden />}
     </Button>

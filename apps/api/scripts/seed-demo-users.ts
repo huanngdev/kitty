@@ -5,7 +5,7 @@ import { getAuth } from "../src/lib/auth";
 import { getDb } from "../src/lib/db";
 
 /**
- * Seeds the demo accounts used by the "Continue as demo organizer" button and by
+ * Seeds the demo accounts used by the "Try the demo (for judges)" button and by
  * judges (docs/23-user-screen-flow.md §2).
  *
  * Run from the repo root: `bun run seed:demo-users` (the script loads

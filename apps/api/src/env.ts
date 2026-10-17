@@ -31,7 +31,7 @@ const envSchema = z.object({
   WEB_ORIGIN: z.preprocess(unsetIfEmpty, z.url().optional()),
 
   // Password of the seeded demo accounts (organizer@demo.kitty). Powers the
-  // "Continue as demo organizer" button; never exposed to the browser.
+  // "Try the demo (for judges)" button; never exposed to the browser.
   DEMO_USER_PASSWORD: z.preprocess(unsetIfEmpty, z.string().min(8).optional()),
 
   // One-click demo login flag. OFF by default — enable it only on the judge

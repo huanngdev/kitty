@@ -12,7 +12,8 @@ import { useDemoSignIn } from "../hooks/use-demo-sign-in";
  *
  * Rendered only when `GET /api/demo-sign-in/status` reports the deployment
  * enabled it — ordinary deployments never show the button, and the endpoint
- * 404s anyway.
+ * 404s anyway. The label says "for judges" and the button uses the secondary
+ * style on purpose: it must never be mistaken for the email + password login.
  */
 export function DemoSignInButton(): JSX.Element | null {
   const { enabled, isLoading } = useDemoLoginStatus();
@@ -24,10 +25,13 @@ export function DemoSignInButton(): JSX.Element | null {
 
   return (
     <div className="flex flex-col gap-2">
-      <Button type="button" variant="outline" onClick={signInAsDemo} disabled={isPending}>
+      <Button type="button" variant="secondary" onClick={signInAsDemo} disabled={isPending}>
         {isPending ? <Spinner data-icon="inline-start" /> : <Cat data-icon="inline-start" />}
-        Continue as demo organizer
+        Try the demo (for judges)
       </Button>
+      <p className="text-center text-xs text-muted-foreground">
+        Opens the seeded organizer workspace — no email needed.
+      </p>
       {error === null ? null : (
         <p role="alert" className="text-sm text-destructive">
           {error}
