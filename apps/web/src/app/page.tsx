@@ -1,10 +1,9 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link2, ShieldCheck, Wallet } from "lucide-react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { JSX } from "react";
 import { Logo } from "@/components/brand/logo";
+import { LinkButton } from "@/components/link-button";
 import { DemoSignInButton } from "@/features/auth/components/demo-sign-in-button";
 import { ApiStatusBadge } from "@/features/system/components/api-status-badge";
 import { routes } from "@/lib/routes";
@@ -72,10 +71,10 @@ export default async function Home(): Promise<JSX.Element> {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3">
-              <Button render={<Link href={routes.signIn} />}>Sign in</Button>
-              <Button variant="outline" render={<Link href={routes.signUp} />}>
+              <LinkButton href={routes.signIn}>Sign in</LinkButton>
+              <LinkButton variant="outline" href={routes.signUp}>
                 Create an account
-              </Button>
+              </LinkButton>
               <DemoSignInButton />
             </div>
           </CardContent>

@@ -124,6 +124,7 @@ function label(result: Result): string {
 - **MUST** — Server Components được dùng cho layout/dữ liệu tĩnh và prefetch (`prefetchQuery` + `HydrationBoundary`); phần interactive là Client Component dùng hook.
 - **MUST** — Component sponsor (AG Studio, Bryntum) phải được bọc trong một component của mình để phần còn lại của app không import trực tiếp thư viện sponsor.
 - **MUST** — shadcn/ui component nằm ở `apps/web/src/components/ui` (định nghĩa ở [docs/25](docs/25-code-architecture.md)); **MUST NOT sửa tay file CLI generate** — muốn đổi thì chỉnh variant/rule trong `apps/web/eslint.config.js` hoặc hỏi owner, không patch file vendor.
+- **MUST** — nút điều hướng dùng `<LinkButton>` (`apps/web/src/components/link-button.tsx`), không truyền `render={<Link/>}` thẳng vào `Button`; với Base UI `render` khác thẻ `<button>` phải set `nativeButton={false}`.
 - **MUST** — Brand (mascot/wordmark "Kitty") chỉ render qua component `<Logo />` ở `apps/web/src/components/brand/logo.tsx`; MUST NOT dựng lại markup logo/text brand rải rác trong page/feature.
 - **MUST** — Naming: file `kebab-case`, component `PascalCase`, hook `useX`, một component một file, **named export** (ngoại lệ: file `page.tsx`/`layout.tsx`/`route.ts` của Next buộc default export).
 

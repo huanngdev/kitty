@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import {
   Empty,
   EmptyContent,
@@ -8,8 +7,8 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { CalendarDays } from "lucide-react";
-import Link from "next/link";
 import type { JSX } from "react";
+import { LinkButton } from "@/components/link-button";
 import { routes } from "@/lib/routes";
 
 /** S03 empty state (docs/23-user-screen-flow.md §6). */
@@ -26,7 +25,7 @@ export function EventsEmptyState(): JSX.Element {
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button render={<Link href={routes.newEvent} />}>Create your first event</Button>
+        <LinkButton href={routes.newEvent}>Create your first event</LinkButton>
       </EmptyContent>
     </Empty>
   );
