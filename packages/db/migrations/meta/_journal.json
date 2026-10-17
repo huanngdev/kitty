@@ -15,6 +15,20 @@
       "when": 1792207166494,
       "tag": "0001_oval_captain_midlands",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792224090209,
+      "tag": "0002_chubby_rictor",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792224096186,
+      "tag": "0003_leash_append_only",
+      "breakpoints": true
     }
   ]
 }
