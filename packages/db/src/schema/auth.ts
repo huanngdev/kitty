@@ -16,6 +16,11 @@ export const user = appSchema.table("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
+  /**
+   * Demo/judge accounts get Kitty's limited demo AI key (docs/24 §6). Set by the
+   * demo seed only; never accepted from user input (Better Auth `input: false`).
+   */
+  isDemo: boolean("is_demo").default(false).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()

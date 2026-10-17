@@ -39,6 +39,21 @@ function createAuth() {
     basePath: "/api/auth",
     trustedOrigins: [webOrigin],
     emailAndPassword: { enabled: true },
+    user: {
+      additionalFields: {
+        /**
+         * Demo/judge flag. Not part of sign-up input — only the demo seed sets it
+         * via the database (AGENTS.md invariant #13: demo key is the sole exception
+         * to BYOK, and only for flagged accounts).
+         */
+        isDemo: {
+          type: "boolean",
+          required: false,
+          defaultValue: false,
+          input: false,
+        },
+      },
+    },
     session: {
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,

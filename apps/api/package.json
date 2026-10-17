@@ -16,6 +16,7 @@
     "@kitty/db": "workspace:*",
     "@kitty/shared": "workspace:*",
     "better-auth": "^1.7.10",
+    "drizzle-orm": "^0.45.4",
     "hono": "^4.13.13",
     "pino": "^10.4.0",
     "zod": "^4.6.7"

@@ -1,6 +1,6 @@
 # 25 — Code Architecture
 
-> **Trạng thái:** `@kitty/shared`, `@kitty/db`, `@kitty/ui` **đã tồn tại**; web đã có data layer (axios + TanStack Query + proxy `/api`), `apps/api` đã có Better Auth (bảng `app.user`/`session`/`account`/`verification` — migration 0001 **chưa apply**), logger pino + `onError` dùng chung; gateway đã có `bun run sandbox:check`. File này chốt cấu trúc thư mục và luật phụ thuộc để mọi người code theo. Rules bắt buộc ở [CODE_RULES.md](../CODE_RULES.md).
+> **Trạng thái:** `@kitty/shared`, `@kitty/db`, `@kitty/ui` **đã tồn tại**; web đã có data layer (axios + TanStack Query + proxy `/api`), **auth UI + app shell** (`/sign-in`, `/sign-up`, `(app)` layout, sidebar, theme, demo login — KIT-24), `apps/api` đã có Better Auth (bảng `app.user`/`session`/`account`/`verification` + `is_demo`) + `POST /api/demo-sign-in` + seed demo users; logger pino + `onError` dùng chung; gateway đã có `bun run sandbox:check`. File này chốt cấu trúc thư mục và luật phụ thuộc để mọi người code theo. Rules bắt buộc ở [CODE_RULES.md](../CODE_RULES.md).
 
 Mục tiêu: tách rõ **hiển thị / logic / dữ liệu**, giữ **contract là một nguồn duy nhất** (`@kitty/shared`), và để mọi service backend (web BFF, `apps/api`, sau này gateway/agents/worker) dùng cùng một cách phân tầng.
 
@@ -68,33 +68,46 @@ Routes chỉ là vỏ mỏng; mọi thứ theo feature.
 ```
 apps/web/
 ├─ src/
+│  ├─ proxy.ts                     # ✅ Next 16 proxy: cookie-only redirect cho /events, /settings, /sign-in, /sign-up
 │  ├─ app/                         # routes only (page/layout mỏng)
-│  │  ├─ layout.tsx                # ✅ bọc <Providers>
-│  │  ├─ providers.tsx             # ✅ QueryClientProvider (+ devtools chỉ ở dev)
-│  │  ├─ page.tsx                  # ✅ landing + ApiStatusBadge
-│  │  └─ events/                   # (kế hoạch)
-│  │     ├─ page.tsx
-│  │     └─ [id]/page.tsx
+│  │  ├─ layout.tsx                # ✅ bọc <Providers>, Inter + JetBrains Mono, suppressHydrationWarning
+│  │  ├─ providers.tsx             # ✅ ThemeProvider + QueryClientProvider + TooltipProvider (+ devtools chỉ ở dev)
+│  │  ├─ page.tsx                  # ✅ landing S01 (redirect user đã đăng nhập → /events), instant = false
+│  │  ├─ sign-in/page.tsx          # ✅ S02 + "Continue as demo organizer"
+│  │  ├─ sign-up/page.tsx          # ✅ tạo tài khoản
+│  │  └─ (app)/                    # ✅ vùng đã đăng nhập (layout check session thật, instant = false)
+│  │     ├─ layout.tsx             # getServerSession() → redirect /sign-in
+│  │     └─ events/                # S03: page + loading.tsx (Skeleton) + error.tsx (Alert)
+│  │        └─ new/page.tsx        # S04 placeholder (KIT-21)
 │  ├─ features/
 │  │  ├─ system/                   # ✅ ví dụ mẫu để copy cho feature sau
 │  │  │  ├─ api/system.api.ts      # axios fn + systemKeys + queryOptions
 │  │  │  ├─ hooks/use-api-status.ts
 │  │  │  └─ components/api-status-badge.tsx
-│  │  └─ events/                   # (kế hoạch)
-│  │     ├─ api/events.api.ts
-│  │     ├─ components/…
-│  │     ├─ hooks/…
-│  │     └─ utils/…
+│  │  ├─ auth/                     # ✅ KIT-24
+│  │  │  ├─ components/            # auth-shell, sign-in-form, sign-up-form, demo-sign-in-button
+│  │  │  ├─ api/demo-login.api.ts  # ✅ status query (axios + queryOptions)
+│  │  │  ├─ hooks/                 # use-sign-in-form, use-sign-up-form, use-demo-sign-in, use-demo-login-status
+│  │  │  └─ lib/auth-error.ts      # map lỗi Better Auth/API → câu hiển thị
+│  │  ├─ shell/                    # ✅ KIT-24: app-shell, app-sidebar, app-top-bar, theme-toggle, user-menu
+│  │  │  ├─ components/…
+│  │  │  ├─ hooks/                 # use-app-nav (nav từ sitemap docs/23), use-theme-toggle, use-user-menu
+│  │  │  └─ lib/initials.ts
+│  │  └─ events/                   # ✅ empty/skeleton/error state (list thật ở KIT-21)
+│  │     ├─ components/events-empty-state.tsx · events-skeleton.tsx · events-error.tsx
+│  │     └─ hooks/use-events-error.ts
 │  ├─ components/                  # component ghép chung toàn app (chưa có)
 │  ├─ hooks/                       # hook chung toàn app (chưa có)
 │  ├─ lib/
 │  │  ├─ http.ts                   # ✅ axios instance (baseURL "/api", withCredentials) + ApiRequestError
 │  │  ├─ query-client.ts           # ✅ makeQueryClient/getQueryClient (staleTime 30s, không retry 4xx)
 │  │  ├─ auth-client.ts            # ✅ better-auth/react
+│  │  ├─ server-session.ts         # ✅ getServerSession() — gọi /api/auth/get-session qua rewrite
+│  │  ├─ auth-redirect.ts          # ✅ resolveAuthRedirect() (pure, proxy dùng; có test)
+│  │  ├─ routes.ts                 # ✅ routes + buildSignInPath/readNextPath
 │  │  └─ env.ts                    # ✅ zod-validated env (clientEnv + getServerEnv)
-│  └─ providers/                   # (kế hoạch) tách file provider riêng khi cần
-│     ├─ query-provider.tsx
-│     └─ theme-provider.tsx
+│  └─ providers/
+│     └─ theme-provider.tsx        # ✅ next-themes (attribute="class")
 ├─ eslint.config.js
 └─ tsconfig.json
 ```
@@ -106,6 +119,8 @@ apps/web/
 - `lib/http.ts` là điểm duy nhất tạo axios instance → mọi interceptor/cookie ở một chỗ.
 - `features/system/` là **ví dụ mẫu hoàn chỉnh** (api → hook → component) để feature sau copy; component không chứa logic.
 - `lib/http.ts` (`baseURL: "/api"`) + `next.config.ts` `rewrites()` → browser same-origin, cookie auth first-party.
+- Auth: UI ở `features/auth`, quyết định redirect ở 2 hook pure (`lib/auth-redirect.ts` — proxy dùng, `lib/routes.ts` — `?next=`), session thật đọc ở server (`lib/server-session.ts`) → component không tự gọi auth API. Lý do + đánh đổi ở [ADR-022](20-risks-and-decisions.md).
+- Layout class **không** đặt trên component shadcn (rule `@shadcn/lint/no-restyle`): bọc trong `div`/`span` thường, đúng như `features/system` đã làm.
 
 ## 4. apps/api — modular theo domain
 
@@ -128,10 +143,15 @@ apps/api/
 │  └─ modules/
 │     ├─ system/
 │     │  └─ system.routes.ts       # ✅ GET /api/health (mount dưới /api)
+│     ├─ auth/
+│     │  ├─ demo.routes.ts         # ✅ POST /api/demo-sign-in (+ GET .../status; 404 khi tắt, 429 rate limit)
+│     │  └─ demo.service.ts        # ✅ isDemoLoginEnabled() + signInEmail({ asResponse: true }) với DEMO_USER_PASSWORD
 │     └─ events/                   # (kế hoạch)
 │        ├─ events.routes.ts       # Hono router + zValidator → service
 │        ├─ events.service.ts      # business logic (không type Hono)
 │        └─ events.repository.ts   # chỉ Drizzle
+├─ scripts/
+│  └─ seed-demo-users.ts           # ✅ root script `seed:demo-users` (idempotent, signUpEmail)
 └─ tsconfig.json
 ```
 
@@ -155,10 +175,14 @@ packages/shared/
 │  │  ├─ money.schema.ts           # cents (integer) + formatCents()
 │  │  ├─ pagination.schema.ts      # cursor pagination helper
 │  │  └─ index.ts
+│  ├─ auth/                        # ✅ KIT-24
+│  │  ├─ auth.schema.ts            # signInSchema, signUpSchema, authSessionSchema, safeNextPath()
+│  │  ├─ auth.types.ts             # SignInInput, SignUpInput, AuthSessionPayload…
+│  │  └─ index.ts
 │  └─ health/
 │     ├─ health-response.schema.ts # { ok: true }
 │     └─ index.ts
-└─ package.json                    # exports: "." + "./common" + "./health" + "./api-paths"
+└─ package.json                    # exports: "." + "./common" + "./auth" + "./health" + "./api-paths"
 ```
 
 **Vì sao:** cả `apps/web` và `apps/api` import cùng schema → validate ở server và type ở client không bao giờ lệch. Đổi contract = đổi ở đây trước.
@@ -181,12 +205,16 @@ packages/db/
 
 packages/ui/
 ├─ src/
-│  ├─ components/                  # shadcn/ui components (CLI generate): button, card, input, label, badge
+│  ├─ components/                  # shadcn/ui components (CLI generate): button, card, input, label, badge,
+│  │                               #   sidebar, sheet, dropdown-menu, tooltip, avatar, separator, field,
+│  │                               #   alert, empty, skeleton, spinner, collapsible
+│  ├─ hooks/
+│  │  └─ use-mobile.ts             # useSyncExternalStore trên matchMedia (sidebar dùng)
 │  ├─ lib/
 │  │  └─ utils.ts                  # cn() = clsx + tailwind-merge
-│  └─ styles/globals.css           # Tailwind v4 + shadcn theme tokens (light + dark)
+│  └─ styles/globals.css           # Tailwind v4 + token brand Kitty (light + dark), xem docs/15 §1
 ├─ components.json                 # config cho shadcn CLI (monorepo)
-└─ package.json                    # exports: ./styles/globals.css, ./components/*, ./lib/*
+└─ package.json                    # exports: ./styles/globals.css, ./components/*, ./hooks/*, ./lib/*
 ```
 
 **Vì sao:** `db` gom schema/migration một chỗ; `ui` là nơi duy nhất chứa component shadcn/ui + `cn()` để web và (sau này) các app UI khác dùng lại cùng token.

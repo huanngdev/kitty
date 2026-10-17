@@ -3,6 +3,7 @@ import { Hono, type Context } from "hono";
 import { getAuth } from "./lib/auth";
 import { AppError } from "./lib/errors";
 import { logger } from "./lib/logger";
+import { demoRoutes } from "./modules/auth/demo.routes";
 import { systemRoutes } from "./modules/system/system.routes";
 
 /**
@@ -36,6 +37,7 @@ app.get("/health", (c) => {
 app.on(["GET", "POST"], "/api/auth/*", (c) => getAuth().handler(c.req.raw));
 
 // Product API. Reached same-origin from the browser through the Next /api proxy.
+app.route("/api", demoRoutes);
 app.route("/api", systemRoutes);
 
 export type App = typeof app;
