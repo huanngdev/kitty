@@ -34,6 +34,13 @@
 | Q14 | `leash-mcp` phát hành thế nào: publish npm hay chạy từ repo (`bunx github:…`)? | owner · 30/10 |
 | Q15 | Remote PayPal MCP có tool commerce chạy được trong sandbox không (Shopper dùng qua leash)? | owner · 25/10 |
 
+## 18/10/2026
+
+- **KIT-64 — Auth end-to-end (PR đang mở, chờ owner review):** email/password (min 8, max 128, auto sign-in, reset 1 h revoke session khác, verify 24 h), **"Continue with GitHub"** và **"Continue with PayPal"** qua `socialProviders` có sẵn của Better Auth 1.7 — provider chỉ đăng ký khi đủ env, UI render theo `GET /api/auth-config`. Thêm trang `/forgot-password`, `/reset-password`, `/verify-email`, `/auth/error`, banner verify email, và **Settings → Account** (profile, email + badge, đổi mật khẩu, link/unlink provider — chặn unlink method cuối, sessions + revoke, delete account type-to-confirm).
+- **Bảo mật/bất biến:** ADR-028 tách **REST app "Log in with PayPal"** khỏi app tiền — `PAYPAL_LOGIN_*` chỉ ở `apps/api`, `PAYPAL_CLIENT_SECRET` vẫn chỉ ở `apps/gateway`; `check:env-isolation` thêm luật + self-test hai chiều sai. ADR-029 chốt verification theo môi trường, implicit link **chỉ khi provider email verified** (`validateUserInfo`), middleware `requireSession` → `requireVerifiedEmail` → `requireEventOrganizer` (404 cho cả event của người khác), rate limit `storage: "database"` 5/phút cho sign-in/sign-up/forgot, cookie prefix `kitty` + `freshAge` 1 ngày, demo read-only.
+- **Migration:** `0009_previous_nightshade.sql` — bảng `app.rate_limit` (đã apply lên Neon dev).
+- **Test:** `bun run ci` xanh; `apps/api` integration trên Neon dev (sign-up → link verify từ ConsoleMailer → verify → sign-in → đổi mật khẩu (session cũ chết) → reset → lượt sign-in thứ 6 bị 429); OAuth integration chạy callback Better Auth qua `oauth2-mock-server` (new user / auto-link khi verified / **không** link khi provider chưa verify / error redirect); Playwright `apps/web/test/e2e/auth.e2e.ts` chạy full journey trên port phụ (3100/8887) — 0 console error, open-redirect `?next=//evil.example` phải về `/events`.
+
 ## 17/10/2026
 
 - **PR #25** — Logo owner thật (branch `feat/brand-logo`): hai SVG `apps/web/public/brand/kitty-logo-light.svg` (thân đen/chi tiết trắng) + `kitty-logo-dark.svg` (thân trắng/chi tiết đen), crop **zero padding** bằng viewBox đúng hộp bao hình học `300 17.536248 300 282.463752` (getBBox khớp < 0.0001, 4 cạnh 600px/32px đều có pixel mực); `<Logo />` giữ API cũ thêm `theme: "auto"|"light"|"dark"` + `priority` (auto render cả hai ảnh, CSS `dark:hidden`/`hidden dark:block` — không lệch hydration), size theo chiều cao; favicon `apps/web/src/app/icon.svg` theo `prefers-color-scheme` (bỏ `favicon.ico`); e2e UI-QA assert đúng 1 mark hiển thị và đúng file theo theme trên `/`, `/sign-in`, `/events`.

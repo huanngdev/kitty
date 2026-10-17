@@ -235,7 +235,20 @@ Các route `app/api/*` của Next.js, gọi Gateway Admin API phía server:
 
 ### 4.1 Product routes trong `apps/api` (KIT-30 — session auth)
 
-`apps/api` phục vụ dữ liệu không phải tiền với Better Auth session; web BFF proxy tới đây. Mọi route dưới đây `401 UNAUTHORIZED` khi chưa đăng nhập, và chỉ organizer của event được thao tác (`403 FORBIDDEN`), id không tồn tại `404 *_NOT_FOUND`. Tiền là decimal string ở biên.
+`apps/api` phục vụ dữ liệu không phải tiền với Better Auth session; web BFF proxy tới đây. Mọi route dưới đây `401 UNAUTHENTICATED` khi chưa đăng nhập; khi deployment bật verify email thì user chưa verify nhận `403 EMAIL_NOT_VERIFIED`; event không tồn tại **hoặc của user khác** đều `404 EVENT_NOT_FOUND` (không 403 — không lộ sự tồn tại, ADR-029). Tiền là decimal string ở biên.
+
+**Middleware chain (KIT-64, ADR-029):** `sessionMiddleware` (đọc session Better Auth) → `requireSession` (401 `UNAUTHENTICATED`) → `requireVerifiedEmail` (403 `EMAIL_NOT_VERIFIED`, chỉ mount khi verification bật) → `requireEventOrganizer("id")` (404 `EVENT_NOT_FOUND`, gán `c.var.event`). Handler chỉ còn `requireUser(c)` để lấy `user.id`; service vẫn kiểm lại ownership như lớp thứ hai.
+
+**Auth routes (public, không cần session):**
+
+| Method | Path | Mô tả |
+|---|---|---|
+| GET | `/api/auth-config` | Phương thức đăng nhập đã cấu hình: `{ emailPassword: true, providers: ["github","paypal"], demo, emailVerification }` — UI chỉ render nút theo danh sách này. Không chứa secret. |
+| GET | `/api/demo-sign-in/status` · POST `/api/demo-sign-in` | Demo một chạm, 404 khi `DEMO_LOGIN_ENABLED=false` (ADR-025) |
+| — | `/api/auth/*` | Better Auth handler: sign-up/sign-in email, social (github/paypal), verify-email, reset-password, change-password, list-sessions, revoke-session, link/unlink account, delete-user |
+| — | `/api/dev/*` (development only) | Chỉ tồn tại khi `NODE_ENV=development`: `GET /api/dev/last-email?to=`, `POST /api/dev/emails/clear`, `POST /api/dev/rate-limit/clear`. Production trả 404. |
+
+**Demo read-only:** tài khoản `is_demo` nhận `403 DEMO_READ_ONLY` ở `change-password`, `change-email`, `update-user`, `delete-user`, `unlink-account` (hook Better Auth). Agent không bao giờ authenticate ở đây — agent đi qua Gateway MCP; route session không nhận `member_token`.
 
 | Method | Path | Mô tả |
 |---|---|---|

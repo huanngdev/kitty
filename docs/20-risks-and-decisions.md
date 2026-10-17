@@ -178,6 +178,35 @@
 - **Hệ quả:** + chứng minh "any agent" bằng demo thật (cảnh "Claude Desktop bị lừa → DENY"); + judges thử agent bằng client của họ, không cần BYOK; + private key không rời máy người dùng. − thêm một package public (publish npm hay chạy từ repo — Q14); − phải bám spec MCP hiện hành (2026-07-28).
 - **Bất biến giữ nguyên:** agent ngoài chỉ có `leash_*` tools (#3), không approve, không sửa leash của mình (#9), mọi quyết định tiền vẫn qua policy thuần (#2).
 
+### ADR-028 — "Log in with PayPal" dùng REST app tách khỏi app tiền (18/10)
+
+- **Bối cảnh:** KIT-64 yêu cầu "Continue with PayPal". Better Auth 1.7 có sẵn `socialProviders.paypal` ({ clientId, clientSecret, environment }). Nhưng bất biến #1 (AGENTS.md §3) cấm `apps/api` giữ credential PayPal có thể tiêu tiền, và cấm `PAYPAL_CLIENT_SECRET` xuất hiện ngoài `apps/gateway`.
+- **Quyết định:**
+  1. Tạo **một REST app riêng** trên PayPal Developer, bật **duy nhất** feature **"Log in with PayPal"** (không Payouts/Invoicing/Orders), gắn với một **sandbox business account riêng, số dư 0**. App này chỉ trả về identity (sub, email, `email_verified`, name).
+  2. Env của app login chỉ sống ở `apps/api`: `PAYPAL_LOGIN_CLIENT_ID`, `PAYPAL_LOGIN_CLIENT_SECRET`, `PAYPAL_LOGIN_ENV` (`sandbox` | `live`, mặc định `sandbox`). Secret của app tiền vẫn `PAYPAL_CLIENT_SECRET` và vẫn **chỉ** ở `apps/gateway`.
+  3. `scripts/check-env-isolation.ts` thêm luật: `PAYPAL_LOGIN_CLIENT_SECRET` chỉ được xuất hiện trong `apps/api/**`; `PAYPAL_CLIENT_SECRET` vẫn chỉ trong `apps/gateway/**`; có self-test cho cả hai chiều sai.
+  4. Identity không bao giờ cấp quyền tiền: user đăng nhập bằng PayPal **chỉ là user**; mọi hành động tiền vẫn qua leash + Gateway Admin API với session organizer.
+- **Thay thế bị loại:** dùng chung app tiền cho login (vi phạm #1: secret tiền rời gateway); tự viết OAuth (vi phạm CODE_RULES §A: Better Auth đã có provider); dùng PayPal như "linked account để chuyển tiền" (ngoài scope — tiền chỉ đi tới payee đã verify).
+- **Hệ quả:** + login tách hoàn toàn khỏi đường tiền, CI chứng minh bằng hai case fail; + cùng một PayPal user vẫn có thể là organizer. − thêm 3 env và một app phải tạo tay; − **PayPal từ chối return URL `localhost`** (đã kiểm trong docs PayPal + Better Auth): local dev cần tunnel HTTPS (`ngrok http 3100`) và set `BETTER_AUTH_URL`/`WEB_ORIGIN`/`NEXT_PUBLIC_APP_URL` theo origin tunnel; email/password + GitHub vẫn chạy trên `http://localhost`.
+- **Ghi chú vận hành:** app live cần PayPal review; permissions (email, name) đặt trong Dashboard, **không** qua scope param.
+
+### ADR-029 — Chuẩn hoá auth: verification policy, linking policy, 404 cho event của người khác (18/10)
+
+- **Bối cảnh:** KIT-64 làm lại auth end-to-end (email/password + GitHub + PayPal). Cần chốt ba quyết định dễ gây tranh cãi: khi nào **bắt buộc verify email**, khi nào **tự động link** provider vào account có sẵn, và trả **403 hay 404** khi organizer A chạm event của B.
+- **Quyết định:**
+  1. **Verification policy:** `sendOnSignUp: true` luôn bật; `requireEmailVerification` **bật ở production khi có mailer thật** (Resend đủ `RESEND_API_KEY` + `MAIL_FROM`), **tắt ở development/test**. `AUTH_REQUIRE_EMAIL_VERIFICATION` override được cả hai chiều. Production thiếu mailer → log warning, verification tắt (không thể bắt verify mà không gửi được link). Token: verify 24 h, reset 1 h; reset **revoke mọi session khác** (`revokeSessionsOnPasswordReset`). UI luôn có banner "verify your email" khi `user.emailVerified !== true`.
+  2. **Linking policy:** `account.accountLinking.enabled = true`, `trustedProviders = ["github","paypal"]`, nhưng **implicit link chỉ khi provider khẳng định email đã verify** (GitHub primary verified email, PayPal `email_verified`) — ép bằng `user.validateUserInfo` (action `link-account`) trả `provider_email_not_verified`. Ngoài ra giữ mặc định của Better Auth: email của account local cũng phải `emailVerified`. Không tự link được → Better Auth redirect `errorCallbackURL` với code, UI hiện "account exists — sign in with your password, then link it from Settings → Account". Unlink được từ Settings, **không bao giờ unlink method cuối cùng** (Better Auth `allowUnlinkingAll: false` + UI).
+  3. **404, không 403, cho event của người khác:** middleware `requireEventOrganizer(eventIdParam)` trả `404 EVENT_NOT_FOUND` cho cả id không tồn tại **và** event của user khác — 403 vô tình xác nhận id tồn tại (oracle liệt kê). Service vẫn kiểm lại (`requireOwnedEvent`) như lớp phòng thủ thứ hai; docs/10 §4 đổi theo.
+  4. **Một chuỗi middleware có type:** `requireSession` (401 `UNAUTHENTICATED`) → `requireVerifiedEmail` (403 `EMAIL_NOT_VERIFIED`, chỉ mount khi verification bật, đọc từ env) → `requireEventOrganizer` (404). Mọi route `/api/events|members|vendors|budget-lines` đi qua chuỗi này; handler chỉ còn `requireUser(c)` để lấy id.
+  5. **Session/cookie:** `cookiePrefix: "kitty"`, `httpOnly`, `sameSite=lax`, `secure` khi production (qua `useSecureCookies`), `expiresIn` 7 d, `updateAge` 1 d, `freshAge` 1 d cho change password/unlink/delete; `advanced.ipAddress.ipAddressHeaders = ["x-forwarded-for"]` (Render). `BETTER_AUTH_SECRET` ≥ 32 ký tự (env schema chặn).
+  6. **Rate limit:** bật, `storage: "database"` (bảng `app.rate_limit`, migration 0009) để sống qua restart và chia sẻ giữa instance; rule chặt 5/phút cho `/sign-in/email`, `/sign-up/email`, `/forget-password`, `/request-password-reset`. UI map 429 + `X-Retry-After` thành "try again in N seconds".
+  7. **Demo là read-only:** endpoint hook Better Auth chặn `change-password`, `change-email`, `update-user`, `delete-user`, `unlink-account` cho `is_demo` → `403 DEMO_READ_ONLY`; UI disable tương ứng. Demo login vẫn sau `DEMO_LOGIN_ENABLED`.
+  8. **Log:** pino redact thêm đường dẫn body chứa credential (`*.password`, `*.newPassword`, `*.token`, …); không log giá trị secret/session/token (bất biến #11).
+- **Thay thế bị loại:** bắt verify ở mọi môi trường (dev không có mailer → tự khoá mình); tin provider email mặc định (chiếm account qua provider chưa verify); 403 cho event của người khác (lộ tồn tại); rate limit trong memory (mất khi restart, không chia sẻ).
+- **Hệ quả:** + hành vi auth rõ ràng, có test cho từng nhánh; + `apps/api` chạy được không cần GitHub/PayPal/Resend (provider chỉ đăng ký khi đủ env, `GET /api/auth-config` cho UI biết); − production mới bật verification thật khi có mailer; − PayPal login local cần tunnel HTTPS (ADR-028).
+- **Bất biến giữ nguyên:** không LLM trong đường tiền (#2); agent không auth qua đây (#3, #9); `PAYPAL_CLIENT_SECRET` vẫn chỉ ở gateway (#1).
+
+
 ## 3. Open questions (cần trả lời, có hạn)
 
 | # | Câu hỏi | Ai/cách trả lời | Hạn |
