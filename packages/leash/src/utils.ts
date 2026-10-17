@@ -7,7 +7,6 @@ import {
   type AllowedCategories,
   type Category,
   type LeashBalance,
-  type Usage,
 } from "./types";
 
 /** Rolling window in which a matching intent counts as a possible duplicate. */
@@ -15,17 +14,6 @@ export const DUPLICATE_WINDOW_MS = 10 * 60 * 1000;
 
 /** Literal payee entry that matches any `member:<id>`. */
 export const MEMBER_WILDCARD = "member:*";
-
-/**
- * Usage assumed when the caller did not provide one for an ancestor. The zero
- * balance makes ancestor balance checks fail closed for money actions.
- */
-export const EMPTY_USAGE: Usage = {
-  availableCents: 0n,
-  spent24hCents: 0n,
-  allowCountLastHour: 0,
-  recentIntents: [],
-};
 
 /** Balance assumed when the caller did not provide one for a leash. */
 export const EMPTY_BALANCE: LeashBalance = { availableCents: 0n, heldCents: 0n };

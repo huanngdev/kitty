@@ -193,6 +193,22 @@ describe("validateDelegation", () => {
     expect(details(result)).toEqual(["EXPIRY"]);
   });
 
+  test("EXPIRY: a malformed child expiresAt fails closed", () => {
+    const p = parent();
+    const result = validateDelegation(
+      p,
+      child(p, { expiresAt: "not-a-date" }),
+      makeUsage({ availableCents: 50_000n }),
+    );
+    expect(details(result)).toEqual(["EXPIRY"]);
+  });
+
+  test("EXPIRY: a malformed parent expiresAt fails closed", () => {
+    const p = parent({ expiresAt: "" });
+    const result = validateDelegation(p, child(p), makeUsage({ availableCents: 50_000n }));
+    expect(details(result)).toEqual(["EXPIRY"]);
+  });
+
   test("STEP_UP: a child with no threshold is broader than a parent threshold", () => {
     const p = parent({ stepUpAboveCents: 30_000n });
     const result = validateDelegation(

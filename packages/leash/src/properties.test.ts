@@ -97,6 +97,26 @@ describe("property: ALLOW implies the limits hold", () => {
   });
 });
 
+describe("property: ancestor balance is irrelevant", () => {
+  test("changing an ancestor's availableCents never changes the decision", () => {
+    fc.assert(
+      fc.property(arbInput, fc.bigInt({ min: 0n, max: 1_000_000n }), (input, availableCents) => {
+        const baseline = evaluate(input);
+        const mutated: EvaluateInput = {
+          ...input,
+          ancestorUsage: Object.fromEntries(
+            Object.entries(input.ancestorUsage).map(
+              ([id, usage]) => [id, { ...usage, availableCents }] as const,
+            ),
+          ),
+        };
+        expect(evaluate(mutated)).toEqual(baseline);
+      }),
+      { numRuns: RUNS },
+    );
+  });
+});
+
 const scaleDown = (value: bigint, factor: number): bigint => (value * BigInt(factor)) / 1000n;
 
 function tightenCategories(

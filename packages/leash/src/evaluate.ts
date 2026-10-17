@@ -11,7 +11,6 @@ import type {
 } from "./types";
 import {
   DUPLICATE_WINDOW_MS,
-  EMPTY_USAGE,
   actionNeedsPayee,
   isCategoryAllowed,
   isMoneyAction,
@@ -45,13 +44,27 @@ function ancestorInactiveReason(ancestor: Leash, nowMs: number): DecisionReason 
       details: `ancestor ${ancestor.id} status is "${ancestor.status}"`,
     };
   }
-  if (nowMs < Date.parse(ancestor.notBefore)) {
+  const notBeforeMs = Date.parse(ancestor.notBefore);
+  if (Number.isNaN(notBeforeMs)) {
+    return {
+      code: "PARENT_LEASH_INACTIVE",
+      details: `invalid date: ancestor ${ancestor.id} notBefore "${ancestor.notBefore}"`,
+    };
+  }
+  const expiresAtMs = Date.parse(ancestor.expiresAt);
+  if (Number.isNaN(expiresAtMs)) {
+    return {
+      code: "PARENT_LEASH_INACTIVE",
+      details: `invalid date: ancestor ${ancestor.id} expiresAt "${ancestor.expiresAt}"`,
+    };
+  }
+  if (nowMs < notBeforeMs) {
     return {
       code: "PARENT_LEASH_INACTIVE",
       details: `ancestor ${ancestor.id} is not yet valid (notBefore ${ancestor.notBefore})`,
     };
   }
-  if (nowMs >= Date.parse(ancestor.expiresAt)) {
+  if (nowMs >= expiresAtMs) {
     return {
       code: "PARENT_LEASH_INACTIVE",
       details: `ancestor ${ancestor.id} expired at ${ancestor.expiresAt}`,
@@ -79,6 +92,10 @@ function findDuplicate(
       continue;
     }
     const delta = nowMs - Date.parse(prior.at);
+    if (Number.isNaN(delta)) {
+      // Unparseable timestamp: fail closed by treating it as inside the window.
+      return prior;
+    }
     if (delta < 0 || delta > DUPLICATE_WINDOW_MS) {
       continue;
     }
@@ -88,9 +105,15 @@ function findDuplicate(
 }
 
 /**
- * Check 14: re-apply the ancestor-scoped dimensions (action, payee, category
- * allow-lists plus per-tx, daily and balance limits) using the ancestor's
- * limits and usage. One reason is emitted per violated dimension.
+ * Check 14: re-apply the ancestor-scoped dimensions (action, payee and category
+ * allow-lists plus the per-tx and daily limits) using the ancestor's limits and
+ * usage. One reason is emitted per violated dimension.
+ *
+ * The ancestor's own `availableCents` is intentionally **not** checked: money
+ * is cut out of the parent at delegation (ledger `leash:parent:available →
+ * leash:child:available`, docs/05 §7), so a parent that delegated its whole
+ * balance still legitimately backs its child. `usage.spent24hCents` here is the
+ * 24h spend of the ancestor's **whole subtree**.
  */
 function ancestorLimitReasons(
   ancestor: Leash,
@@ -132,10 +155,6 @@ function ancestorLimitReasons(
     );
   }
 
-  if (intent.amountCents > usage.availableCents) {
-    push(`amountCents ${intent.amountCents} > availableCents ${usage.availableCents}`);
-  }
-
   return reasons;
 }
 
@@ -151,6 +170,9 @@ export function evaluate(input: EvaluateInput): Decision {
   const { leash, ancestors, intent, usage } = input;
   const reasons: DecisionReason[] = [];
   const nowMs = Date.parse(input.now);
+  if (Number.isNaN(nowMs)) {
+    throw new RangeError(`evaluate received an invalid "now": ${input.now}`);
+  }
 
   // 1. leash status
   if (leash.status !== "active") {
@@ -158,13 +180,25 @@ export function evaluate(input: EvaluateInput): Decision {
   }
 
   // 2. validity window (notBefore inclusive, expiresAt exclusive)
-  if (nowMs < Date.parse(leash.notBefore)) {
+  const notBeforeMs = Date.parse(leash.notBefore);
+  if (Number.isNaN(notBeforeMs)) {
+    reasons.push({
+      code: "LEASH_NOT_YET_VALID",
+      details: `invalid date: leash ${leash.id} notBefore "${leash.notBefore}"`,
+    });
+  } else if (nowMs < notBeforeMs) {
     reasons.push({
       code: "LEASH_NOT_YET_VALID",
       details: `now ${input.now} is before notBefore ${leash.notBefore}`,
     });
   }
-  if (nowMs >= Date.parse(leash.expiresAt)) {
+  const expiresAtMs = Date.parse(leash.expiresAt);
+  if (Number.isNaN(expiresAtMs)) {
+    reasons.push({
+      code: "LEASH_EXPIRED",
+      details: `invalid date: leash ${leash.id} expiresAt "${leash.expiresAt}"`,
+    });
+  } else if (nowMs >= expiresAtMs) {
     reasons.push({
       code: "LEASH_EXPIRED",
       details: `now ${input.now} is at or after expiresAt ${leash.expiresAt}`,
@@ -281,9 +315,16 @@ export function evaluate(input: EvaluateInput): Decision {
     }
   }
 
-  // 14. ancestor limits
+  // 14. ancestor limits (action, payee, category, per-tx, daily)
   for (const ancestor of ancestors) {
-    const ancestorUsage = input.ancestorUsage[ancestor.id] ?? EMPTY_USAGE;
+    const ancestorUsage = input.ancestorUsage[ancestor.id];
+    if (ancestorUsage === undefined) {
+      reasons.push({
+        code: "PARENT_LIMIT_EXCEEDED",
+        details: `usage for ancestor ${ancestor.id} missing`,
+      });
+      continue;
+    }
     reasons.push(...ancestorLimitReasons(ancestor, ancestorUsage, intent));
   }
 

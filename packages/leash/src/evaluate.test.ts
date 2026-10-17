@@ -88,6 +88,22 @@ describe("evaluate — check 2: validity window", () => {
     const decision = evaluate(makeInput({ leash: makeLeash({ notBefore: NOW }) }));
     expect(decision.outcome).toBe("ALLOW");
   });
+
+  test("a malformed notBefore fails closed with LEASH_NOT_YET_VALID", () => {
+    const decision = evaluate(makeInput({ leash: makeLeash({ notBefore: "not-a-date" }) }));
+    expect(codesOf(decision)).toEqual(["LEASH_NOT_YET_VALID"]);
+    expect(reasonFor(decision, "LEASH_NOT_YET_VALID")).toContain("invalid date");
+  });
+
+  test("a malformed expiresAt fails closed with LEASH_EXPIRED", () => {
+    const decision = evaluate(makeInput({ leash: makeLeash({ expiresAt: "" }) }));
+    expect(codesOf(decision)).toEqual(["LEASH_EXPIRED"]);
+    expect(reasonFor(decision, "LEASH_EXPIRED")).toContain("invalid date");
+  });
+
+  test("a malformed now is a programmer error", () => {
+    expect(() => evaluate(makeInput({ now: "not-a-date" }))).toThrow(RangeError);
+  });
 });
 
 describe("evaluate — check 3: ancestors active and valid", () => {
@@ -108,6 +124,18 @@ describe("evaluate — check 3: ancestors active and valid", () => {
     const ancestor = validAncestor({ expiresAt: "2026-11-01T00:00:00.000Z" });
     const decision = evaluate(makeInput(withAncestor(ancestor)));
     expect(reasonFor(decision, "PARENT_LEASH_INACTIVE")).toContain("expired");
+  });
+
+  test("a malformed ancestor notBefore fails closed", () => {
+    const ancestor = validAncestor({ notBefore: "not-a-date" });
+    const decision = evaluate(makeInput(withAncestor(ancestor)));
+    expect(reasonFor(decision, "PARENT_LEASH_INACTIVE")).toContain("invalid date");
+  });
+
+  test("a malformed ancestor expiresAt fails closed", () => {
+    const ancestor = validAncestor({ expiresAt: "" });
+    const decision = evaluate(makeInput(withAncestor(ancestor)));
+    expect(reasonFor(decision, "PARENT_LEASH_INACTIVE")).toContain("invalid date");
   });
 });
 
@@ -347,6 +375,14 @@ describe("evaluate — check 13: duplicate detection", () => {
     );
     expect(decision.outcome).toBe("STEP_UP");
   });
+
+  test("a recent intent with an invalid timestamp fails closed to STEP_UP", () => {
+    const decision = evaluate(
+      makeInput({ usage: makeUsage({ recentIntents: [makeRecentIntent({ at: "not-a-date" })] }) }),
+    );
+    expect(decision.outcome).toBe("STEP_UP");
+    expect(codesOf(decision)).toEqual(["POSSIBLE_DUPLICATE"]);
+  });
 });
 
 describe("evaluate — check 14: ancestor limits", () => {
@@ -396,19 +432,29 @@ describe("evaluate — check 14: ancestor limits", () => {
     expect(reasonFor(decision, "PARENT_LIMIT_EXCEEDED")).toContain("dailyMaxCents");
   });
 
-  test("ancestor balance is insufficient", () => {
+  test("an ancestor that delegated its whole balance still backs an in-limit child payout", () => {
     const ancestor = validAncestor();
-    const decision = evaluate(
-      makeInput(withAncestor(ancestor, makeUsage({ availableCents: 100n }))),
-    );
-    expect(reasonFor(decision, "PARENT_LIMIT_EXCEEDED")).toContain("availableCents");
+    const decision = evaluate(makeInput(withAncestor(ancestor, makeUsage({ availableCents: 0n }))));
+    expect(decision).toEqual({ outcome: "ALLOW" });
   });
 
-  test("missing ancestor usage falls back to a zero balance", () => {
+  test("the ancestor's own availableCents is ignored entirely", () => {
+    const ancestor = validAncestor();
+    const plentiful = evaluate(
+      makeInput(withAncestor(ancestor, makeUsage({ availableCents: 999_999n }))),
+    );
+    const empty = evaluate(makeInput(withAncestor(ancestor, makeUsage({ availableCents: 0n }))));
+    expect(empty).toEqual(plentiful);
+    expect(empty.outcome).toBe("ALLOW");
+  });
+
+  test("a missing ancestor usage entry fails closed", () => {
     const ancestor = validAncestor();
     const decision = evaluate(makeInput({ ancestors: [ancestor], ancestorUsage: {} }));
     expect(codesOf(decision)).toEqual(["PARENT_LIMIT_EXCEEDED"]);
-    expect(reasonFor(decision, "PARENT_LIMIT_EXCEEDED")).toContain("availableCents 0");
+    expect(reasonFor(decision, "PARENT_LIMIT_EXCEEDED")).toBe(
+      `usage for ancestor ${ancestor.id} missing`,
+    );
   });
 
   test("an ancestor that does not need a payee skips the payee dimension", () => {

@@ -103,7 +103,14 @@ export function validateDelegation(
     }
   }
 
-  if (Date.parse(child.expiresAt) > Date.parse(parent.expiresAt)) {
+  const childExpiry = Date.parse(child.expiresAt);
+  const parentExpiry = Date.parse(parent.expiresAt);
+  if (Number.isNaN(childExpiry) || Number.isNaN(parentExpiry)) {
+    add(
+      "EXPIRY",
+      `invalid date: child expiresAt "${child.expiresAt}", parent expiresAt "${parent.expiresAt}"`,
+    );
+  } else if (childExpiry > parentExpiry) {
     add("EXPIRY", `child expiresAt ${child.expiresAt} > parent expiresAt ${parent.expiresAt}`);
   }
 

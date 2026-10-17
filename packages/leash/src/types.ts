@@ -147,7 +147,17 @@ export interface RecentIntent {
 
 /** Live usage of a leash, computed from the ledger by the caller. */
 export interface Usage {
+  /**
+   * Balance available to the leash itself (check #11). Ignored for ancestors:
+   * money is cut out of the parent at delegation, so an ancestor's own
+   * available balance never gates a child intent.
+   */
   availableCents: bigint;
+  /**
+   * Settled spend in the rolling 24h window. For an ancestor this is the 24h
+   * spend of that ancestor's **whole subtree** (check #14); for the leash
+   * itself it is its own 24h spend (check #10).
+   */
   spent24hCents: bigint;
   allowCountLastHour: number;
   recentIntents: RecentIntent[];
@@ -161,11 +171,17 @@ export interface EvaluateInput {
   intent: SpendIntent;
   usage: Usage;
   /**
-   * Usage per ancestor leash id. Required so check #14 can re-apply ancestor
-   * limits against each ancestor's own balance and rolling windows.
+   * Usage per ancestor leash id — required to enforce ancestor limits (check
+   * #14). `spent24hCents` must be the 24h spend of that ancestor's whole
+   * subtree; the entry's `availableCents` is ignored (money is cut out of the
+   * parent at delegation). A missing entry fails closed with
+   * `PARENT_LIMIT_EXCEEDED` rather than being treated as zero usage.
    */
   ancestorUsage: Readonly<Record<string, Usage>>;
-  /** Evaluation time, ISO-8601. The engine is pure: it never calls `Date.now()`. */
+  /**
+   * Evaluation time, ISO-8601. The engine is pure: it never calls `Date.now()`.
+   * A malformed value is a programmer error and throws a `RangeError`.
+   */
   now: string;
 }
 
