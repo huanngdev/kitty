@@ -60,6 +60,14 @@ export const authSessionSchema = z.object({
 });
 
 /**
+ * `GET /api/demo-sign-in/status`. The web app only shows the one-click demo
+ * button when the deployment explicitly enabled demo login.
+ */
+export const demoLoginStatusSchema = z.object({
+  enabled: z.boolean(),
+});
+
+/**
  * Accepts only same-origin relative paths as a post-auth redirect target.
  * Rejects absolute URLs, scheme-relative URLs and backslash tricks so `?next=`
  * cannot bounce a freshly signed-in user off-site.

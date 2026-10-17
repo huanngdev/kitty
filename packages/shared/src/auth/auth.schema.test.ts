@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { safeNextPath, signInSchema, signUpSchema } from "./auth.schema";
+import { demoLoginStatusSchema, safeNextPath, signInSchema, signUpSchema } from "./auth.schema";
 
 describe("signInSchema", () => {
   test("trims the email and accepts a valid pair", () => {
@@ -49,6 +49,18 @@ describe("signUpSchema", () => {
     });
 
     expect(parsed.name).toBe("Mai");
+  });
+});
+
+describe("demoLoginStatusSchema", () => {
+  test("accepts the enabled flag", () => {
+    expect(demoLoginStatusSchema.parse({ enabled: true })).toEqual({ enabled: true });
+    expect(demoLoginStatusSchema.parse({ enabled: false })).toEqual({ enabled: false });
+  });
+
+  test("rejects anything that is not a boolean flag", () => {
+    expect(demoLoginStatusSchema.safeParse({ enabled: "true" }).success).toBe(false);
+    expect(demoLoginStatusSchema.safeParse({}).success).toBe(false);
   });
 });
 
