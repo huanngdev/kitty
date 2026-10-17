@@ -1,0 +1,5 @@
+# The ledger is the source of truth for money (AGENTS.md invariant #5), so every
+# branch of every helper must be exercised: 100% lines and functions, enforced by
+# `bun test --coverage` in the package `test` script.
+[test]
+coverageThreshold = { lines = 1, functions = 1 }

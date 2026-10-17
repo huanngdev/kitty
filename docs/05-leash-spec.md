@@ -226,6 +226,52 @@ Bút toán:
 - I3: Sub-leash được cắt từ `parent.available` ⇒ tổng tiền trong một cây leash không bao giờ vượt allocation của gốc + top-ups.
 - I4: Một `intentId` → tối đa 1 PayPal money movement.
 
+### 8.1 Thực thi trong `packages/ledger`
+
+`@kitty/ledger` là package **thuần**: không I/O, không network, không DB, không runtime dependency. Trong toàn package tiền là `bigint` cents (bất biến #4 AGENTS.md); decimal string chỉ tồn tại ở biên.
+
+**Accounts (`accounts.ts`)** — key canonical, `AccountRef` là discriminated union:
+
+| Account | Ghi chú |
+|---|---|
+| `kitty:{kittyId}:available` | per-kitty, thay cho `kitty:available` trần ở bảng trên |
+| `leash:{leashId}:available`, `leash:{leashId}:held` | |
+| `external:member:{memberId}` | |
+| `external:payee:{email}` | email được `trim` + lowercase ⇒ 1 vendor = 1 account |
+
+`accountKey(ref)`, `parseAccountKey(key)` (throw `AccountKeyError` khi sai namespace/bucket/shape), `isInternal(ref)`, `isKnownAccountKey(key)`.
+
+**Money (`money.ts`)** — biên giới duy nhất được phép dùng decimal string:
+
+- `parseMoney(value): bigint` chỉ nhận wire format `^\d+\.\d{2}$` (không dấu, không exponent, không whitespace, đúng 2 chữ số thập phân); sai → `MoneyFormatError`.
+- `formatMoney(cents): string` ⇒ `1234n → "12.34"`, `-5n → "-0.05"`; luôn in canonical (không leading zero).
+- `assertNonNegative(cents, context)` → `NegativeMoneyError` nếu < 0.
+
+Round-trip: `parseMoney(formatMoney(c)) === c` với mọi `bigint`; `formatMoney(parseMoney(s)) === s` với mọi wire string canonical. Pattern cho phép leading zero (`"0012.34" → 1234n`) nhưng `formatMoney` luôn canonical hoá.
+
+**Entries (`entries.ts`)** — `LedgerTxn = { txnId, kind, lines: { account, amountCents }[], intentId? }` với `Σ lines = 0`; `intentId` có mặt ở các bút toán gắn với một spend intent để I4 kiểm được. Một builder cho mỗi dòng của bảng "Bút toán": `contribution`, `allocateLeash` (allocate/top-up), `delegate`, `reserve`, `settlePayout`, `release` (failed/released/rejected), `revokeLeash`, `refundMember`. Mỗi builder trả **đúng 2 dòng** cân bằng và từ chối `amountCents ≤ 0` (`TxnArgError`).
+
+`validateTxn(txn)` kiểm tra cấu trúc và trả discriminated union `{ ok: true }` hoặc `{ ok: false, code }` với `code ∈ { EMPTY, TOO_FEW_LINES, UNKNOWN_ACCOUNT, ZERO_LINE, DUPLICATE_ACCOUNT, UNBALANCED }`.
+
+**Balances (`balances.ts`)** — `balanceOf(lines, accountKey)`, `balances(lines): Map<key, bigint>`, `leashBalance(lines, leashId): { availableCents, heldCents }` (view §2).
+
+**Invariants (`invariants.ts`)**:
+
+```ts
+checkInvariants(
+  txns: LedgerTxn[],                                  // theo thứ tự posting
+  options?: {
+    leashParentOf?: ReadonlyMap<string, string>;      // childLeashId → parentLeashId (I3)
+    kittyOfLeash?: ReadonlyMap<string, string>;       // leash đã biết trước khi có allocate
+  },
+): InvariantViolation[]
+```
+
+- Trả về **tất cả** vi phạm: `I1_UNBALANCED_LEDGER`, `I1_KITTY_MISMATCH`, `I2_NEGATIVE_BUCKET`, `I3_TREE_OVER_ALLOCATION`, `I4_MULTIPLE_MONEY_MOVEMENTS`, cộng `UNKNOWN_ACCOUNT` / `UNATTRIBUTED_KITTY` khi ledger không đọc được.
+- I2 chỉ báo bút toán **đầu tiên** làm âm bucket (kèm mọi bucket bị âm ở bút toán đó).
+- I3 tính `Σ (available + held + spent) ≤ Σ allocated` cho từng cây leash; `spent` = settled payout đã rời cây; `allocated` = Σ `allocateLeash` (gốc + top-up) đổ vào cây; lease không có parent là gốc cây.
+- `assertSingleMoneyMovement(intentId, txns)` là bản "throw" của I4 cho đường tiền (nhiều hơn 1 money movement → `MultipleMoneyMovementsError`).
+
 ## 9. Delegation (sub-leash)
 
 Agent có action `delegate` gọi `leash.delegate(childAgentId, spec)`. Validation (gom lỗi, code `DELEGATION_EXCEEDS_PARENT` + chi tiết):
