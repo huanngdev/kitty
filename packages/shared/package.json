@@ -1,0 +1,28 @@
+{
+  "name": "@kitty/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "check-types": "tsc --noEmit",
+    "test": "bun test --pass-with-no-tests"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./common": "./src/common/index.ts",
+    "./health": "./src/health/index.ts",
+    "./api-paths": "./src/api-paths.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@kitty/eslint-config": "workspace:*",
+    "@kitty/typescript-config": "workspace:*",
+    "@types/bun": "1.4.3",
+    "eslint": "^10.13.0",
+    "typescript": "^5"
+  }
+}
