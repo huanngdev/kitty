@@ -1,4 +1,4 @@
 {
   "extends": "@kitty/typescript-config/bun.json",
-  "include": ["src"]
+  "include": ["src", "scripts"]
 }
