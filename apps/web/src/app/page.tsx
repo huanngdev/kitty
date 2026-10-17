@@ -1,15 +1,10 @@
-import { Button } from "@kitty/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@kitty/ui/components/card";
-import { Cat, Link2, ShieldCheck, Wallet } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link2, ShieldCheck, Wallet } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { JSX } from "react";
+import { Logo } from "@/components/brand/logo";
 import { DemoSignInButton } from "@/features/auth/components/demo-sign-in-button";
 import { ApiStatusBadge } from "@/features/system/components/api-status-badge";
 import { routes } from "@/lib/routes";
@@ -47,10 +42,9 @@ export default async function Home(): Promise<JSX.Element> {
     <main className="flex min-h-svh flex-col items-center justify-center gap-12 p-6">
       <div className="flex flex-col items-center gap-4 text-center">
         <ApiStatusBadge />
-        <span className="flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-          <Cat aria-hidden className="size-7" />
-        </span>
-        <h1 className="text-4xl font-semibold tracking-tight">Kitty</h1>
+        <h1 className="flex justify-center">
+          <Logo size="lg" showWordmark className="flex-col gap-3" />
+        </h1>
         <p className="max-w-md text-lg text-balance text-muted-foreground">
           Let your agents spend. On a leash.
         </p>

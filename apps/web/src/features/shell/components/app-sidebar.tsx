@@ -1,6 +1,6 @@
 import type { JSX } from "react";
-import { Cat } from "lucide-react";
 import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
 import {
   Sidebar,
   SidebarContent,
@@ -13,8 +13,8 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarRail,
-} from "@kitty/ui/components/sidebar";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@kitty/ui/components/tooltip";
+} from "@/components/ui/sidebar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { routes } from "@/lib/routes";
 import { type AppNavItem, useAppNav } from "../hooks/use-app-nav";
 
@@ -65,13 +65,7 @@ export function AppSidebar(): JSX.Element {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton render={<Link href={routes.events} />} size="lg">
-              <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Cat aria-hidden />
-              </span>
-              <span className="flex flex-col gap-0.5">
-                <span className="font-semibold">Kitty</span>
-                <span className="text-xs text-muted-foreground">Agents on a leash</span>
-              </span>
+              <Logo size="sm" showWordmark />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
