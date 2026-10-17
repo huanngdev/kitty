@@ -1,3 +1,5 @@
+"use client";
+
 import type { JSX } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
@@ -13,6 +15,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { routes } from "@/lib/routes";
@@ -38,7 +41,12 @@ function DisabledNavItem({ item }: { item: AppNavItem }): JSX.Element {
   );
 }
 
-function NavItem({ item }: { item: AppNavItem }): JSX.Element {
+interface NavItemProps {
+  item: AppNavItem;
+  onNavigate?: () => void;
+}
+
+function NavItem({ item, onNavigate }: NavItemProps): JSX.Element {
   if (item.disabled) {
     return <DisabledNavItem item={item} />;
   }
@@ -47,7 +55,10 @@ function NavItem({ item }: { item: AppNavItem }): JSX.Element {
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton render={<Link href={item.href} />} isActive={item.active}>
+      <SidebarMenuButton
+        render={<Link href={item.href} onClick={onNavigate} />}
+        isActive={item.active}
+      >
         <Icon aria-hidden />
         <span>{item.title}</span>
       </SidebarMenuButton>
@@ -58,13 +69,25 @@ function NavItem({ item }: { item: AppNavItem }): JSX.Element {
 /** App navigation; collapses to a sheet on mobile (shadcn Sidebar). */
 export function AppSidebar(): JSX.Element {
   const { groups } = useAppNav();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  // On mobile the sidebar is a sheet over the page. Navigating must close it,
+  // otherwise the destination stays behind an aria-hidden dialog.
+  const closeMobileSheet = (): void => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton render={<Link href={routes.events} />} size="lg">
+            <SidebarMenuButton
+              render={<Link href={routes.events} onClick={closeMobileSheet} />}
+              size="lg"
+            >
               <Logo size="sm" showWordmark />
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -78,7 +101,7 @@ export function AppSidebar(): JSX.Element {
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => (
-                  <NavItem key={item.title} item={item} />
+                  <NavItem key={item.title} item={item} onNavigate={closeMobileSheet} />
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
