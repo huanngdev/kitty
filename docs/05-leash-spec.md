@@ -110,6 +110,26 @@ Chuỗi được ký:
 ```
 Gateway: tra `agentPublicKey` → verify → kiểm timestamp skew → `INSERT nonce` (unique, TTL 10') → tiếp tục.
 
+**Chốt quy ước chuỗi canonical** (implement: `packages/signing`, hàm `canonicalRequest`):
+
+- `METHOD` viết hoa (`toUpperCase()`).
+- `PATH` = pathname + query **đúng như gửi đi**, không có host (ví dụ `/mcp?kitty=kty_01J…`).
+- `BODY` = **byte thô** của request; body dạng string được encode UTF-8; body rỗng ⇒ `sha256_hex("")` = `e3b0c442…b855`.
+- `TIMESTAMP` = RFC 3339 UTC, chính xác tới **giây**: `YYYY-MM-DDTHH:MM:SSZ` (không có phần milli giây).
+- `NONCE` = 16 byte random, base64url **không padding**.
+- `Leash-Signature: ed25519=<base64url(sig)>`; chữ ký là Ed25519 trên chuỗi canonical (RFC 8032 ⇒ deterministic với cùng key + message).
+- Bốn thành phần được ghép trực tiếp bằng `\n`, nên `METHOD` / `PATH` / `TIMESTAMP` / `NONCE` **không được chứa CR/LF** (HTTP request line và header cũng không thể chứa), nếu không chuỗi canonical sẽ mơ hồ.
+
+**Verify ở Gateway — thứ tự kiểm và mã lỗi** (`verifyRequest` trả `{ ok: false, code }`):
+
+1. parse header → `MALFORMED_HEADERS`: thiếu/rỗng header, timestamp sai format, nonce không phải base64url, signature sai prefix `ed25519=` hoặc base64url hỏng.
+2. lệch timestamp > 60s (đúng 60s vẫn hợp lệ) → `STALE_TIMESTAMP`.
+3. không tra được `agentPublicKey` → `UNKNOWN_AGENT`.
+4. chữ ký sai, **hoặc** public key lưu trong DB không import được → `BAD_SIGNATURE`.
+5. `claim(agentId, nonce, now + 10')` — gọi **cuối cùng**, để chỉ request có chữ ký hợp lệ mới được "đốt" nonce (kẻ tấn công không thể replay-burn nonce của agent) → `NONCE_REPLAY`.
+
+`resolvePublicKey(agentId)` và `NonceStore.claim(agentId, nonce, expiresAt)` do Gateway inject (DB impl ở `apps/gateway` dùng bảng `leash.nonces`); `packages/signing` thuần, không I/O. Test/dev dùng `createMemoryNonceStore()` (purge TTL theo clock inject được).
+
 Private key agent nằm ở **agent runtime** (env/secret của service `agents`), **không** nằm trong context của LLM (LLM không có tool đọc env/file).
 
 ## 6. Policy engine — thuật toán

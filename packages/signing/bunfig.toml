@@ -1,0 +1,7 @@
+[test]
+# Coverage gate required by the task: 100% lines + functions for the signing package.
+# `bun test --coverage` exits non-zero when the threshold is not met.
+coverage = true
+coverageReporter = ["text"]
+coverageSkipTestFiles = true
+coverageThreshold = { lines = 1.0, functions = 1.0 }
