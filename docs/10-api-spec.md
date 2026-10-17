@@ -232,3 +232,12 @@ Auth: `GATEWAY_INTERNAL_TOKEN`. Dùng bởi worker:
 | POST `/internal/sweeps/nonces` | Dọn nonce cũ |
 | GET `/internal/outbox?after=` · POST `/internal/outbox/ack` | Đọc/ack domain events |
 | POST `/internal/intents/:id/execute` | Thực thi intent đã ALLOW/approved |
+| GET `/internal/intents/:id` | Đọc trạng thái một intent (worker/reconcile) |
+
+**KIT-16** implement `POST /internal/intents/:id/execute` và `GET /internal/intents/:id`:
+
+- Auth: `Authorization: Bearer <GATEWAY_INTERNAL_TOKEN>`, so sánh **constant-time** (So sánh sha256 digest qua `crypto.timingSafeEqual`); thiếu token cấu hình → 503 `INTERNAL_TOKEN_NOT_CONFIGURED`, sai token → 401 `UNAUTHORIZED`.
+- `GET` trả `{ intent }`; `POST` trả `{ intent, outcome }` với `outcome ∈ { submitted, failed_released, unknown, not_implemented, noop }`. Schema ở `@kitty/shared/internal` (`intentViewSchema`, `executeIntentResponseSchema`). `intent` gồm `intentId`, `leashId`, `kittyId`, `agentId`, `action`, `amount` (string thập phân), `currency`, `payee`, `category`, `memo`, `taskId`, `decision`, `reasons[]`, `status`, `paypalRef`, `executeAttempts`, `error`, `createdAt`, `updatedAt`.
+- Intent không tồn tại → 404 `INTENT_NOT_FOUND`. `POST` chỉ thực thi hành động `payout` trong task này; hành động khác giữ `reserved` và ghi `last_execute_error = { code: "NOT_IMPLEMENTED" }`.
+- Route handler **không** chạm DB: `routes → service → repository` (CODE_RULES §D).
+

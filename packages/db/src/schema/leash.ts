@@ -182,6 +182,14 @@ export const spendIntents = leashSchema.table(
     justification: text("justification"),
     /** SHA-256 of the signed body; same id with a different hash is a 409. */
     requestHash: text("request_hash").notNull(),
+    /**
+     * SHA-256 of the canonical decision payload (action, amount, currency,
+     * payee, category, memo, taskId). Deliberately excludes `justification`,
+     * which never affects a decision (docs/05 §7). `NULL` on rows written
+     * before this column existed; the idempotency check then only compares the
+     * leash.
+     */
+    payloadHash: text("payload_hash"),
     /** `ALLOW` | `DENY` | `STEP_UP`. */
     decision: text("decision").notNull(),
     reasons: jsonb("reasons")
@@ -191,6 +199,10 @@ export const spendIntents = leashSchema.table(
     /** `payout_item_id` | `invoice_id` | `refund_id` … */
     paypalRef: text("paypal_ref"),
     error: jsonb("error"),
+    /** How many times `executeIntent` attempted the PayPal call (docs/11 §4). */
+    executeAttempts: integer("execute_attempts").notNull().default(0),
+    /** Last execution failure, safe to serialize (never carries a secret). */
+    lastExecuteError: jsonb("last_execute_error"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
