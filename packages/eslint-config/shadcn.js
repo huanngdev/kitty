@@ -36,10 +36,12 @@ export const shadcnConfig = ({ uiImportPrefix, uiDir = "src/components/ui" } = {
     },
   },
   {
-    // shadcn/ui components define the design system; they are allowed to restyle themselves.
+    // shadcn/ui components define the design system: they may restyle themselves
+    // and use off-token (arbitrary) values that the rest of the app must not.
     files: [`${uiDir}/**/*.{js,jsx,ts,tsx}`],
     rules: {
       "shadcn/no-restyle": "off",
+      "shadcn/no-arbitrary-values": "off",
     },
   },
 ];
