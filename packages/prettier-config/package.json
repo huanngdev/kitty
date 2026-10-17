@@ -9,9 +9,6 @@
   "exports": {
     ".": "./index.js"
   },
-  "dependencies": {
-    "prettier-plugin-tailwindcss": "^0.8.1"
-  },
   "peerDependencies": {
     "prettier": "^3"
   }
