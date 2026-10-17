@@ -23,6 +23,7 @@ import {
   spendIntentStatusEnum,
   spendIntents,
   verifiedPayees,
+  WEBHOOK_EVENT_STATUSES,
   webhookEvents,
 } from "./leash";
 import type { ContributionRow, LedgerEntryRow, LeashRow, SpendIntentRow } from "./leash";
@@ -163,6 +164,28 @@ describe("leash tables", () => {
     expect(getTableConfig(nonces).indexes.map((entry) => entry.config.name)).toContain(
       "nonces_expires_at_idx",
     );
+  });
+
+  test("webhook events carry a docs-09 status verdict", () => {
+    expect([...WEBHOOK_EVENT_STATUSES]).toEqual(["received", "processed", "ignored", "failed"]);
+
+    const columns = getTableConfig(webhookEvents).columns;
+    const status = columns.find((column) => column.name === "status");
+    expect(status?.notNull).toBe(true);
+    expect(status?.hasDefault).toBe(true);
+
+    const checks = getTableConfig(webhookEvents).checks.map((constraint) => constraint.name);
+    expect(checks).toContain("webhook_events_status_known");
+    expect(getTableConfig(webhookEvents).indexes.map((entry) => entry.config.name)).toContain(
+      "webhook_events_status_received_at_idx",
+    );
+  });
+
+  test("the reconcile sweep can find stale submitted intents by index", () => {
+    const indexes = getTableConfig(spendIntents).indexes.map((entry) => entry.config.name);
+
+    expect(indexes).toContain("spend_intents_status_updated_at_idx");
+    expect(indexes).toContain("spend_intents_paypal_ref_idx");
   });
 
   test("paypal objects are unique per (kind, id)", () => {
