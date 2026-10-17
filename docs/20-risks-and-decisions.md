@@ -111,6 +111,11 @@
 - **Quyết định:** chỉ cài **skill chính thức của nhà cung cấp công nghệ** (Neon, shadcn/ui, Turborepo, Better Auth, Vercel React). Skill là tài liệu tham khảo: `CODE_RULES.md` và `AGENTS.md` **thắng** khi mâu thuẫn (ví dụ skill Neon gợi ý Neon Auth → bỏ qua, ta dùng Better Auth). Chỉ load skill khớp công nghệ task đang đụng. Thêm skill mới cần ADR. Cập nhật bằng CLI (`bunx skills update`, `bunx neon@latest skills update`), không sửa tay.
 - **Hệ quả:** + agent có hướng dẫn chính thức, đúng phiên bản. − có vendor content trong repo (`.agents/skills`, `.claude/skills`) → ignore khỏi lint/format.
 
+### ADR-021 — Payee verification do gateway sở hữu; `member:*` giới hạn action (KIT-6)
+- **Bối cảnh:** bất biến #12 cấm agent tự thêm payee vào allowlist; docs/10 §1 ghi "`member:*` is allowed for create_invoice/refund only" nhưng preset Collector (docs/05 §12) có `create_invoice` + `send_reminder` với `member:*`.
+- **Quyết định:** bảng `leash.verified_payees (kitty_id, email, verified_by, verified_at)` do gateway sở hữu; chỉ organizer (owner kitty) gọi `POST/DELETE /v1/kitties/:id/payees`. Leash create/top-up chỉ nhận email đã verify (lowercase) → nếu không `PAYEE_NOT_VERIFIED`. `member:*` không cần verify nhưng chỉ hợp lệ khi **mọi** action của leash ⊆ `{create_invoice, refund, send_reminder}` (loại trừ `payout`, `create_order`, `delegate`, `browser_booking` — đều trả cho vendor ngoài). Admin auth = bearer token + HMAC-SHA256(userId ‖ timestamp ‖ rawBody), ±60 s.
+- **Hệ quả:** + agent không thể tự mở rộng payee; verify idempotent (upsert). − `member:*` nới hơn câu chữ "create_invoice/refund only" một action không mang payee (`send_reminder`) để giữ preset Collector; top-up kiểm lại payee để một vendor bị bỏ verify không lách qua.
+
 ## 3. Open questions (cần trả lời, có hạn)
 
 | # | Câu hỏi | Ai/cách trả lời | Hạn |
