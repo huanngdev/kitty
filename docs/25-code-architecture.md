@@ -133,11 +133,17 @@ apps/api/
 │  ├─ lib/
 │  │  ├─ auth.ts                   # ✅ Better Auth instance (Drizzle adapter, lazy getAuth)
 │  │  ├─ db.ts                     # ✅ drizzle client (từ @kitty/db)
+│  │  ├─ admin-signing.ts          # ✅ ký request Gateway Admin API (docs/10 §1)
+│  │  ├─ gateway-client.ts         # ✅ axios client tới Gateway Admin API (lazy)
+│  │  ├─ params.ts                 # ✅ schema path-param (evt_/mem_/ven_)
+│  │  ├─ narrow.ts                 # ✅ narrow text column → union sau runtime check
+│  │  ├─ tokens.ts                 # ✅ member_token 32 byte base64url
+│  │  ├─ validate.ts               # ✅ hook zValidator → shape lỗi dùng chung
 │  │  ├─ r2.ts                     # (kế hoạch) S3 client + presign helper
 │  │  ├─ logger.ts                 # ✅ pino (redact secret/PII)
 │  │  └─ errors.ts                 # ✅ AppError + shape lỗi dùng chung
 │  ├─ middleware/
-│  │  ├─ session.ts                # ✅ gán c.var.user / c.var.session + export AppEnv
+│  │  ├─ session.ts                # ✅ c.var.user/session + requireSession + AppEnv
 │  │  ├─ require-role.ts           # (kế hoạch)
 │  │  └─ request-id.ts             # (kế hoạch)
 │  └─ modules/
@@ -146,12 +152,17 @@ apps/api/
 │     ├─ auth/
 │     │  ├─ demo.routes.ts         # ✅ POST /api/demo-sign-in (+ GET .../status; 404 khi tắt, 429 rate limit)
 │     │  └─ demo.service.ts        # ✅ isDemoLoginEnabled() + signInEmail({ asResponse: true }) với DEMO_USER_PASSWORD
-│     └─ events/                   # (kế hoạch)
-│        ├─ events.routes.ts       # Hono router + zValidator → service
-│        ├─ events.service.ts      # business logic (không type Hono)
-│        └─ events.repository.ts   # chỉ Drizzle
+│     ├─ events/                   # ✅ KIT-30
+│     │  ├─ events.routes.ts       # Hono router + zValidator → service
+│     │  ├─ events.service.ts      # business logic (không type Hono)
+│     │  ├─ events.repository.ts   # chỉ Drizzle
+│     │  └─ events.ownership.ts    # guard organizer (404/403) dùng lại
+│     ├─ members/                  # ✅ KIT-30 (routes/service/repository)
+│     ├─ vendors/                  # ✅ KIT-30 (+ verify → gateway payee)
+│     └─ budget-lines/             # ✅ KIT-30 (PUT replace set)
 ├─ scripts/
-│  └─ seed-demo-users.ts           # ✅ root script `seed:demo-users` (idempotent, signUpEmail)
+│  ├─ seed-demo-users.ts           # ✅ root script `seed:demo-users` (idempotent, signUpEmail)
+│  └─ smoke-events.ts              # ✅ KIT-30 `bun run --filter api smoke:events` (không trong CI)
 └─ tsconfig.json
 ```
 
@@ -160,7 +171,7 @@ apps/api/
 - Một module = một domain; `routes → service → repository` bắt buộc (xem [CODE_RULES.md](../CODE_RULES.md) §D).
 - `app.ts` tách khỏi `index.ts` để test được Hono app (`app.request`) mà không mở port.
 - `GET /health` ở root giữ cho health check hạ tầng; route sản phẩm nằm dưới `/api` (`GET /api/health` để verify proxy).
-- `/api/auth/*` mount trong `app.ts` nhưng `middleware/session.ts` **chưa gắn toàn cục** (cần DB) — feature sau tự gắn khi cần phiên đăng nhập.
+- `/api/auth/*` mount trong `app.ts`; các route sản phẩm (`/api/events/...`) được gắn `sessionMiddleware` + `requireSession` trên một router con — signed-out → `401 UNAUTHORIZED` trước handler. Authorization (session user là organizer của event) kiểm trong service.
 
 ## 5. packages/shared — contract
 
@@ -194,7 +205,9 @@ packages/db/
 ├─ src/
 │  ├─ client.ts                    # createDb(DATABASE_URL) — Neon pooled, prepare: false
 │  ├─ schema/
-│  │  ├─ app.ts                    # pgSchema("app")
+│  │  ├─ app-schema.ts             # pgSchema("app") — tách riêng để tránh import cycle app↔auth
+│  │  ├─ app.ts                    # app.events/members/budget_lines/vendors (+ user FK)
+│  │  ├─ auth.ts                   # app.user/session/account/verification (Better Auth)
 │  │  ├─ leash.ts                  # pgSchema("leash")
 │  │  └─ index.ts
 │  └─ index.ts

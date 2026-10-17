@@ -28,6 +28,8 @@ erDiagram
 
 ## 2. Schema `app`
 
+> **Trạng thái (KIT-30):** `app.events`, `app.members`, `app.budget_lines`, `app.vendors` đã có Drizzle schema ở `packages/db/src/schema/app.ts` (migration `0006`). `pgSchema("app")` nằm ở `app-schema.ts` riêng để `app.ts` (FK `events.organizer_id → app.user`) và `auth.ts` không import vòng nhau. `member_token` là 32 byte ngẫu nhiên base64url; prefix id mới `bdl_` (budget line) đã thêm vào `@kitty/shared` `idPrefixes`. Các bảng còn lại trong khối dưới vẫn là kế hoạch.
+
 ```sql
 -- users / sessions: do Better Auth quản lý (bảng user, session, account, verification)
 
@@ -60,7 +62,7 @@ CREATE TABLE app.members (
 );
 
 CREATE TABLE app.budget_lines (
-  id            text PRIMARY KEY,
+  id            text PRIMARY KEY,              -- bdl_… (thêm prefix mới, xem common/ids.ts)
   event_id      text NOT NULL REFERENCES app.events(id) ON DELETE CASCADE,
   category      text NOT NULL,                 -- lodging|food|transport|gear|merch|activities|other
   planned_cents bigint NOT NULL,
