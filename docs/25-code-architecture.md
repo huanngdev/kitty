@@ -1,6 +1,6 @@
-# 25 — Code Architecture (đề xuất)
+# 25 — Code Architecture
 
-> **Trạng thái:** đề xuất. Các package `@kitty/shared`, `@kitty/db`, `@kitty/ui` **chưa tồn tại** — sẽ tạo ở task sau. File này chốt cấu trúc thư mục và luật phụ thuộc để mọi người code theo. Rules bắt buộc ở [CODE_RULES.md](../CODE_RULES.md).
+> **Trạng thái:** `@kitty/shared`, `@kitty/db`, `@kitty/ui` **đã tồn tại**. File này chốt cấu trúc thư mục và luật phụ thuộc để mọi người code theo. Rules bắt buộc ở [CODE_RULES.md](../CODE_RULES.md).
 
 Mục tiêu: tách rõ **hiển thị / logic / dữ liệu**, giữ **contract là một nguồn duy nhất** (`@kitty/shared`), và để mọi service backend (web BFF, `apps/api`, sau này gateway/agents/worker) dùng cùng một cách phân tầng.
 
@@ -30,11 +30,12 @@ flowchart LR
 kitty/
 ├─ apps/
 │  ├─ web/                     # Next.js 16 (EXISTS)
-│  └─ api/                     # Hono on Bun (EXISTS)
+│  ├─ api/                     # Hono on Bun (EXISTS)
+│  └─ gateway/                 # Hono on Bun — Leash Gateway (EXISTS, skeleton)
 ├─ packages/
-│  ├─ shared/                  # @kitty/shared — contracts (PROPOSED)
-│  ├─ db/                      # @kitty/db — Drizzle schema + client + migrations (PROPOSED)
-│  ├─ ui/                      # @kitty/ui — shadcn/ui + tokens + cn() (PROPOSED)
+│  ├─ shared/                  # @kitty/shared — contracts (EXISTS)
+│  ├─ db/                      # @kitty/db — Drizzle schema + client + migrations (EXISTS)
+│  ├─ ui/                      # @kitty/ui — shadcn/ui + tokens + cn() (EXISTS)
 │  ├─ typescript-config/       # @kitty/typescript-config (EXISTS)
 │  ├─ eslint-config/           # @kitty/eslint-config (EXISTS)
 │  └─ prettier-config/         # @kitty/prettier-config (EXISTS)
@@ -43,9 +44,9 @@ kitty/
 
 | Package | Vai trò | Trạng thái |
 |---|---|---|
-| `@kitty/shared` | Zod schema, type, enum, error code, API path, pure util — **contract** | proposed |
-| `@kitty/db` | Drizzle schema + client + migrations. **Chỉ `apps/api` dùng.** | proposed |
-| `@kitty/ui` | shadcn/ui components (setup monorepo), Tailwind tokens, `cn()` | proposed |
+| `@kitty/shared` | Zod schema, type, enum, error code, API path, pure util — **contract** | exists |
+| `@kitty/db` | Drizzle schema + client + migrations. **Chỉ `apps/api` và `apps/gateway` dùng.** | exists |
+| `@kitty/ui` | shadcn/ui components (setup monorepo), Tailwind tokens, `cn()` | exists |
 | `@kitty/typescript-config` / `eslint-config` / `prettier-config` | config dùng chung | exists |
 
 **Luật phụ thuộc (MUST):**
@@ -141,18 +142,17 @@ apps/api/
 packages/shared/
 ├─ src/
 │  ├─ index.ts
-│  ├─ events/
-│  │  ├─ events.schema.ts
-│  │  ├─ events.types.ts
+│  ├─ api-paths.ts                 # apiPaths const
+│  ├─ common/
+│  │  ├─ api-error.schema.ts       # shape { error: { code, message, details? } } + errorCodes
+│  │  ├─ ids.ts                    # idPrefixes + idSchema(prefix)
+│  │  ├─ money.schema.ts           # cents (integer) + formatCents()
+│  │  ├─ pagination.schema.ts      # cursor pagination helper
 │  │  └─ index.ts
-│  ├─ members/
-│  ├─ auth/
-│  └─ common/
-│     ├─ pagination.schema.ts
-│     ├─ api-error.schema.ts       # shape { error: { code, message, details } }
-│     ├─ money.schema.ts           # cents (integer)
-│     └─ ids.ts
-└─ package.json                    # exports: "." + "./events" + "./members" + ...
+│  └─ health/
+│     ├─ health-response.schema.ts # { ok: true }
+│     └─ index.ts
+└─ package.json                    # exports: "." + "./common" + "./health" + "./api-paths"
 ```
 
 **Vì sao:** cả `apps/web` và `apps/api` import cùng schema → validate ở server và type ở client không bao giờ lệch. Đổi contract = đổi ở đây trước.
@@ -162,25 +162,25 @@ packages/shared/
 ```
 packages/db/
 ├─ src/
-│  ├─ client.ts                    # drizzle(postgres(DATABASE_URL, { prepare: false })) — Neon pooled
+│  ├─ client.ts                    # createDb(DATABASE_URL) — Neon pooled, prepare: false
 │  ├─ schema/
-│  │  ├─ events.ts
+│  │  ├─ app.ts                    # pgSchema("app")
+│  │  ├─ leash.ts                  # pgSchema("leash")
 │  │  └─ index.ts
 │  └─ index.ts
-├─ migrations/
+├─ migrations/                     # drizzle-kit generate → SQL
 ├─ drizzle.config.ts               # đọc DATABASE_URL_UNPOOLED (direct) cho migrations
+├─ .env.example                    # DATABASE_URL_UNPOOLED (chỉ migrations)
 └─ package.json
 
 packages/ui/
 ├─ src/
-│  ├─ components/                  # shadcn/ui components (CLI generate)
-│  │  └─ button.tsx
+│  ├─ components/                  # shadcn/ui components (CLI generate): button, card, input, label, badge
 │  ├─ lib/
 │  │  └─ utils.ts                  # cn() = clsx + tailwind-merge
-│  ├─ styles/globals.css           # Tailwind tokens dùng chung
-│  └─ index.ts
+│  └─ styles/globals.css           # Tailwind v4 + shadcn theme tokens (light + dark)
 ├─ components.json                 # config cho shadcn CLI (monorepo)
-└─ package.json
+└─ package.json                    # exports: ./styles/globals.css, ./components/*, ./lib/*
 ```
 
 **Vì sao:** `db` gom schema/migration một chỗ; `ui` là nơi duy nhất chứa component shadcn/ui + `cn()` để web và (sau này) các app UI khác dùng lại cùng token.

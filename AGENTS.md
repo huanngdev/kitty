@@ -85,15 +85,15 @@ apps/demo-sites   (planned) Static: demo vendor booking site + injection page
 packages/typescript-config  @kitty/typescript-config — tsconfig base/nextjs/bun
 packages/eslint-config      @kitty/eslint-config — shared ESLint flat config
 packages/prettier-config    @kitty/prettier-config — shared Prettier config
-packages/shared   (proposed) @kitty/shared — Zod contracts, types, error codes, API paths
+packages/shared   (exists) @kitty/shared — Zod contracts, types, error codes, API paths
 packages/leash    (planned) Pure policy engine, types, reason codes
 packages/ledger   (planned) Money (cents) + bucket ledger helpers
 packages/paypal   (planned) Typed PayPal REST client (gateway only)
 packages/signing  (planned) Ed25519 request signing/verification
 packages/crypto-box  (planned) Envelope encryption for user LLM API keys (agents only)
-packages/db       (proposed) @kitty/db — Drizzle schema, client, migrations (chỉ apps/api)
+packages/db       (exists) @kitty/db — Drizzle schema, client, migrations (chỉ apps/api và apps/gateway)
 packages/events   (planned) Domain event types (zod)
-packages/ui       (proposed) @kitty/ui — shadcn/ui components, Tailwind tokens, cn()
+packages/ui       (exists) @kitty/ui — shadcn/ui components, Tailwind tokens, cn()
 packages/config   (planned) env schemas (zod)
 postman/          (planned) Postman collections
 scripts/          (planned) sandbox-check, gen-agent-keys, demo reset, env isolation check
@@ -114,6 +114,9 @@ bun run lint:fix                 # turbo run lint:fix — sắp xếp class Tail
 bun run check-types              # turbo run check-types (tsc --noEmit)
 bun run test                     # turbo run test (bun test trong từng package)
 bun run check:env-isolation      # fail nếu PAYPAL_CLIENT_SECRET lọt ra ngoài apps/gateway
+bun run db:generate              # drizzle-kit generate (packages/db, offline)
+bun run db:migrate               # drizzle-kit migrate (packages/db, cần DATABASE_URL_UNPOOLED)
+bun run db:studio                # drizzle-kit studio (packages/db, cần DATABASE_URL_UNPOOLED)
 bun run format                   # prettier --write .
 bun run format:check             # prettier --check .
 bun run clean                    # xoá .turbo / .next / cache
