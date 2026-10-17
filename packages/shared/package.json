@@ -13,6 +13,7 @@
     ".": "./src/index.ts",
     "./common": "./src/common/index.ts",
     "./health": "./src/health/index.ts",
+    "./internal": "./src/internal/index.ts",
     "./api-paths": "./src/api-paths.ts",
     "./leash-admin": "./src/leash-admin/index.ts"
   },
