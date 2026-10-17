@@ -86,7 +86,8 @@ apps/web/
 │  │  │  └─ components/api-status-badge.tsx
 │  │  ├─ auth/                     # ✅ KIT-24
 │  │  │  ├─ components/            # auth-shell, sign-in-form, sign-up-form, demo-sign-in-button
-│  │  │  ├─ hooks/                 # use-sign-in-form, use-sign-up-form, use-demo-sign-in
+│  │  │  ├─ api/demo-login.api.ts  # ✅ status query (axios + queryOptions)
+│  │  │  ├─ hooks/                 # use-sign-in-form, use-sign-up-form, use-demo-sign-in, use-demo-login-status
 │  │  │  └─ lib/auth-error.ts      # map lỗi Better Auth/API → câu hiển thị
 │  │  ├─ shell/                    # ✅ KIT-24: app-shell, app-sidebar, app-top-bar, theme-toggle, user-menu
 │  │  │  ├─ components/…
@@ -143,8 +144,8 @@ apps/api/
 │     ├─ system/
 │     │  └─ system.routes.ts       # ✅ GET /api/health (mount dưới /api)
 │     ├─ auth/
-│     │  ├─ demo.routes.ts         # ✅ POST /api/demo-sign-in (ngoài /api/auth/*)
-│     │  └─ demo.service.ts        # ✅ signInEmail({ asResponse: true }) với DEMO_USER_PASSWORD
+│     │  ├─ demo.routes.ts         # ✅ POST /api/demo-sign-in (+ GET .../status; 404 khi tắt, 429 rate limit)
+│     │  └─ demo.service.ts        # ✅ isDemoLoginEnabled() + signInEmail({ asResponse: true }) với DEMO_USER_PASSWORD
 │     └─ events/                   # (kế hoạch)
 │        ├─ events.routes.ts       # Hono router + zValidator → service
 │        ├─ events.service.ts      # business logic (không type Hono)
