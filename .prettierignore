@@ -1,0 +1,10 @@
+node_modules
+.next
+.turbo
+dist
+coverage
+bun.lock
+docs/
+AGENTS.md
+CLAUDE.md
+README.md
