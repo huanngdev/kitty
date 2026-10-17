@@ -6,11 +6,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@kitty/ui/components/card";
+import { ApiStatusBadge } from "@/features/system/components/api-status-badge";
 
 export default function Home() {
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-10 p-6">
       <div className="flex flex-col items-center gap-3 text-center">
+        <ApiStatusBadge />
         <h1 className="text-4xl font-semibold tracking-tight">Kitty</h1>
         <p className="text-lg text-muted-foreground">Let your agents spend. On a leash.</p>
       </div>

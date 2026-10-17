@@ -32,5 +32,14 @@ export const clientEnv: ClientEnv = clientSchema.parse({
   NEXT_PUBLIC_PAYPAL_CLIENT_ID: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
 });
 
-/** Server-only env. `null` when this module is evaluated in the browser. */
-export const serverEnv: ServerEnv | null = isServer ? serverSchema.parse(process.env) : null;
+/**
+ * Server-only env. Throws when called in the browser, so it is safe to use from
+ * server modules such as `next.config.ts`.
+ */
+export function getServerEnv(): ServerEnv {
+  if (!isServer) {
+    throw new Error("getServerEnv() must only be called on the server");
+  }
+
+  return serverSchema.parse(process.env);
+}
