@@ -24,10 +24,12 @@
 | **Domain event** | Sự kiện nghiệp vụ Gateway phát ra (vd `kitty.funds_received`). |
 | **Organizer / Member / Vendor (Payee)** | Người tạo event / người góp tiền / bên nhận tiền. |
 | **Planner / Shopper / Collector / Treasurer** | Bốn vai agent. |
-| **Agent key** | Cặp khoá Ed25519 của một agent; private key ở service `agents`, public key ở Gateway. |
+| **Agent key** | Cặp khoá Ed25519 của một agent; private key ở service `agents` (hoặc ở máy người dùng với agent bên ngoài), public key ở Gateway. |
 | **Sandbox** | Môi trường test của PayPal — toàn bộ Kitty chạy ở đây. |
 | **Agent Pass (Sui)** | Concept gốc từ Sui Basecamp 2026 mà Kitty lấy cảm hứng. |
-| **MCP** | Model Context Protocol — giao thức agents dùng để gọi tools (Gateway, Channel3, Zapier). |
+| **MCP** | Model Context Protocol — giao thức agents dùng để gọi tools (Leash Gateway, Channel3). |
+| **`leash-mcp`** | Bridge stdio chạy trên máy người dùng: cho MCP client có sẵn (Claude Desktop, Claude Code, Cursor) nối vào Leash Gateway, ký Ed25519 từng request ([ADR-025](20-risks-and-decisions.md)). |
+| **External agent** | Agent không do Kitty chạy (một MCP client nối qua `leash-mcp`); có leash và bị policy như mọi agent. |
 | **BYOK** | Bring Your Own Key — người dùng tự nhập API key của nhà cung cấp LLM và tự chọn model; Kitty không cung cấp model. |
 | **AI credential** | Một API key LLM đã mã hoá của người dùng (`app.ai_credentials`), chỉ hiển thị `last4`. |
 | **Model settings** | Model default và model theo từng vai agent mà người dùng chọn. |

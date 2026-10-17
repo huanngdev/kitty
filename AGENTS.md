@@ -39,7 +39,7 @@ Organizer ──► Kitty app (Next.js) ──► Agents (Planner · Shopper · 
 | 10 | [docs/10-api-spec.md](docs/10-api-spec.md) | Gateway Admin API, MCP tools, Web App API, webhooks, internal API |
 | 11 | [docs/11-paypal-integration.md](docs/11-paypal-integration.md) | PayPal APIs, payloads, webhook handling, idempotency, fallbacks |
 | 12 | [docs/12-agents.md](docs/12-agents.md) | Vai agent, loop, prompts, tools, triggers, evals |
-| 13 | [docs/13-sponsor-integrations.md](docs/13-sponsor-integrations.md) | AG Studio, Bryntum, Channel3, Render, Zapier, Elastic, APIMatic, Postman, KERNEL, Astropods |
+| 13 | [docs/13-sponsor-integrations.md](docs/13-sponsor-integrations.md) | AG Studio (nhắm giải), Render, Channel3, APIMatic, Bryntum (Could); sponsor đã bỏ và lý do (ADR-024) |
 | 14 | [docs/14-security-threat-model.md](docs/14-security-threat-model.md) | Threats → mitigations, bounded loss statement |
 | 15 | [docs/15-ui-ux.md](docs/15-ui-ux.md) | Brand, màn hình, copy reason codes (luồng đi giữa các màn hình ở 23) |
 | 16 | [docs/16-roadmap.md](docs/16-roadmap.md) | Milestones, kế hoạch theo ngày, critical path, cut list |
@@ -81,21 +81,21 @@ apps/api          Hono 4 chạy trên Bun — service API                (no Pay
 apps/gateway      (skeleton) Leash Gateway: Hono REST admin + MCP + webhooks (ONLY PayPal secret)
 apps/agents       (planned) Agent runtime: tool-use loops (BYOK models), agent keys, decrypts user LLM keys (no PayPal secret)
 apps/worker       (planned) Render Workflows / outbox / cron sweeps (no PayPal secret)
-apps/demo-sites   (planned) Static: demo vendor booking site + injection page
+apps/demo-sites   (planned) Static: injection page "Hoodie Deals" (+ catalog demo)
 packages/typescript-config  @kitty/typescript-config — tsconfig base/nextjs/bun
 packages/eslint-config      @kitty/eslint-config — shared ESLint flat config
 packages/prettier-config    @kitty/prettier-config — shared Prettier config
 packages/shared   (exists) @kitty/shared — Zod contracts, types, error codes, API paths
-packages/leash    (planned) Pure policy engine, types, reason codes
-packages/ledger   (planned) Money (cents) + bucket ledger helpers
-packages/paypal   (planned) Typed PayPal REST client (gateway only)
-packages/signing  (planned) Ed25519 request signing/verification
+packages/leash    (exists) Pure policy engine, types, reason codes
+packages/ledger   (exists) Money (cents) + bucket ledger helpers
+packages/paypal   (exists) Typed PayPal REST client (gateway only)
+packages/signing  (exists) Ed25519 request signing/verification + createSignedFetch
+packages/leash-mcp  (planned) CLI bridge stdio → Gateway MCP for external MCP clients (ADR-025; no secrets)
 packages/crypto-box  (planned) Envelope encryption for user LLM API keys (agents only)
 packages/db       (exists) @kitty/db — Drizzle schema, client, migrations (chỉ apps/api và apps/gateway)
 packages/events   (planned) Domain event types (zod)
 packages/ui       (exists) @kitty/ui — shadcn/ui components, Tailwind tokens, cn()
 packages/config   (planned) env schemas (zod)
-postman/          (planned) Postman collections
 scripts/          (exists) check-env-isolation; sandbox-check nằm ở apps/gateway/scripts; còn lại planned
 turbo.json        Turborepo task graph
 ```
