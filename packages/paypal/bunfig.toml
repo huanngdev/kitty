@@ -4,5 +4,6 @@
 [test]
 coverageThreshold = { lines = 0.95, functions = 0.95 }
 # Only measure this package: `@kitty/ledger` is imported for `formatMoney`/
-# `parseMoney` and is covered by its own 100% suite.
-coveragePathIgnorePatterns = ["**/node_modules/**", "**/ledger/**"]
+# `parseMoney` and is covered by its own 100% suite. Test helpers live under
+# `test/` and are not production code.
+coveragePathIgnorePatterns = ["**/node_modules/**", "**/ledger/**", "test/**"]

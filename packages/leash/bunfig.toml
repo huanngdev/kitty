@@ -2,4 +2,4 @@
 coverage = true
 coverageThreshold = { lines = 1, functions = 1 }
 coverageSkipTestFiles = true
-coveragePathIgnorePatterns = ["src/test-support/**"]
+coveragePathIgnorePatterns = ["test/**"]
