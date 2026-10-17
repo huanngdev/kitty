@@ -1,6 +1,8 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
+  "cacheMaxSize": "10GB",
+  "cacheMaxAge": "7d",
   "globalEnv": [
     "PORT",
     "NODE_ENV",
