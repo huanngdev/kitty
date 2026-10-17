@@ -28,6 +28,10 @@ export function demoLoginErrorMessage(code: string | null): string {
     case "DEMO_LOGIN_NOT_CONFIGURED":
     case "DEMO_LOGIN_FAILED":
       return "The demo account isn't available yet. Sign in with your email instead.";
+    case "DEMO_LOGIN_DISABLED":
+      return "Demo login is turned off on this deployment. Sign in with your email instead.";
+    case "RATE_LIMITED":
+      return "Too many demo sign-in attempts. Try again in a few minutes.";
     case null:
       return "Could not start the demo. Try again.";
     default:

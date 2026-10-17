@@ -27,6 +27,11 @@ describe("demoLoginErrorMessage", () => {
     expect(demoLoginErrorMessage("DEMO_LOGIN_FAILED")).toContain("Sign in with your email");
   });
 
+  test("explains a disabled or rate-limited demo login", () => {
+    expect(demoLoginErrorMessage("DEMO_LOGIN_DISABLED")).toContain("turned off");
+    expect(demoLoginErrorMessage("RATE_LIMITED")).toContain("Too many demo sign-in attempts");
+  });
+
   test("has a generic fallback", () => {
     expect(demoLoginErrorMessage(null)).toBe("Could not start the demo. Try again.");
   });
