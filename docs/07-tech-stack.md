@@ -127,7 +127,7 @@ export default { port: env.PORT, fetch: app.fetch };
 | Browser agent | **KERNEL** (+ `playwright-core` qua CDP) | Browserbase | Sponsor |
 | Notifications | **Zapier MCP** (Slack, Gmail, Calendar) | Slack SDK | Sponsor; không phải tự build OAuth |
 | Unit/integration test | **`bun test`** + **fast-check** (property) | Vitest | Có sẵn trong Bun, API giống Jest |
-| HTTP mock | **MSW 2** (`msw/node`) hoặc `spyOn(globalThis, "fetch")` | nock | Mock PayPal API |
+| HTTP mock | **MSW 2** (`msw/node`, mock qua axios adapter) | nock | Mock PayPal API |
 | E2E | **Playwright** (`bunx playwright test`) | Cypress | |
 | Lint + format | **ESLint 10 (flat config qua `@kitty/eslint-config`) + Prettier 3 (`@kitty/prettier-config`)** | Biome | Chuẩn phổ biến; tách plugin theo framework (Next/Hono); format ổn định và đồng nhất toàn monorepo |
 | Logging | **pino** (JSON) | console | Có redact secrets |
@@ -154,7 +154,7 @@ Tài khoản demo/judge dùng **demo key** của team, có hạn mức ([24](24-
 
 | Nhu cầu | Dùng |
 |---|---|
-| Server-side REST | **`packages/paypal`**: client mỏng tự viết trên `fetch` (OAuth2 client credentials có cache, retry, `PayPal-Request-Id`). Chỉ gateway import |
+| Server-side REST | **`packages/paypal`**: client mỏng tự viết trên **axios** (instance riêng, OAuth2 client credentials có cache, retry, `PayPal-Request-Id`). Chỉ gateway import |
 | Tham khảo schema | PayPal Server SDK (TypeScript) / APIMatic Context Plugin |
 | Agent tools | **Không đưa PayPal Agent Toolkit trực tiếp cho agent.** Gateway có thể dùng Toolkit *bên trong*, sau khi policy ALLOW (ADR-007) |
 | Client checkout | **PayPal JS SDK v6** trên trang `/pay` và trang nạp quỹ |
@@ -199,7 +199,7 @@ Ghi kết quả vào ADR-008 ở [20-risks-and-decisions.md](20-risks-and-decisi
 
 - ESM, path alias `@kitty/*` cho packages (khai báo trong `tsconfig` base ở `packages/config`).
 - Không `any`. Zod parse tại mọi biên (HTTP, MCP tool input, webhook, env).
-- Chỉ dùng API Web-standard (`fetch`, `Request`, `Response`, `crypto`) trong `packages/*`. Không dùng API riêng của Bun (`Bun.*`) trong packages, để giữ được fallback sang Node. `Bun.*` chỉ được dùng trong entry file của apps.
+- Chỉ dùng API Web-standard/đa runtime (`Request`, `Response`, `crypto`, axios) trong `packages/*`. Không dùng API riêng của Bun (`Bun.*`) trong packages, để giữ được fallback sang Node. `Bun.*` chỉ được dùng trong entry file của apps.
 - Tiền: chỉ dùng `Money` (cents bigint) trong domain; convert sang string ở biên.
 - Thời gian: lưu UTC `timestamptz`; hiển thị theo timezone event.
 - Lỗi domain: `throw new KittyError(code, details)`. Không throw string.
