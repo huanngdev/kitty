@@ -1,0 +1,322 @@
+# CODE_RULES.md — Kitty
+
+> **Bắt buộc đọc toàn bộ file này trước khi viết hoặc sửa code. Vi phạm một rule MUST = PR không được merge.**
+
+File này chốt **tech stack chuẩn** và **quy ước code** cho toàn monorepo. Kiến trúc chi tiết ở [docs/25-code-architecture.md](docs/25-code-architecture.md); bất biến bảo mật/tiền ở [AGENTS.md](AGENTS.md) §3.
+
+**Mức độ rule:**
+- **MUST** — bắt buộc. Vi phạm = chặn merge (review/CI).
+- **SHOULD** — nên làm; bỏ thì phải nói lý do trong PR.
+
+**Ngôn ngữ:** code, comment, commit message, README, UI → tiếng Anh. `docs/` nội bộ → tiếng Việt.
+
+**Ưu tiên khi mâu thuẫn:** các bất biến trong [AGENTS.md](AGENTS.md) §3 (Leash, PayPal secret chỉ ở `apps/gateway`, BYOK keys) **thắng** mọi rule ở file này. Nếu một rule dưới đây xung đột với bất biến tiền/bảo mật → theo AGENTS.md và ghi lại.
+
+---
+
+## A. Tech stack chuẩn
+
+Chỉ dùng những thứ dưới đây. **Thêm một thư viện khác làm cùng một việc = MUST có ADR mới ở [docs/20-risks-and-decisions.md](docs/20-risks-and-decisions.md)** trước khi merge.
+
+| Layer | Library / chuẩn |
+|---|---|
+| Runtime · package manager · monorepo | **Bun 1.3** · **Turborepo 2**. MUST NOT dùng `npm`/`pnpm`/`yarn` (chỉ `bun`/`bunx`) |
+| Language | **TypeScript strict** qua `@kitty/typescript-config` |
+| Frontend framework | **Next.js 16 App Router** · **React 19** |
+| UI components | **shadcn/ui** (thêm bằng shadcn CLI). Mọi component UI đến từ shadcn/ui hoặc compose từ shadcn/ui primitives. MUST NOT thêm component library khác (MUI, Chakra, Ant…) |
+| Icons | **lucide-react** |
+| Styling | **Tailwind CSS 4** + helper `cn()` (`clsx` + `tailwind-merge`) |
+| HTTP client | **axios** — một instance đã cấu hình cho mỗi app |
+| Server state | **TanStack Query v5** |
+| Forms | **react-hook-form** + **@hookform/resolvers/zod** |
+| Validation | **Zod v4** — schema nằm ở `@kitty/shared` |
+| Client-only UI state | React state trước; **Zustand** chỉ cho cross-component client state |
+| Backend framework | **Hono** chạy trên Bun + `@hono/zod-validator` |
+| Auth | **Better Auth** (server ở `apps/api`, client `better-auth/react`) |
+| Database | **PostgreSQL 16** + **Drizzle ORM** + **drizzle-kit** (driver `postgres.js`) |
+| Object storage | **Cloudflare R2** qua S3 API (`@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`) |
+| Testing | **`bun test`** (unit/integration) · **fast-check** (property) · **Playwright** (e2e) |
+| Lint · format | **ESLint 10** flat config (`@kitty/eslint-config`) · **Prettier 3** (`@kitty/prettier-config`) |
+| Env | Mỗi app validate env bằng Zod schema lúc startup |
+| Dates · Money | ISO string qua wire, `Date` chỉ bên trong function; **money = integer cents** (xem AGENTS.md §3) |
+
+Quy tắc bắt buộc kèm theo stack:
+
+- **MUST** — UI: chỉ shadcn/ui + lucide-react. Ngoại lệ duy nhất là component sponsor đã chốt trong [docs/13](docs/13-sponsor-integrations.md) (AG Studio, Bryntum) — và phải được **bọc trong component của mình** (xem §C).
+- **MUST** — HTTP: mọi lời gọi API trong app code đi qua **axios instance** (`src/lib/http.ts`). MUST NOT gọi `fetch` trực tiếp. Ngoại lệ: (a) code server-only của Next cần fetch caching, (b) Hono `app.request` trong test.
+- **MUST** — Server state: mọi read là `useQuery`/`useSuspenseQuery`, mọi write là `useMutation` với invalidation tường minh. MUST NOT fetch data trong `useEffect`.
+- **MUST** — Contract: schema Zod sống ở `@kitty/shared`; type là `z.infer` của schema đó. MUST NOT khai báo lại DTO/interface ở app.
+- **MUST** — Auth: dùng Better Auth. MUST NOT tự viết session, JWT hay password hashing.
+- **MUST** — DB: chỉ Drizzle. Raw SQL chỉ qua template tag `sql` của drizzle.
+- **MUST** — Mọi bất biến trong AGENTS.md §3 vẫn áp dụng và **đứng trên** file này.
+
+---
+
+## B. Type safety (MUST)
+
+- **MUST** — Không `any`. Dùng `unknown` rồi narrow.
+- **MUST** — Không `@ts-ignore`. `@ts-expect-error` chỉ khi có comment lý do ngay trên dòng đó.
+- **MUST** — Không non-null assertion `!`. Không `as` cast, trừ: (a) ngay sau khi đã validate runtime, (b) `as const`. Ưu tiên `satisfies`.
+- **MUST** — Mọi function/hook/service được export có type tham số và kiểu trả về tường minh.
+- **MUST** — Mọi biên ngoài được parse bằng Zod: HTTP request (`zValidator`), HTTP response ở tầng axios, env, webhook, `localStorage`, query params trên URL.
+- **MUST** — Trạng thái/kết quả dùng discriminated union; `switch` phải exhaustive với check `never`.
+- **MUST** — Type/DTO dùng chung import từ `@kitty/shared`; MUST NOT redeclare ở app.
+- **MUST** — `noUncheckedIndexedAccess` bật; xử lý `undefined` khi truy cập theo index/key.
+
+```ts
+// ❌ any + implicit cast
+export function total(items: any): any {
+  return items.reduce((sum: any, item: any) => sum + item.amount, 0);
+}
+```
+
+```ts
+// ✅ validate ở biên, type suy ra từ schema, không any
+import { z } from "zod";
+
+const itemSchema = z.object({ amount: z.number().int() });
+type Item = z.infer<typeof itemSchema>;
+
+export function total(items: Item[]): number {
+  return items.reduce((sum, item) => sum + item.amount, 0);
+}
+```
+
+```ts
+// ✅ discriminated union + switch exhaustive
+type Result =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "error"; error: string }
+  | { status: "success"; data: string };
+
+function label(result: Result): string {
+  switch (result.status) {
+    case "idle":
+      return "—";
+    case "loading":
+      return "Loading…";
+    case "error":
+      return result.error;
+    case "success":
+      return result.data;
+    default: {
+      const exhaustive: never = result;
+      return exhaustive;
+    }
+  }
+}
+```
+
+---
+
+## C. Frontend rules (MUST)
+
+**Component chỉ để hiển thị: JSX + props + gọi hooks. Mọi logic nằm trong hooks.**
+
+- **MUST** — Logic (event handler, data fetching, mutation, derived value, effect, form setup, navigation) sống trong hook, không nằm trong component.
+- **MUST** — File component MUST NOT chứa: gọi axios/query, `useEffect` có logic, `async function`, business rule, hay inline handler làm gì hơn việc gọi một hàm của hook.
+- **MUST** — Mỗi mối quan tâm một hook trong `use-<name>.ts`. Feature component thường có hook khớp tên (`event-form.tsx` + `use-event-form.ts`), hook trả về một object có type tường minh gồm mọi thứ component cần.
+- **MUST** — Gọi API chỉ trong `features/<feature>/api/*.ts` (axios function + query key + `queryOptions`); hook bọc chúng bằng TanStack Query; component chỉ gọi hook.
+- **MUST** — Server Components được dùng cho layout/dữ liệu tĩnh và prefetch (`prefetchQuery` + `HydrationBoundary`); phần interactive là Client Component dùng hook.
+- **MUST** — Component sponsor (AG Studio, Bryntum) phải được bọc trong một component của mình để phần còn lại của app không import trực tiếp thư viện sponsor.
+- **MUST** — shadcn/ui component nằm ở vị trí chung định nghĩa trong [docs/25](docs/25-code-architecture.md); MUST NOT sửa file shadcn generate ra ngoài customisation đã ghi chú.
+- **MUST** — Naming: file `kebab-case`, component `PascalCase`, hook `useX`, một component một file, **named export** (ngoại lệ: file `page.tsx`/`layout.tsx`/`route.ts` của Next buộc default export).
+
+```tsx
+// ❌ component tự fetch, tự mutate, tự tính logic
+"use client";
+import { useEffect, useState } from "react";
+import axios from "axios";
+
+export function EventList() {
+  const [events, setEvents] = useState<Event[]>([]);
+  useEffect(() => {
+    axios.get("/api/events").then((r) => setEvents(r.data));
+  }, []);
+  const handleSelect = async (id: string) => {
+    await axios.post(`/api/events/${id}/select`);
+    setEvents((prev) => prev.map((e) => ({ ...e, selected: e.id === id })));
+  };
+  return events.map((e) => (
+    <button key={e.id} onClick={() => handleSelect(e.id)}>
+      {e.title}
+    </button>
+  ));
+}
+```
+
+```ts
+// ✅ features/events/api/events.api.ts — axios + key + queryOptions
+import type { Event } from "@kitty/shared/events";
+import { eventListSchema } from "@kitty/shared/events";
+import { http } from "@/lib/http";
+
+export const eventsKeys = {
+  all: ["events"] as const,
+  list: () => [...eventsKeys.all, "list"] as const,
+};
+
+export async function listEvents(): Promise<Event[]> {
+  const { data } = await http.get("/api/events");
+  return eventListSchema.parse(data);
+}
+```
+
+```ts
+// ✅ features/events/hooks/use-events.ts — mọi logic ở đây
+"use client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { eventsKeys, listEvents, selectEvent } from "../api/events.api";
+
+export function useEvents() {
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: eventsKeys.list(), queryFn: listEvents });
+  const select = useMutation({
+    mutationFn: selectEvent,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: eventsKeys.all }),
+  });
+  return { events: query.data ?? [], isLoading: query.isPending, select };
+}
+```
+
+```tsx
+// ✅ features/events/components/event-list.tsx — chỉ hiển thị
+"use client";
+import { useEvents } from "../hooks/use-events";
+
+export function EventList() {
+  const { events, select } = useEvents();
+  return events.map((event) => (
+    <button key={event.id} onClick={() => select.mutate(event.id)}>
+      {event.title}
+    </button>
+  ));
+}
+```
+
+---
+
+## D. Backend rules (MUST)
+
+Phân tầng bắt buộc: `routes` → `services` → `repositories`.
+
+- **MUST** — `routes` (Hono router + `zValidator` + gọi service) MUST NOT chạm DB trực tiếp.
+- **MUST** — `services` chứa business logic, type tường minh, **không dùng type của Hono**.
+- **MUST** — `repositories` chỉ chứa truy vấn Drizzle, MUST NOT chứa business rule.
+- **MUST** — Mọi route validate input bằng schema từ `@kitty/shared` và trả response khớp schema response dùng chung.
+- **MUST** — Lỗi: throw `AppError(code, httpStatus, details)`; một `onError` duy nhất của Hono map thành shape `{ error: { code, message, details } }` định nghĩa ở `@kitty/shared`. MUST NOT rò stack trace ra ngoài.
+- **MUST** — Middleware auth gán `c.var.user`/`c.var.session` có type; middleware authorization kiểm role/permission theo từng route.
+- **MUST** — Dùng transaction cho ghi nhiều dòng; các rule tiền ở AGENTS.md (cents, idempotency, ledger) vẫn áp dụng.
+- **MUST** — Log bằng `pino`, structured, có redact secret/PII.
+
+```ts
+// ✅ modules/events/events.routes.ts — validate rồi gọi service, không chạm DB
+import { Hono } from "hono";
+import { zValidator } from "@hono/zod-validator";
+import { createEventSchema } from "@kitty/shared/events";
+import { eventsService } from "./events.service";
+
+export const eventsRoutes = new Hono().post(
+  "/",
+  zValidator("json", createEventSchema),
+  async (c) => c.json(await eventsService.create(c.req.valid("json")), 201),
+);
+```
+
+```ts
+// ✅ modules/events/events.repository.ts — chỉ Drizzle
+import { events } from "@kitty/db/schema";
+import { db } from "@/lib/db";
+
+export async function insert(input: { title: string; ownerId: string }) {
+  const [row] = await db.insert(events).values(input).returning();
+  return row;
+}
+```
+
+```ts
+// ✅ lib/errors.ts + onError tập trung
+export class AppError extends Error {
+  constructor(
+    readonly code: string,
+    readonly httpStatus: number,
+    readonly details?: unknown,
+  ) {
+    super(code);
+  }
+}
+```
+
+```ts
+// ✅ src/app.ts
+app.onError((error, c) => {
+  if (error instanceof AppError) {
+    return c.json(
+      { error: { code: error.code, message: error.message, details: error.details } },
+      error.httpStatus,
+    );
+  }
+  logger.error({ err: error }, "unhandled error");
+  return c.json({ error: { code: "INTERNAL", message: "Internal server error" } }, 500);
+});
+```
+
+---
+
+## E. Shared package rules (MUST)
+
+`@kitty/shared` là **nguồn sự thật của contract**.
+
+- **MUST** — Chỉ chứa: Zod schema, type/interface suy ra, enum/const, error code, hằng số path API, và pure isomorphic util.
+- **MUST NOT** — Không React, không Hono, không Drizzle, không API chỉ có ở Node/Bun/browser, không secret.
+- **MUST** — Export qua `src/index.ts` + subpath export theo domain (ví dụ `@kitty/shared/events`).
+- **MUST** — Cả hai app import contract từ đây; đổi contract = đổi ở đây trước.
+
+```ts
+// ✅ packages/shared/src/events/events.schema.ts
+import { z } from "zod";
+
+export const createEventSchema = z.object({
+  title: z.string().min(1).max(120),
+  budgetCents: z.number().int().nonnegative(),
+});
+
+export const eventListSchema = z.array(
+  z.object({ id: z.string(), title: z.string() }),
+);
+```
+
+```ts
+// ✅ packages/shared/src/events/events.types.ts
+import type { z } from "zod";
+import type { createEventSchema } from "./events.schema";
+
+export type CreateEventInput = z.infer<typeof createEventSchema>;
+```
+
+---
+
+## F. Workflow (MUST)
+
+- **MUST** — Trước khi code: đọc [AGENTS.md](AGENTS.md), file này, và docs liên quan tới task.
+- **MUST** — Trước khi commit: **`bun run ci` phải pass** (`format:check`, `lint`, `check-types`, `build`). Không warning từ ESLint.
+- **MUST** — **Conventional Commits**; commit nhỏ, PR nhỏ.
+- **MUST** — Không commit `.env`, secret, `node_modules`, `.next`, `.turbo`.
+- **MUST** — Vào `main` chỉ qua PR.
+
+**Checklist**
+
+```md
+- [ ] `bun run ci` pass (format:check · lint · check-types · build), 0 warning ESLint
+- [ ] Không `any`, không `!`, không `as`, không `@ts-ignore` không lý do
+- [ ] Mọi biên ngoài parse bằng Zod; type lấy từ `z.infer` / `@kitty/shared`
+- [ ] Mọi logic ở hooks; component chỉ JSX + props + gọi hook
+- [ ] UI chỉ dùng shadcn/ui + lucide-react (hoặc bọc sponsor component)
+- [ ] Gọi API qua axios instance; read/write qua TanStack Query, có invalidation
+- [ ] API: route → service → repository; input `zValidator`; lỗi qua `AppError` + `onError`
+- [ ] Contract thay đổi thì sửa ở `@kitty/shared` trước
+- [ ] Không vi phạm bất biến AGENTS.md §3; không log secret/PII
+- [ ] Docs cập nhật nếu thay đổi hành vi/thiết kế; ADR nếu thêm thư viện/quyết định mới
+- [ ] Conventional Commits; không commit secret hay build artifact
+```
