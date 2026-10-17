@@ -1,6 +1,7 @@
 {
   "name": "kitty",
   "private": true,
+  "license": "MIT",
   "packageManager": "bun@1.3.14",
   "scripts": {
     "dev": "turbo run dev",
@@ -9,10 +10,12 @@
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
     "check-types": "turbo run check-types",
+    "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "check:env-isolation": "bun scripts/check-env-isolation.ts",
     "clean": "bun -e \"const fs=require('node:fs');const p=['.turbo','node_modules/.cache'];for(const d of ['apps','packages']){if(fs.existsSync(d))for(const x of fs.readdirSync(d))p.push(d+'/'+x+'/.turbo',d+'/'+x+'/.next',d+'/'+x+'/node_modules/.cache')}for(const x of p)fs.rmSync(x,{recursive:true,force:true});console.log('clean: removed',p.length,'paths')\"",
-    "ci": "bun run format:check && bun run lint && bun run check-types && bun run build"
+    "ci": "bun run format:check && bun run lint && bun run check-types && bun run test && bun run check:env-isolation && bun run build"
   },
   "prettier": "@kitty/prettier-config",
   "devDependencies": {
