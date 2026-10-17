@@ -23,3 +23,16 @@ export function createDb(databaseUrl: string): Db {
   const client = postgres(databaseUrl, { prepare: false, max: 10 });
   return drizzle(client, { schema });
 }
+
+/**
+ * A Drizzle transaction handle, derived from `Db` so services never re-declare
+ * Drizzle's types (CODE_RULES.md §B, §D).
+ */
+export type DbTx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+/**
+ * Anything a repository can run queries against: the pooled client or a
+ * transaction opened by a service. Repositories take this as their first
+ * argument so multi-row writes can run in one transaction.
+ */
+export type DbLike = Db | DbTx;
