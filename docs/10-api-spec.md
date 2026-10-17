@@ -243,12 +243,12 @@ Các route `app/api/*` của Next.js, gọi Gateway Admin API phía server:
 
 | Method | Path | Mô tả |
 |---|---|---|
-| GET | `/api/auth-config` | Phương thức đăng nhập đã cấu hình: `{ emailPassword: true, providers: ["github","paypal"], demo, emailVerification }` — UI chỉ render nút theo danh sách này. Không chứa secret. |
+| GET | `/api/auth-config` | Phương thức đăng nhập đã cấu hình: `{ emailPassword: true, providers: ["github","paypal"], demo, emailVerification, passwordReset }` — UI chỉ render nút/link theo danh sách này (`passwordReset: false` ở production không có mailer → ẩn "Forgot password?"). Không chứa secret. |
 | GET | `/api/demo-sign-in/status` · POST `/api/demo-sign-in` | Demo một chạm, 404 khi `DEMO_LOGIN_ENABLED=false` (ADR-025) |
 | — | `/api/auth/*` | Better Auth handler: sign-up/sign-in email, social (github/paypal), verify-email, reset-password, change-password, list-sessions, revoke-session, link/unlink account, delete-user |
 | — | `/api/dev/*` (development only) | Chỉ tồn tại khi `NODE_ENV=development`: `GET /api/dev/last-email?to=`, `POST /api/dev/emails/clear`, `POST /api/dev/rate-limit/clear`. Production trả 404. |
 
-**Demo read-only:** tài khoản `is_demo` nhận `403 DEMO_READ_ONLY` ở `change-password`, `change-email`, `update-user`, `delete-user`, `unlink-account` (hook Better Auth). Agent không bao giờ authenticate ở đây — agent đi qua Gateway MCP; route session không nhận `member_token`.
+**Demo read-only:** tài khoản `is_demo` nhận `403 DEMO_READ_ONLY` ở `change-password`, `change-email`, `update-user`, `delete-user`, `unlink-account`, `link-social`, `revoke-session`, `revoke-sessions`, `revoke-other-sessions`, `set-password` (hook Better Auth); request reset cho email demo trả generic success và không gửi mail. Agent không bao giờ authenticate ở đây — agent đi qua Gateway MCP; route session không nhận `member_token`.
 
 | Method | Path | Mô tả |
 |---|---|---|

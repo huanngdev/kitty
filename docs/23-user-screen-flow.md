@@ -378,7 +378,7 @@ Click một con số bất kỳ ⟶ S13 Activity đã lọc sẵn theo con số 
 | S17 Pay | — | Nút PayPal loading | Lỗi PayPal, không trừ tiền | Đã trả → S18 |
 | S02 Sign in / S02b Sign up | — | Per-button spinner (chỉ nút provider đang chạy), form disabled khi submit | Lỗi map sẵn (sai mật khẩu, 429 + retry-after, chưa verify + resend, account exists + link hint, OAuth cancelled) | Session mới → về `?next=` hợp lệ hoặc S03 |
 | S02c Verify email | "Check your inbox" + dev hint | "Verifying your email…" | Link invalid/expired → xin link mới | Verify xong → "Email verified" → S03 |
-| S02d Forgot / Reset | — | Nút spinner | Reset: token sai/hết hạn → `[Request a new link]` | Reset xong → "Password updated" |
+| S02d Forgot / Reset | Deployment không có mailer (production) → "Password reset is not available on this deployment" + `[Back to sign in]` (sign-in ẩn luôn "Forgot password?") | Nút spinner | Reset: token sai/hết hạn → `[Request a new link]` | Reset xong → "Password updated" |
 | S02a Settings → Account | — | Skeleton cho list sessions/accounts | Lỗi riêng từng card; demo read-only giải thích rõ | Sau change password → các session khác biến mất |
 | S02e `/auth/error` | — | — | Mọi code OAuth → copy thân thiện + `[Try again]` + `[Reset your password]` | — |
 
