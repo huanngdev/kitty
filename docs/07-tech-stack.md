@@ -52,7 +52,7 @@ A: Một số package Node dùng API ít phổ biến có thể lệch hành vi.
 | Bundler | Turbopack (mặc định cho `next dev` và `next build` ở Next 16) |
 | Runtime | `bun --bun next dev` / `bun --bun next start`. **Fallback:** `bun run next start` (Next tự chạy trên Node) nếu spike thấy lỗi |
 | Middleware | Next 16 dùng file `proxy.ts` (tên mới của `middleware.ts`) cho auth redirect |
-| Gọi gateway/agents | Từ server (route handlers / server actions) bằng **Hono RPC client** `hc<AppType>`, nên type của API gateway được chia sẻ sang web, không phải viết tay |
+| Gọi gateway/agents | Qua **axios** + **TanStack Query**, contract là Zod schema trong **`@kitty/shared`** (type = `z.infer`). *(Hono RPC `hc<AppType>` đã được cân nhắc và thay thế — xem ADR-016.)* |
 
 **Q: Vì sao không làm frontend bằng Hono JSX hoặc Vite SPA cho đồng bộ với Bun?**
 A: Trang `/pay` public cần SSR nhanh; AG Studio và Bryntum có wrapper React tốt; Next cho routing, layout, auth và streaming chat sẵn. Hono vẫn là backend cho mọi service còn lại.
@@ -65,7 +65,7 @@ A: Trang `/pay` public cần SSR nhanh; AG Studio và Bryntum có wrapper React 
 | Entry | `export default { port: Number(process.env.PORT ?? 8787), fetch: app.fetch }` → Bun tự `serve` |
 | Middleware dùng | `hono/logger` (thay bằng pino), `hono/secure-headers`, `hono/body-limit`, `hono/timeout`, `zValidator` (`@hono/zod-validator`), middleware tự viết `leashSignature()` cho Ed25519 |
 | MCP | **`@hono/mcp@0.3.x` + `@modelcontextprotocol/sdk@1.32.x`**: Streamable HTTP transport gắn vào route `POST /mcp` của gateway |
-| Type sharing | `export type GatewayAdminApp = typeof adminRoutes` → web dùng `hc<GatewayAdminApp>(GATEWAY_URL)` |
+| Type sharing | Contract là Zod schema trong **`@kitty/shared`** (`z.infer` cho type). Không dùng Hono RPC `hc<AppType>` (xem ADR-016) |
 | Raw body cho webhook | `await c.req.text()` trước khi parse JSON (cần raw cho verify chữ ký PayPal) |
 
 Ví dụ entry gateway:
@@ -97,12 +97,19 @@ export default { port: env.PORT, fetch: app.fetch };
 | Monorepo | **Turborepo 2.11** | Nx, Bun workspaces trơn | Task graph + cache, cấu hình tối thiểu |
 | Runtime + PM | **Bun 1.3.14** | Node 22 + pnpm | Một công cụ; Hono native; dev loop nhanh |
 | Frontend | **Next.js 16.4 (App Router) + React 19.3** | Vite SPA, Hono JSX | SSR `/pay`, ecosystem React cho AG/Bryntum |
-| Styling | **Tailwind CSS 4.3 + shadcn/ui** | MUI | Nhanh; token dùng chung với AG Studio/Bryntum |
+| UI components | **shadcn/ui** (+ `lucide-react`) | MUI, Chakra, Ant | Mọi component đến từ shadcn/ui hoặc compose từ primitive; không thêm component library khác |
+| HTTP client (web) | **axios** (một instance/app ở `src/lib/http.ts`) | `fetch` trực tiếp | baseURL từ env, `withCredentials` cho cookie Better Auth, interceptor normalize lỗi |
+| Server state | **TanStack Query v5** | SWR, tự viết | Cache + invalidation; query key factory; `queryOptions()` |
+| Form | **react-hook-form + `@hookform/resolvers/zod`** | Formik | Schema lấy từ `@kitty/shared` |
+| Client state | React state trước; **Zustand** (tuỳ chọn) | Redux | Chỉ cho cross-component client state; không chứa server data |
+| Data contracts | **`@kitty/shared` (Zod v4)** | Hono RPC `hc<AppType>` | Một nguồn sự thật cho web + api; type = `z.infer` |
+| Styling | **Tailwind CSS 4 + `cn()` (clsx + tailwind-merge)** | CSS-in-JS | Nhanh; token dùng chung với AG Studio/Bryntum |
 | Gantt/Scheduler/Calendar | **Bryntum (React wrappers, trial)** | frappe-gantt | Sponsor; dependency engine thật cho payment gate |
 | Dashboard | **AG Studio (React) + Studio Agent Framework** | Recharts | Sponsor; NL → widget |
 | Backend HTTP | **Hono 4.13 trên Bun** | Express, Fastify, Elysia | Web-standard, nhẹ, RPC types, middleware gọn |
 | MCP | **`@hono/mcp` + `@modelcontextprotocol/sdk`** (Streamable HTTP) | stdio | Gateway là MCP server từ xa |
 | DB | **PostgreSQL 16 (Render Postgres)** | SQLite | `SELECT … FOR UPDATE`, `LISTEN/NOTIFY` |
+| Object storage | **Cloudflare R2** (S3 API + presigned URL) | S3, GCS | Chỉ khi cần file; browser upload trực tiếp, key/metadata ở Postgres |
 | ORM / driver | **Drizzle ORM 0.45 + `postgres` (postgres.js)** | Prisma, `Bun.sql` | Chạy cả Bun lẫn Node (giữ được fallback); kiểm soát transaction/lock |
 | Migrations | **drizzle-kit** (`bunx drizzle-kit generate/migrate`) | | |
 | Validation | **Zod** (+ `@hono/zod-validator`) | Valibot | Env, API, MCP tool input, events |

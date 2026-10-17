@@ -20,10 +20,13 @@ Organizer ──► Kitty app (Next.js) ──► Agents (Planner · Shopper · 
                      PayPal: Invoicing · Payouts · Orders · Refunds · Webhooks
 ```
 
+> **BẮT BUỘC:** mọi agent MUST đọc [CODE_RULES.md](CODE_RULES.md) trước khi viết hoặc sửa code. CODE_RULES.md chốt tech stack chuẩn và quy ước code; các bất biến ở §3 dưới đây **luôn thắng** khi mâu thuẫn.
+
 ## 2. Mục lục tài liệu
 
 | # | File | Nội dung |
 |---|---|---|
+| — | [CODE_RULES.md](CODE_RULES.md) | **Rules bắt buộc**: tech stack chuẩn + quy ước code (MUST/SHOULD) |
 | 01 | [docs/01-hackathon.md](docs/01-hackathon.md) | Toàn bộ thông tin hackathon: rules, deadline, giải, judging, sponsors, submission |
 | 02 | [docs/02-problem-and-vision.md](docs/02-problem-and-vision.md) | Vấn đề, giải pháp, why now, tầm nhìn, nguyên tắc sản phẩm, non-goals |
 | 03 | [docs/03-sui-agent-pass-to-paypal.md](docs/03-sui-agent-pass-to-paypal.md) | Sui Agent Pass là gì, ánh xạ sang PayPal, giới hạn trung thực |
@@ -48,6 +51,7 @@ Organizer ──► Kitty app (Next.js) ──► Agents (Planner · Shopper · 
 | 22 | [docs/22-glossary.md](docs/22-glossary.md) | Thuật ngữ |
 | 23 | [docs/23-user-screen-flow.md](docs/23-user-screen-flow.md) | **User screen flow**: sitemap, từng luồng màn hình theo persona, trạng thái màn hình, deep link, edge cases |
 | 24 | [docs/24-byok-ai-models.md](docs/24-byok-ai-models.md) | **BYOK**: người dùng tự nhập API key và chọn model; mã hoá key, manual mode, demo key, gói trả phí tương lai |
+| 25 | [docs/25-code-architecture.md](docs/25-code-architecture.md) | **Code architecture**: monorepo, luồng request, cấu trúc web/api/shared/db/ui |
 
 **Thứ tự đọc cho agent mới:** AGENTS.md → 02 → 05 → 06 → 16 → file liên quan tới task.
 
@@ -81,14 +85,15 @@ apps/demo-sites   (planned) Static: demo vendor booking site + injection page
 packages/typescript-config  @kitty/typescript-config — tsconfig base/nextjs/bun
 packages/eslint-config      @kitty/eslint-config — shared ESLint flat config
 packages/prettier-config    @kitty/prettier-config — shared Prettier config
+packages/shared   (proposed) @kitty/shared — Zod contracts, types, error codes, API paths
 packages/leash    (planned) Pure policy engine, types, reason codes
 packages/ledger   (planned) Money (cents) + bucket ledger helpers
 packages/paypal   (planned) Typed PayPal REST client (gateway only)
 packages/signing  (planned) Ed25519 request signing/verification
 packages/crypto-box  (planned) Envelope encryption for user LLM API keys (agents only)
-packages/db       (planned) Drizzle schemas (app, leash), migrations, seed
+packages/db       (proposed) @kitty/db — Drizzle schema, client, migrations (chỉ apps/api)
 packages/events   (planned) Domain event types (zod)
-packages/ui       (planned) Shared React components
+packages/ui       (proposed) @kitty/ui — shadcn/ui components, Tailwind tokens, cn()
 packages/config   (planned) env schemas (zod)
 postman/          (planned) Postman collections
 scripts/          (planned) sandbox-check, gen-agent-keys, demo reset, env isolation check
@@ -129,6 +134,7 @@ bun run --filter web dev         # chạy riêng một service
 
 ## 7. Cách làm một task
 
+0. **Đọc [CODE_RULES.md](CODE_RULES.md)** (bắt buộc) và [AGENTS.md](AGENTS.md) trước khi viết code.
 1. Xác định task thuộc milestone nào trong [16-roadmap.md](docs/16-roadmap.md) và có nằm trên critical path không.
 2. Đọc spec liên quan (05 cho mọi thứ dính tới tiền).
 3. Viết/cập nhật test trước cho logic tiền (policy, ledger, webhook handler).
