@@ -129,7 +129,7 @@
 ### ADR-023 — Tạo event kèm kitty bằng compensating flow, không 2PC (KIT-30)
 - **Bối cảnh:** `POST /api/events` vừa ghi `app.events` (Postgres) vừa gọi gateway tạo `leash.kitties`. Hai service/DB khác nhau nên không thể một transaction.
 - **Quyết định:** insert event (chưa có `kitty_id`) → gọi `POST /v1/kitties` → ghi `kitty_id`. Nếu bước 2/3 lỗi thì **xoá lại event** rồi ném lỗi. Gateway giữ idempotency/ownership như thường. Bất biến "một event = một kitty" giữ được ở phía event (không có event thiếu kitty).
-- **Hệ quả:** + đơn giản, không cần 2PC/saga hạ tầng; lỗi gateway phổ biến (chưa cấu hình, mạng) → event không được tạo, đúng kỳ vọng. − trường hợp hiếm kitty tạo xong nhưng ghi `kitty_id` lỗi để lại kitty mồ côi (xem Q12); không ảnh hưởng tiền vì kitty rỗng.
+- **Hệ quả:** + đơn giản, không cần 2PC/saga hạ tầng; lỗi gateway phổ biến (chưa cấu hình, mạng) → event không được tạo, đúng kỳ vọng. − trường hợp hiếm kitty tạo xong nhưng ghi `kitty_id` lỗi để lại kitty mồ côi (xem Q13); không ảnh hưởng tiền vì kitty rỗng.
 
 ## 3. Open questions (cần trả lời, có hạn)
 
@@ -147,4 +147,4 @@
 | Q11 | AI SDK v7 tool calling ổn định với Anthropic + một OpenAI-compatible endpoint (OpenRouter/Ollama) trên Bun? | spike | 29/10 |
 | Q12 | Payout `RETURNED`/`REFUNDED` đến **sau khi** intent đã `settled`: tiền đã rời ledger sang `external:payee` nên không thể hoàn tác bằng bút toán nội bộ (KIT-7 chỉ ghi `paypal_objects` + audit alert, không đụng ledger). Xử lý thế nào: bút toán bù `external:payee → kitty:available` với txn riêng, hay chỉnh tay ở trang settling? | spike + ADR | 01/11 |
 | Q10 | Làm solo hay team? Nếu team: chia vai (Gateway/ledger · Web/UI · Agents/sponsors) | quyết định của bạn | 17/10 |
-| Q12 | Nếu tạo kitty xong mà `apps/api` ghi `kitty_id` lỗi (event đã xoá), kitty mồ côi trong `leash.kitties`. Cần endpoint `DELETE /v1/kitties/:id` (organizer, chưa có ledger) hay reconcile sweep? | quyết định + issue sau | 25/10 |
+| Q13 | Nếu tạo kitty xong mà `apps/api` ghi `kitty_id` lỗi (event đã xoá), kitty mồ côi trong `leash.kitties`. Cần endpoint `DELETE /v1/kitties/:id` (organizer, chưa có ledger) hay reconcile sweep? | quyết định + issue sau | 25/10 |
