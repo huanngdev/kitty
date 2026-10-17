@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@kitty/ui/components/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@kitty/ui/components/tooltip";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Boxes, ChevronsUpDown } from "lucide-react";
 import Link from "next/link";
 import type { JSX } from "react";

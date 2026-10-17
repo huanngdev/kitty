@@ -1,4 +1,4 @@
-import { Button } from "@kitty/ui/components/button";
+import { Button } from "@/components/ui/button";
 import {
   Empty,
   EmptyContent,
@@ -6,7 +6,7 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@kitty/ui/components/empty";
+} from "@/components/ui/empty";
 import { CalendarDays } from "lucide-react";
 import Link from "next/link";
 import type { JSX } from "react";

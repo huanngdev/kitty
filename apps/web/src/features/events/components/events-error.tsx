@@ -1,7 +1,7 @@
 "use client";
 
-import { Alert, AlertDescription, AlertTitle } from "@kitty/ui/components/alert";
-import { Button } from "@kitty/ui/components/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
 import type { JSX } from "react";
 import { useEventsError } from "../hooks/use-events-error";

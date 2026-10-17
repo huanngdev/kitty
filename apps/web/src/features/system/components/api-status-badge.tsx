@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@kitty/ui/components/badge";
+import { Badge } from "@/components/ui/badge";
 import type { JSX } from "react";
 import { useApiStatus, type ApiStatus } from "../hooks/use-api-status";
 

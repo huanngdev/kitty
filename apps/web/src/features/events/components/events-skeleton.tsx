@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader } from "@kitty/ui/components/card";
-import { Skeleton } from "@kitty/ui/components/skeleton";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { JSX } from "react";
 
 const skeletonKeys = ["one", "two", "three"] as const;

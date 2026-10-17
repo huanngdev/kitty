@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@kitty/ui/components/button";
+import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
 import type { JSX } from "react";
 import { useThemeToggle } from "../hooks/use-theme-toggle";

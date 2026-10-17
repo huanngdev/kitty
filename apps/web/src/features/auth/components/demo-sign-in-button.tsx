@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@kitty/ui/components/button";
-import { Spinner } from "@kitty/ui/components/spinner";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Cat } from "lucide-react";
 import type { JSX } from "react";
 import { useDemoLoginStatus } from "../hooks/use-demo-login-status";

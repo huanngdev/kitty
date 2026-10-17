@@ -1,7 +1,7 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@kitty/ui/components/avatar";
-import { Button } from "@kitty/ui/components/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@kitty/ui/components/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 import { LogOut } from "lucide-react";
 import type { JSX } from "react";
 import { useUserMenu } from "../hooks/use-user-menu";
