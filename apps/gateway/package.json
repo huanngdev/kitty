@@ -13,6 +13,8 @@
     "test": "bun test --pass-with-no-tests"
   },
   "dependencies": {
+    "@kitty/db": "workspace:*",
+    "@kitty/shared": "workspace:*",
     "hono": "^4.13.13",
     "zod": "^4.6.7"
   },

@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import { healthResponseSchema } from "@kitty/shared/health";
 import { app } from "./app";
 
 describe("GET /health", () => {
-  test("returns ok", async () => {
+  test("returns a valid health response", async () => {
     const response = await app.request("/health");
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true });
+    expect(healthResponseSchema.parse(await response.json())).toEqual({ ok: true });
   });
 });
