@@ -15,8 +15,12 @@
       "name": "api",
       "version": "0.0.0",
       "dependencies": {
+        "@hono/zod-validator": "^0.9.1",
         "@kitty/db": "workspace:*",
+        "@kitty/ledger": "workspace:*",
         "@kitty/shared": "workspace:*",
+        "@kitty/signing": "workspace:*",
+        "axios": "^1.20.0",
         "better-auth": "^1.7.10",
         "drizzle-orm": "^0.45.4",
         "hono": "^4.13.13",
