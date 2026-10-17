@@ -68,13 +68,13 @@ Routes chỉ là vỏ mỏng; mọi thứ theo feature.
 ```
 apps/web/
 ├─ src/
-│  ├─ proxy.ts                     # ✅ Next 16 proxy: cookie-only redirect cho /events, /settings, /sign-in, /sign-up
+│  ├─ proxy.ts                     # ✅ Next 16 proxy: cookie-only redirect cho /events, /settings; /sign-in, /sign-up xác thực session thật (ADR-025)
 │  ├─ app/                         # routes only (page/layout mỏng)
 │  │  ├─ globals.css               # ✅ Tailwind v4 entry + theme mặc định của preset b4VmS9QxUG (CLI generate; không sửa tay)
 │  │  ├─ layout.tsx                # ✅ bọc <Providers>, Inter + JetBrains Mono + Merriweather heading (CLI), suppressHydrationWarning
 │  │  ├─ providers.tsx             # ✅ ThemeProvider + QueryClientProvider + TooltipProvider (+ devtools chỉ ở dev)
 │  │  ├─ page.tsx                  # ✅ landing S01 (redirect user đã đăng nhập → /events), instant = false
-│  │  ├─ sign-in/page.tsx          # ✅ S02 + "Continue as demo organizer"
+│  │  ├─ sign-in/page.tsx          # ✅ S02 + "Try the demo (for judges)"
 │  │  ├─ sign-up/page.tsx          # ✅ tạo tài khoản
 │  │  └─ (app)/                    # ✅ vùng đã đăng nhập (layout check session thật, instant = false)
 │  │     ├─ layout.tsx             # getServerSession() → redirect /sign-in
