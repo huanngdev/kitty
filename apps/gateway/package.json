@@ -10,12 +10,15 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check-types": "tsc --noEmit",
-    "test": "bun test --pass-with-no-tests"
+    "test": "bun test --pass-with-no-tests",
+    "sandbox:check": "bun scripts/sandbox-check.ts"
   },
   "dependencies": {
     "@kitty/db": "workspace:*",
     "@kitty/shared": "workspace:*",
+    "axios": "^1.20.0",
     "hono": "^4.13.13",
+    "pino": "^10.4.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

@@ -1,5 +1,25 @@
 import { healthResponseSchema } from "@kitty/shared/health";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
+import { AppError } from "./lib/errors";
+import { logger } from "./lib/logger";
+
+/**
+ * The single Hono error handler (CODE_RULES.md §D): `AppError` becomes the shared
+ * `{ error: { code, message, details } }` shape, anything else is a bare 500 with
+ * no stack trace leaked.
+ */
+export function handleError(error: Error, c: Context): Response {
+  if (error instanceof AppError) {
+    return c.json(
+      { error: { code: error.code, message: error.message, details: error.details } },
+      error.httpStatus,
+    );
+  }
+
+  logger.error({ err: error }, "unhandled error");
+
+  return c.json({ error: { code: "INTERNAL", message: "Internal server error" } }, 500);
+}
 
 /**
  * Leash Gateway.
@@ -10,6 +30,8 @@ import { Hono } from "hono";
  * logic.
  */
 export const app = new Hono();
+
+app.onError(handleError);
 
 app.get("/health", (c) => {
   return c.json(healthResponseSchema.parse({ ok: true }));
