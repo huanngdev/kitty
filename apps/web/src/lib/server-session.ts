@@ -1,24 +1,23 @@
 import { authSessionSchema, type AuthSessionPayload } from "@kitty/shared/auth";
 import { cookies } from "next/headers";
-import { clientEnv } from "./env";
+import { getServerEnv } from "./env";
 
 /**
- * Reads the Better Auth session on the server.
+ * Asks `apps/api` who owns this cookie header. Returns `null` for a missing,
+ * expired, malformed or forged session.
  *
- * `apps/api` owns Better Auth, so the web app never imports the auth instance:
- * it calls `GET /api/auth/get-session` through the same-origin `/api` rewrite
- * with the visitor's cookies (docs/25-code-architecture.md §1). Returns `null`
- * for a missing, expired or malformed session.
+ * Used by `getServerSession()` (pages, layouts) and by `proxy.ts`, which needs
+ * the same truth to decide whether a visitor may skip the auth screens. The
+ * call goes to the internal `API_URL`, not the public origin: the web server
+ * must not depend on its own public URL being reachable from inside.
  */
-export async function getServerSession(): Promise<AuthSessionPayload | null> {
-  const cookieHeader = (await cookies()).toString();
-
+export async function readSession(cookieHeader: string): Promise<AuthSessionPayload | null> {
   if (cookieHeader.length === 0) {
     return null;
   }
 
   try {
-    const response = await fetch(`${clientEnv.NEXT_PUBLIC_APP_URL}/api/auth/get-session`, {
+    const response = await fetch(`${getServerEnv().API_URL}/api/auth/get-session`, {
       headers: { cookie: cookieHeader },
       cache: "no-store",
     });
@@ -36,4 +35,16 @@ export async function getServerSession(): Promise<AuthSessionPayload | null> {
     // the sign-in redirect instead of crashing the request.
     return null;
   }
+}
+
+/**
+ * Reads the Better Auth session on the server.
+ *
+ * `apps/api` owns Better Auth, so the web app never imports the auth instance:
+ * it calls `GET /api/auth/get-session` with the visitor's cookies
+ * (docs/25-code-architecture.md §1). Returns `null` for a missing, expired or
+ * malformed session.
+ */
+export async function getServerSession(): Promise<AuthSessionPayload | null> {
+  return readSession((await cookies()).toString());
 }

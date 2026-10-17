@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resolveAuthRedirect } from "@/lib/auth-redirect";
+import { isAuthRoute, resolveAuthRedirect, resolveSignedInRedirect } from "@/lib/auth-redirect";
 import { buildSignInPath, readNextPath } from "@/lib/routes";
 
 describe("resolveAuthRedirect", () => {
@@ -19,19 +19,47 @@ describe("resolveAuthRedirect", () => {
     expect(resolveAuthRedirect({ pathname: "/", hasSessionCookie: false })).toBeNull();
   });
 
-  test("sends signed-in visitors away from sign-in/sign-up", () => {
-    expect(resolveAuthRedirect({ pathname: "/sign-in", hasSessionCookie: true })).toEqual({
-      redirectTo: "/events",
-    });
-    expect(resolveAuthRedirect({ pathname: "/sign-up", hasSessionCookie: true })).toEqual({
-      redirectTo: "/events",
-    });
-  });
-
   test("does not treat a lookalike prefix as protected", () => {
     expect(
       resolveAuthRedirect({ pathname: "/events-archive", hasSessionCookie: false }),
     ).toBeNull();
+  });
+
+  test("no longer decides the auth screens from the cookie alone", () => {
+    // A stale cookie still passes the optimistic check, so the proxy must not
+    // redirect away from /sign-in before it has a validated session.
+    expect(resolveAuthRedirect({ pathname: "/sign-in", hasSessionCookie: true })).toBeNull();
+    expect(resolveAuthRedirect({ pathname: "/sign-up", hasSessionCookie: true })).toBeNull();
+  });
+});
+
+describe("resolveSignedInRedirect", () => {
+  test("sends a validated session away from sign-in/sign-up", () => {
+    expect(resolveSignedInRedirect({ pathname: "/sign-in", hasValidSession: true })).toEqual({
+      redirectTo: "/events",
+    });
+    expect(resolveSignedInRedirect({ pathname: "/sign-up", hasValidSession: true })).toEqual({
+      redirectTo: "/events",
+    });
+  });
+
+  test("keeps an invalid or stale cookie on the auth screen", () => {
+    expect(resolveSignedInRedirect({ pathname: "/sign-in", hasValidSession: false })).toBeNull();
+    expect(resolveSignedInRedirect({ pathname: "/sign-up", hasValidSession: false })).toBeNull();
+  });
+
+  test("never redirects the app area or public pages", () => {
+    expect(resolveSignedInRedirect({ pathname: "/events", hasValidSession: true })).toBeNull();
+    expect(resolveSignedInRedirect({ pathname: "/", hasValidSession: true })).toBeNull();
+  });
+});
+
+describe("isAuthRoute", () => {
+  test("matches only the signed-out-only screens", () => {
+    expect(isAuthRoute("/sign-in")).toBeTrue();
+    expect(isAuthRoute("/sign-up")).toBeTrue();
+    expect(isAuthRoute("/sign-in/extra")).toBeFalse();
+    expect(isAuthRoute("/events")).toBeFalse();
   });
 });
 

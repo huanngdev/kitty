@@ -141,6 +141,17 @@
   5. **Lint cho vendor code:** nếu component CLI sinh vi phạm rule design-system thì **tắt đúng rule đó cho đúng path** trong `apps/web/eslint.config.js` (`shadcn/no-inline-styles`, `shadcn/require-static-classes`, `better-tailwindcss/no-unknown-classes`, `react-hooks/set-state-in-effect`), tuyệt đối không patch file vendor.
 - **Hệ quả:** + một nguồn UI duy nhất trong app, `bunx shadcn add/apply` hoạt động trực tiếp, bỏ lớp map `@kitty/ui/*`; − không còn component dùng chung giữa nhiều app UI (chấp nhận: hiện chỉ `apps/web` có UI), và `components/ui` làm tăng số file lint phải loại trừ theo path.
 
+### ADR-025 — Cookie chỉ là gợi ý; màn hình auth xác thực session thật (UI-QA)
+
+- **Bối cảnh:** owner báo "bấm đăng nhập là vào luôn, không hỏi email". Truy ra hai lỗi độc lập: (1) `proxy.ts` chuyển `/sign-in` → `/events` chỉ vì **có** cookie `better-auth.session_token`; cookie cũ/hết hạn hoặc sai chữ ký vẫn "đăng nhập được" ở lớp proxy, rồi `(app)/layout` đẩy ngược lại `/sign-in`, tạo vòng lặp 307 `ERR_TOO_MANY_REDIRECTS`; (2) nút demo một chạm có nhãn "Continue as demo organizer" trông như nút đăng nhập thường.
+- **Quyết định:**
+  1. `proxy.ts` **không** chuyển hướng khỏi `/sign-in`, `/sign-up` dựa trên cookie. Khi có cookie, proxy gọi `GET /api/auth/get-session` của `apps/api` (`readSession`, dùng `API_URL` nội bộ) rồi mới quyết định; session không hợp lệ thì **xoá cookie** và render form.
+  2. `getServerSession()` dùng `API_URL` thay vì `NEXT_PUBLIC_APP_URL` để không phụ thuộc việc server tự gọi origin công khai của chính nó.
+  3. Nút demo đổi thành **"Try the demo (for judges)"**, variant `secondary` + dòng giải thích "no email needed" để không bị nhầm với đăng nhập email/mật khẩu.
+  4. Mobile: đóng sheet sidebar khi bấm một mục nav; top bar mobile bỏ wordmark (chỉ giữ mark) và cho event switcher co lại để hết tràn ngang 390px.
+  5. `ThemeToggle` chỉ đổi `aria-label` sau khi mount (dùng `isMounted`) để hết cảnh báo hydration ở dark mode.
+- **Hệ quả:** + hết vòng lặp redirect với cookie cũ, form luôn hiện khi chưa có session thật, dark mode không còn hydration mismatch; − `/sign-in` và `/sign-up` tốn thêm một lời gọi nội bộ khi có cookie (chỉ hai route này, không phải mọi trang).
+
 ## 3. Open questions (cần trả lời, có hạn)
 
 | # | Câu hỏi | Ai/cách trả lời | Hạn |
