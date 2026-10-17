@@ -23,7 +23,7 @@ export interface UseVerifyEmailResult {
 export function useVerifyEmail(token: string | null): UseVerifyEmailResult {
   const query = useQuery({
     queryKey: ["auth", "verify-email", token],
-    queryFn: async (): Promise<void> => {
+    queryFn: async (): Promise<true> => {
       const { error } = await authClient.verifyEmail({
         query: { token: token ?? "" },
       });
@@ -31,6 +31,8 @@ export function useVerifyEmail(token: string | null): UseVerifyEmailResult {
       if (error !== null) {
         throw new Error(describeAuthError(error).message);
       }
+
+      return true;
     },
     enabled: token !== null && token.length > 0,
     retry: false,

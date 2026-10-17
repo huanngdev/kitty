@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import {
-  demoLoginStatusSchema,
-  safeNextPath,
-  signInSchema,
-  signUpSchema,
-} from "../../src/auth/auth.schema";
+import { safeNextPath } from "../../src/auth/auth-redirect";
+import { demoLoginStatusSchema, signInSchema, signUpSchema } from "../../src/auth/auth.schema";
 
 describe("signInSchema", () => {
   test("trims the email and accepts a valid pair", () => {

@@ -53,6 +53,8 @@ export interface CreateAuthOptions {
   readonly mailer?: SelectedMailer;
   /** Extra plugins (test-only OAuth mock, future auth plugins). */
   readonly plugins?: BetterAuthPlugin[];
+  /** Override the trusted social providers (tests only). */
+  readonly trustedProviders?: readonly string[];
 }
 
 function createAuth(options: CreateAuthOptions = {}) {
@@ -150,7 +152,7 @@ function createAuth(options: CreateAuthOptions = {}) {
         // assert a verified email before an implicit link (see validateUserInfo
         // and ADR-029). Better Auth additionally requires the local account's
         // email to be verified (its `requireLocalEmailVerified` default).
-        trustedProviders: ["github", "paypal"],
+        trustedProviders: [...(options.trustedProviders ?? ["github", "paypal"])],
         allowDifferentEmails: false,
       },
     },

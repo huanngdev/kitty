@@ -10,8 +10,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check-types": "tsc --noEmit",
-    "test": "bun test --no-env-file --pass-with-no-tests",
-    "smoke:events": "bun scripts/smoke-events.ts"
+    "test": "bun test --no-env-file --pass-with-no-tests --path-ignore-patterns='**/*.int.test.ts'",
+    "smoke:events": "bun scripts/smoke-events.ts",
+    "test:integration": "bun test --env-file=.env 'test/integration'"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.9.1",
@@ -32,6 +33,7 @@
     "@kitty/typescript-config": "workspace:*",
     "@types/bun": "1.4.3",
     "eslint": "^10.13.0",
+    "oauth2-mock-server": "^9.3.0",
     "typescript": "^5"
   }
 }
