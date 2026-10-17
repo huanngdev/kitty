@@ -45,6 +45,7 @@ export function fakeSession(user: TestUser | null): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     c.set("user", user);
     c.set("session", user === null ? null : makeTestSession(user.id));
+    c.set("event", null);
     await next();
   };
 }

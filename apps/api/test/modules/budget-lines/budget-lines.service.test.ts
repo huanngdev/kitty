@@ -68,7 +68,7 @@ describe("budgetLinesService.replace", () => {
       service.replace("evt_01JZ0000000000000000000099", input, ORG_USER_ID),
     );
 
-    expect(forbidden.code).toBe("FORBIDDEN");
+    expect(forbidden.code).toBe("EVENT_NOT_FOUND");
     expect(missing.code).toBe("EVENT_NOT_FOUND");
   });
 });

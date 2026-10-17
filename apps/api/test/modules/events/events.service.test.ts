@@ -91,7 +91,7 @@ describe("eventsService.list/get/update", () => {
     expect(list.map((event) => event.id)).toEqual([EVENT_ID]);
   });
 
-  test("get returns 404 for an unknown event and 403 for someone else's", async () => {
+  test("get returns 404 for an unknown event and for someone else's event", async () => {
     const events = createFakeEventsRepository([makeEventRow()]);
     const service = createEventsService({ events: events.repo, gateway: createFakeGateway() });
 
@@ -102,8 +102,8 @@ describe("eventsService.list/get/update", () => {
 
     expect(missing.code).toBe("EVENT_NOT_FOUND");
     expect(missing.httpStatus).toBe(404);
-    expect(forbidden.code).toBe("FORBIDDEN");
-    expect(forbidden.httpStatus).toBe(403);
+    expect(forbidden.code).toBe("EVENT_NOT_FOUND");
+    expect(forbidden.httpStatus).toBe(404);
   });
 
   test("update rewrites money and status", async () => {

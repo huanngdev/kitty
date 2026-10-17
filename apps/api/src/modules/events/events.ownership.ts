@@ -4,12 +4,14 @@ import { AppError } from "../../lib/errors";
 import type { EventsRepository } from "./events.repository";
 
 /**
- * Authorization guard shared by every event-scoped module (docs/10-api-spec.md
- * §4): the only person allowed to touch an event is its organizer. Unknown ids
- * are `404 EVENT_NOT_FOUND`; a known event owned by somebody else is
- * `403 FORBIDDEN`.
+ * Authorization guard shared by every event-scoped module (docs/10 §4, ADR-029):
+ * only the event's organizer may touch it. Both an unknown id and a known event
+ * owned by somebody else answer `404 EVENT_NOT_FOUND` — never 403, which would
+ * confirm that the id exists.
  *
- * Pure and repository-agnostic so the services stay unit-testable.
+ * Pure and repository-agnostic so the services stay unit-testable. The primary
+ * gate is the `requireEventOrganizer` middleware; this is the second line of
+ * defense inside the service.
  */
 export async function requireOwnedEvent(
   events: EventsRepository,
@@ -18,12 +20,8 @@ export async function requireOwnedEvent(
 ): Promise<EventRow> {
   const event = await events.findById(eventId);
 
-  if (event === undefined) {
+  if (event === undefined || event.organizerId !== actorUserId) {
     throw new AppError(errorCodes.eventNotFound, 404, { eventId });
-  }
-
-  if (event.organizerId !== actorUserId) {
-    throw new AppError(errorCodes.forbidden, 403, { eventId });
   }
 
   return event;

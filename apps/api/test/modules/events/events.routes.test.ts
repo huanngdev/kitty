@@ -58,7 +58,7 @@ describe("POST /events", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(apiErrorSchema.parse(await response.json()).error.code).toBe("UNAUTHORIZED");
+    expect(apiErrorSchema.parse(await response.json()).error.code).toBe("UNAUTHENTICATED");
   });
 
   test("returns 400 for an invalid body", async () => {
