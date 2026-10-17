@@ -18,6 +18,8 @@
 | Webhook verify | **Notifications** | `POST /v1/notifications/verify-webhook-signature` | gateway |
 | Pay Later messaging | JS SDK v6 messages | client | web (COULD) |
 
+> **Client (`packages/paypal` / `@kitty/paypal`):** toàn bộ bảng trên chạy qua một client REST tự viết trên **axios** (`createPayPalClient`), **chỉ `apps/gateway` được import** (AGENTS.md #1, ép bằng ESLint `no-restricted-imports` + `scripts/check-env-isolation.ts`). Client: cache OAuth2 token đến `expires_in − 60s`, single-flight (nhiều caller chia sẻ một request token), tự refresh token **một lần** khi 401; mọi POST gửi `PayPal-Request-Id` bắt buộc (Payouts thêm `sender_batch_id`); retry tối đa 3 lần cho network/5xx/429 (tôn trọng `Retry-After`), **không** retry 4xx; response validate bằng Zod; tiền vào/ra là **bigint cents** (`@kitty/ledger` `formatMoney`/`parseMoney`). Mọi lỗi gom vào một `PayPalApiError` (`status`, `name`, `message`, `debugId`, `details[]`, issue codes) và **không** chứa secret/access token/Authorization. `verifyCredentials()` chỉ chứng minh OAuth chạy, không trả token.
+
 ## 2. Chi tiết từng luồng
 
 ### 2.1 Invoice cho member

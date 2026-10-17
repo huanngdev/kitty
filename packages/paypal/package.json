@@ -1,0 +1,28 @@
+{
+  "name": "@kitty/paypal",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "check-types": "tsc --noEmit",
+    "test": "bun test --no-env-file --coverage"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@kitty/ledger": "workspace:*",
+    "axios": "^1.20.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@kitty/eslint-config": "workspace:*",
+    "@kitty/typescript-config": "workspace:*",
+    "@types/bun": "1.4.3",
+    "eslint": "^10.13.0",
+    "msw": "^2.11.1",
+    "typescript": "^5"
+  }
+}

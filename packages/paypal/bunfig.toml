@@ -1,0 +1,8 @@
+# The PayPal client is on the money path (AGENTS.md §3), so every endpoint call,
+# retry branch, token branch and error mapper must be exercised: 95% lines and
+# functions, enforced by `bun test --coverage` in the package `test` script.
+[test]
+coverageThreshold = { lines = 0.95, functions = 0.95 }
+# Only measure this package: `@kitty/ledger` is imported for `formatMoney`/
+# `parseMoney` and is covered by its own 100% suite.
+coveragePathIgnorePatterns = ["**/node_modules/**", "**/ledger/**"]

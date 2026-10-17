@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@kitty/db": "workspace:*",
+    "@kitty/paypal": "workspace:*",
     "@kitty/shared": "workspace:*",
     "axios": "^1.20.0",
     "hono": "^4.13.13",

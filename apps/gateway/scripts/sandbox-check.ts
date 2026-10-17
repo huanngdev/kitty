@@ -3,23 +3,16 @@
  * PayPal sandbox check (apps/gateway only — AGENTS.md invariant #1).
  *
  * Verifies OAuth2, Invoicing v2, Payouts v1 and (optionally) the webhook against
- * the PayPal sandbox. Never prints secrets or access tokens. Not part of CI:
+ * the PayPal sandbox, through `@kitty/paypal` (the same client the gateway uses
+ * on the money path). Never prints secrets or access tokens. Not part of CI:
  * `bun run sandbox:check`. See docs/08-infrastructure.md §4 and docs/11 §2.
  */
-import axios, { type AxiosInstance, isAxiosError } from "axios";
-import {
-  buildInvoiceRequest,
-  buildPayoutRequest,
-  extractInvoiceId,
-  isoDate,
-  paypalBaseUrl,
-  readSandboxEnv,
-  type SandboxEnv,
-} from "../src/lib/paypal-sandbox";
+import { createPayPalClient, PayPalApiError } from "@kitty/paypal";
+import { isoDate, readSandboxEnv, type SandboxEnv } from "../src/lib/paypal-sandbox";
 
 const ENV_HINT = "apps/gateway/.env.example (see docs/08-infrastructure.md §4)";
+const AMOUNT_CENTS = 100n;
 const AMOUNT_VALUE = "1.00";
-const TOKEN_TTL_HINT = 20_000;
 
 let failures = 0;
 
@@ -33,24 +26,16 @@ function printFail(label: string, error: unknown): void {
 }
 
 function debugIdSuffix(error: unknown): string {
-  if (!isAxiosError(error)) {
-    return "";
-  }
-
-  const data: unknown = error.response?.data;
-  if (data !== null && typeof data === "object" && "debug_id" in data) {
-    const debugId = (data as { debug_id?: unknown }).debug_id;
-    if (typeof debugId === "string") {
-      return ` (debug_id: ${debugId})`;
-    }
+  if (error instanceof PayPalApiError && error.debugId !== undefined) {
+    return ` (debug_id: ${error.debugId})`;
   }
 
   return "";
 }
 
 function describeError(error: unknown): string {
-  if (isAxiosError(error)) {
-    return `${error.response?.status ?? "network error"} ${error.message}`;
+  if (error instanceof PayPalApiError) {
+    return `${error.status ?? "network error"} ${error.message}`;
   }
 
   return String(error);
@@ -77,82 +62,47 @@ if (sandboxEnv.PAYPAL_ENV === "live") {
   process.exit(1);
 }
 
-console.log(
-  `sandbox-check: PayPal ${sandboxEnv.PAYPAL_ENV} — ${paypalBaseUrl(sandboxEnv.PAYPAL_ENV)}`,
-);
-
-const client: AxiosInstance = axios.create({
-  baseURL: paypalBaseUrl(sandboxEnv.PAYPAL_ENV),
-  timeout: TOKEN_TTL_HINT,
+const paypal = createPayPalClient({
+  env: sandboxEnv.PAYPAL_ENV,
+  clientId: sandboxEnv.PAYPAL_CLIENT_ID,
+  clientSecret: sandboxEnv.PAYPAL_CLIENT_SECRET,
 });
 
-async function requestAccessToken(): Promise<string> {
-  const response = await client.post<{ access_token: string }>(
-    "/v1/oauth2/token",
-    "grant_type=client_credentials",
-    {
-      auth: { username: sandboxEnv.PAYPAL_CLIENT_ID, password: sandboxEnv.PAYPAL_CLIENT_SECRET },
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    },
-  );
-
-  return response.data.access_token;
-}
+console.log(`sandbox-check: PayPal ${sandboxEnv.PAYPAL_ENV} — ${paypal.baseUrl}`);
 
 // 1. OAuth2 client credentials.
-const accessToken = await requestAccessToken().catch((error: unknown): undefined => {
+try {
+  await paypal.verifyCredentials();
+  printPass("OAuth2 client credentials (access token acquired; token never printed)");
+} catch (error) {
   printFail(`OAuth2 client credentials — ${describeError(error)}`, error);
-
-  return undefined;
-});
-
-if (accessToken === undefined) {
   process.exit(1);
 }
-
-printPass("OAuth2 client credentials (access token acquired; token never printed)");
-
-const authed: AxiosInstance = axios.create({
-  baseURL: paypalBaseUrl(sandboxEnv.PAYPAL_ENV),
-  timeout: TOKEN_TTL_HINT,
-  headers: { Authorization: `Bearer ${accessToken}` },
-});
 
 const startedAt = new Date();
 
 // 2. Invoicing v2: draft + send.
 const invoiceNumber = `KTY-SANDBOX-${startedAt.getTime()}`;
 try {
-  const draft = buildInvoiceRequest({
-    platformEmail: sandboxEnv.PLATFORM_PAYPAL_EMAIL,
-    payerEmail: sandboxEnv.PAYPAL_SANDBOX_PAYER_EMAIL,
+  const draft = await paypal.invoicing.createDraft({
+    requestId: `${invoiceNumber}-create`,
     invoiceNumber,
+    currency: "USD",
     dueDate: isoDate(new Date(startedAt.getTime() + 7 * 24 * 60 * 60 * 1000)),
-    amountValue: AMOUNT_VALUE,
+    invoicerEmail: sandboxEnv.PLATFORM_PAYPAL_EMAIL,
+    invoicerBusinessName: "Kitty — sandbox check",
+    recipientEmail: sandboxEnv.PAYPAL_SANDBOX_PAYER_EMAIL,
+    note: "Kitty sandbox check — please ignore.",
+    items: [{ name: "Sandbox check", quantity: "1", amountCents: AMOUNT_CENTS }],
   });
 
-  const created = await authed.post<unknown>("/v2/invoicing/invoices", draft, {
-    headers: {
-      "PayPal-Request-Id": `${invoiceNumber}-create`,
-      // Ask for the representation back; Invoicing v2 still answers 201 with a
-      // HATEOAS link, so the id is read from the body *or* the Location header.
-      Prefer: "return=representation",
-    },
+  const sent = await paypal.invoicing.send({
+    invoiceId: draft.invoiceId,
+    requestId: `${invoiceNumber}-send`,
   });
-
-  const invoiceId = extractInvoiceId({
-    body: created.data,
-    location: created.headers.location ?? null,
-  });
-
-  const sent = await authed.post<{ status?: string }>(
-    `/v2/invoicing/invoices/${invoiceId}/send`,
-    {},
-    { headers: { "PayPal-Request-Id": `${invoiceNumber}-send` } },
-  );
 
   printPass(
-    `Invoicing v2 — invoice ${invoiceId} for $${AMOUNT_VALUE} to ${sandboxEnv.PAYPAL_SANDBOX_PAYER_EMAIL}, status=${sent.data.status ?? "unknown"}`,
+    `Invoicing v2 — invoice ${draft.invoiceId} for $${AMOUNT_VALUE} to ${sandboxEnv.PAYPAL_SANDBOX_PAYER_EMAIL}, status=${sent.status ?? "unknown"}`,
   );
 } catch (error) {
   printFail(`Invoicing v2 — ${describeError(error)}`, error);
@@ -161,21 +111,17 @@ try {
 // 3. Payouts v1 (1 batch = 1 item).
 const senderBatchId = `sandbox-check-${startedAt.toISOString()}`;
 try {
-  const payout = buildPayoutRequest({
-    payeeEmail: sandboxEnv.PAYPAL_SANDBOX_PAYEE_EMAIL,
+  const payout = await paypal.payouts.createSingle({
+    requestId: senderBatchId,
     senderBatchId,
-    amountValue: AMOUNT_VALUE,
+    payeeEmail: sandboxEnv.PAYPAL_SANDBOX_PAYEE_EMAIL,
+    amountCents: AMOUNT_CENTS,
+    currency: "USD",
     note: "Kitty sandbox check",
   });
 
-  const response = await authed.post<{
-    batch_header?: { payout_batch_id?: string; batch_status?: string };
-  }>("/v1/payments/payouts", payout, { headers: { "PayPal-Request-Id": senderBatchId } });
-
-  const header = response.data.batch_header;
-
   printPass(
-    `Payouts v1 — batch ${header?.payout_batch_id ?? "unknown"} for $${AMOUNT_VALUE} to ${sandboxEnv.PAYPAL_SANDBOX_PAYEE_EMAIL}, status=${header?.batch_status ?? "unknown"}`,
+    `Payouts v1 — batch ${payout.batchId} for $${AMOUNT_VALUE} to ${sandboxEnv.PAYPAL_SANDBOX_PAYEE_EMAIL}, status=${payout.status}`,
   );
 } catch (error) {
   printFail(`Payouts v1 — ${describeError(error)}`, error);
@@ -186,12 +132,10 @@ if (sandboxEnv.PAYPAL_WEBHOOK_ID === undefined) {
   console.log("SKIP webhook check (PAYPAL_WEBHOOK_ID not set)");
 } else {
   try {
-    const response = await authed.get<{ url?: string; event_types?: { name?: string }[] }>(
-      `/v1/notifications/webhooks/${sandboxEnv.PAYPAL_WEBHOOK_ID}`,
-    );
+    const webhook = await paypal.webhooks.getWebhook({ webhookId: sandboxEnv.PAYPAL_WEBHOOK_ID });
+    const events = webhook.eventTypes.join(", ");
 
-    const events = (response.data.event_types ?? []).map((event) => event.name ?? "?").join(", ");
-    printPass(`Webhook ${response.data.url ?? "unknown"} — events: ${events}`);
+    printPass(`Webhook ${webhook.url ?? "unknown"} — events: ${events}`);
   } catch (error) {
     printFail(`Webhook lookup — ${describeError(error)}`, error);
   }

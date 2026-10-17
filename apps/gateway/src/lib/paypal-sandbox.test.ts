@@ -1,12 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
-  buildInvoiceRequest,
-  buildPayoutRequest,
-  extractInvoiceId,
-  InvoiceIdNotFoundError,
   isoDate,
   missingSandboxEnvKeys,
-  paypalBaseUrl,
   readSandboxEnv,
   requiredSandboxEnvKeys,
 } from "./paypal-sandbox";
@@ -101,91 +96,8 @@ describe("readSandboxEnv", () => {
   });
 });
 
-describe("extractInvoiceId", () => {
-  test("prefers the id in the response body", () => {
-    expect(extractInvoiceId({ body: { id: "INV2-BODY" } })).toBe("INV2-BODY");
-  });
-
-  test("reads the id from the body href (the real Invoicing v2 shape)", () => {
-    const body = {
-      rel: "self",
-      href: "https://api-m.sandbox.paypal.com:8443/v2/invoicing/invoices/INV2-HREF",
-      method: "GET",
-    };
-
-    expect(extractInvoiceId({ body })).toBe("INV2-HREF");
-  });
-
-  test("falls back to the Location header when the body carries no id", () => {
-    const location = "https://api-m.sandbox.paypal.com:8443/v2/invoicing/invoices/INV2-LOCATION";
-
-    expect(extractInvoiceId({ body: { message: "Created" }, location })).toBe("INV2-LOCATION");
-  });
-
-  test("accepts a bare path in the Location header", () => {
-    expect(
-      extractInvoiceId({ body: undefined, location: "/v2/invoicing/invoices/INV2-PATH" }),
-    ).toBe("INV2-PATH");
-  });
-
-  test("throws when no id can be found anywhere", () => {
-    expect(() => extractInvoiceId({ body: { rel: "self" }, location: null })).toThrow(
-      InvoiceIdNotFoundError,
-    );
-  });
-
-  test("throws when the body is not an object at all", () => {
-    expect(() => extractInvoiceId({ body: "" })).toThrow(InvoiceIdNotFoundError);
-  });
-});
-
-describe("paypalBaseUrl", () => {
-  test("maps env to the PayPal REST base URL", () => {
-    expect(paypalBaseUrl("sandbox")).toBe("https://api-m.sandbox.paypal.com");
-    expect(paypalBaseUrl("live")).toBe("https://api-m.paypal.com");
-  });
-});
-
 describe("isoDate", () => {
   test("formats a date as YYYY-MM-DD", () => {
     expect(isoDate(new Date("2026-11-20T10:30:00.000Z"))).toBe("2026-11-20");
-  });
-});
-
-describe("buildInvoiceRequest", () => {
-  test("builds a single-item $1 USD draft for the payer", () => {
-    const draft = buildInvoiceRequest({
-      platformEmail: "platform@example.com",
-      payerEmail: "payer@example.com",
-      invoiceNumber: "KTY-SANDBOX-1",
-      dueDate: "2026-11-20",
-      amountValue: "1.00",
-    });
-
-    expect(draft.detail.currency_code).toBe("USD");
-    expect(draft.detail.invoice_number).toBe("KTY-SANDBOX-1");
-    expect(draft.detail.payment_term.due_date).toBe("2026-11-20");
-    expect(draft.invoicer.email_address).toBe("platform@example.com");
-    expect(draft.primary_recipients[0]?.billing_info.email_address).toBe("payer@example.com");
-    expect(draft.items[0]?.unit_amount).toEqual({ currency_code: "USD", value: "1.00" });
-  });
-});
-
-describe("buildPayoutRequest", () => {
-  test("builds a 1-item payout batch with the sender batch id", () => {
-    const payout = buildPayoutRequest({
-      payeeEmail: "payee@example.com",
-      senderBatchId: "sandbox-check-2026-11-20T00:00:00.000Z",
-      amountValue: "1.00",
-      note: "Kitty sandbox check",
-    });
-
-    expect(payout.sender_batch_header.sender_batch_id).toBe(
-      "sandbox-check-2026-11-20T00:00:00.000Z",
-    );
-    expect(payout.items).toHaveLength(1);
-    expect(payout.items[0]?.recipient_type).toBe("EMAIL");
-    expect(payout.items[0]?.receiver).toBe("payee@example.com");
-    expect(payout.items[0]?.amount).toEqual({ value: "1.00", currency: "USD" });
   });
 });

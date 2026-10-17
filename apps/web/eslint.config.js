@@ -1,4 +1,9 @@
-import { nextConfig, shadcnConfig, tailwindConfig } from "@kitty/eslint-config";
+import {
+  nextConfig,
+  paypalClientImportRule,
+  shadcnConfig,
+  tailwindConfig,
+} from "@kitty/eslint-config";
 
 const config = [
   ...nextConfig,
@@ -16,6 +21,9 @@ const config = [
               group: ["@kitty/db", "@kitty/db/*"],
               message: "apps/web must not access the database directly; go through apps/api.",
             },
+            // The base config also restricts @kitty/paypal; spreading the
+            // patterns in keeps both rules, since this value replaces the base.
+            ...paypalClientImportRule.patterns,
           ],
         },
       ],
