@@ -30,6 +30,10 @@ export const errorCodes = {
   invalidLeashLimits: "INVALID_LEASH_LIMITS",
   invalidExpiry: "INVALID_EXPIRY",
   invalidPublicKey: "INVALID_PUBLIC_KEY",
+
+  // --- Gateway Agent API / MCP (docs/10-api-spec.md §2) ---
+  /** The same `intentId` was resubmitted with a different body (docs/10 §2). */
+  intentIdReused: "INTENT_ID_REUSED",
 } as const;
 
 export type ErrorCode = (typeof errorCodes)[keyof typeof errorCodes];
