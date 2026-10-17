@@ -14,6 +14,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:env-isolation": "bun scripts/check-env-isolation.ts",
+    "spike:runtime": "bun --env-file=apps/gateway/.env scripts/spikes/runtime-spike.ts",
     "db:generate": "bun run --filter @kitty/db db:generate",
     "db:migrate": "bun run --filter @kitty/db db:migrate",
     "db:studio": "bun run --filter @kitty/db db:studio",
@@ -24,6 +25,7 @@
   "prettier": "@kitty/prettier-config",
   "devDependencies": {
     "@kitty/prettier-config": "workspace:*",
+    "postgres": "^3.4.9",
     "prettier": "^3.9.10",
     "turbo": "^2.11.9"
   },
