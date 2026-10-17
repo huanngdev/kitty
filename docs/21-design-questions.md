@@ -94,7 +94,7 @@ Ngược lại: biến rủi ro mơ hồ thành con số nhỏ, cụ thể, ki�
 Presets + câu "Explain this leash" bằng ngôn ngữ thường; JSON chỉ hiện ở chế độ nâng cao.
 
 **E4. Vì sao Gantt chứ không phải checklist?**
-Tiền có *thời điểm* (cọc trước X ngày) và *phụ thuộc* (chưa đủ tiền thì chưa đặt xe). Gantt với payment gate thể hiện điều đó trực quan — và đúng ý tưởng Bryntum gợi ý.
+Tiền có *thời điểm* (cọc trước X ngày) và *phụ thuộc* (chưa đủ tiền thì chưa đặt xe). Timeline với payment gate thể hiện điều đó trực quan. Bản hackathon vẽ bằng component shadcn của mình; Bryntum Gantt chỉ là nâng cấp nếu dư thời gian ([ADR-026](20-risks-and-decisions.md)).
 
 ## F. Hackathon & chiến lược
 
@@ -111,7 +111,13 @@ README có cấu trúc rõ (headings chuẩn: What / Why / How / Architecture / 
 Có M2 (28/10): money loop + leash + step-up + revoke là đủ một bài nộp mạnh về Tech/Innovation. Thêm injection demo (1 ngày) là đủ "aha". Sponsors là phần thưởng thêm.
 
 **F5. Có đang "khai khống" sponsor không?**
-Quy tắc: chỉ liệt kê tool thực sự được gọi trong code chạy trên demo. Tool dùng lúc dev (APIMatic, Postman) ghi rõ là dev tooling.
+Quy tắc: chỉ liệt kê tool thực sự được gọi trong code chạy trên demo. Tool dùng lúc dev (APIMatic Context Plugin, PayPal AI-Toolkit plugin) ghi rõ là dev tooling. "PayPal Agent Toolkit" chỉ ghi khi gateway thật sự gọi nó (ADR-007).
+
+**F6. Vì sao cắt Zapier, Elastic, KERNEL, Astropods, Postman?**
+Không cái nào có giải sponsor, và luật chỉ cho thắng 1 giải sponsor. Mỗi tích hợp phụ là ngày công lấy từ đường găng (tiền vào, agents, web) — trong khi Design chấm *sự mạch lạc*, không chấm số logo. Chi tiết [ADR-026](20-risks-and-decisions.md).
+
+**F7. Vì sao làm `leash-mcp` thay vì OAuth cho remote MCP?**
+Luận điểm Impact "bất kỳ agent nào cũng dùng được Leash" cần bằng chứng chạy được, và rẻ nhất là một bridge stdio dùng lại `createSignedFetch` có sẵn. OAuth cho remote MCP đẹp hơn (consent screen = form tạo leash) nhưng bearer token đi ngược ADR-004 và tốn thời gian → để sau hackathon. Chi tiết [ADR-027](20-risks-and-decisions.md).
 
 ## G. Bảo mật nâng cao
 
@@ -123,3 +129,6 @@ Approval UI hiển thị dữ liệu **từ hệ thống** (payee verified, amou
 
 **G3. Organizer bị chiếm session?**
 Ngoài phạm vi Leash (đó là bảo mật tài khoản người dùng). Giảm thiểu: session ngắn, re-auth khi tạo leash lớn (Could).
+
+**G4. Agent bên ngoài (Claude Desktop qua `leash-mcp`) có nguy hiểm hơn agent của Kitty không?**
+Không hơn: cùng bộ `leash_*` tools, cùng leash, cùng policy thuần ở Gateway; private key nằm ở máy người dùng và Kitty không bao giờ thấy. Khác biệt duy nhất là Kitty không kiểm soát prompt/model của client — đúng giả định thiết kế "LLM sẽ bị lừa", nên bounded loss vẫn giữ nguyên (T25, T26 ở [14](14-security-threat-model.md)).

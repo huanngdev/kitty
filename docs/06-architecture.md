@@ -16,6 +16,8 @@ flowchart LR
   subgraph Client
     U[Organizer browser]
     M[Member browser]
+    X[External MCP client<br/>Claude Desktop / Claude Code / Cursor]
+    LM[leash-mcp<br/>stdio bridge, private key local]
   end
 
   subgraph Render
@@ -23,15 +25,12 @@ flowchart LR
     A[apps/agents<br/>Agent runtime<br/>Claude tool-use loop]
     G[apps/gateway<br/>Leash Gateway<br/>REST admin + MCP]
     K[apps/worker<br/>Render Workflows / jobs]
-    DB[(Postgres<br/>schema app + schema leash)]
   end
 
   subgraph External
+    DB[(Neon Postgres<br/>schema app + schema leash)]
     PP[PayPal REST<br/>sandbox]
     C3[Channel3 API/MCP]
-    ZP[Zapier MCP]
-    ES[Elastic Serverless]
-    KR[KERNEL browsers]
     LLM[LLM providers<br/>BYOK: Anthropic / OpenAI / Google / OpenRouter / compatible]
   end
 
@@ -40,17 +39,15 @@ flowchart LR
   W -- session-auth admin API --> G
   W -- chat / commands --> A
   A -- MCP + ed25519 signed --> G
+  X -- MCP stdio --> LM
+  LM -- MCP + ed25519 signed --> G
   A --> LLM
   A --> C3
-  A --> ZP
-  A --> ES
-  A --> KR
   A -- app tools (tasks, budget) --> W
   G --> PP
   PP -- webhooks --> G
   G -- domain events --> K
   K -- notify --> W
-  K --> ES
   K -- reminders/settle triggers --> A
   W --- DB
   G --- DB
@@ -63,16 +60,20 @@ flowchart LR
 |---|---|---|---|---|
 | **web** | `apps/web` | Web Service (public) | UI Next.js, auth, BFF; gọi Gateway admin API thay mặt organizer; SSE realtime; app API cho agents (tasks, budget, members) | ❌ (chỉ `PAYPAL_CLIENT_ID` public cho JS SDK) |
 | **gateway** | `apps/gateway` | Web Service (public cho PayPal webhook; MCP endpoint) | Leash policy, reservation, ledger, PayPal calls, webhook verify, approvals, domain events | ✅ **duy nhất** |
-| **agents** | `apps/agents` | Private Service | Chạy agent loops (Planner/Shopper/Collector/Treasurer), giữ private keys agent, kết nối MCP servers (Gateway, Channel3, Zapier); **service duy nhất giải mã LLM API keys của người dùng (BYOK)** | ❌ |
-| **worker** | `apps/worker` | Render Workflows (fallback: Background Worker + Cron Job) | Xử lý domain events, cron (expiry sweep, reminder sweep, reconcile PayPal), index Elastic, settlement trigger | ❌ (gọi Gateway internal API) |
-| **db** | — | Render Postgres | 2 schema: `app` (web) và `leash` (gateway) | — |
-| **demo-sites** | `apps/demo-sites` | Static Site | Trang vendor giả (KERNEL booking) + trang "Hoodie Deals" có prompt injection | ❌ |
+| **agents** | `apps/agents` | Private Service | Chạy agent loops (Planner/Shopper/Collector/Treasurer), giữ private keys agent, kết nối MCP servers (Gateway, Channel3); **service duy nhất giải mã LLM API keys của người dùng (BYOK)** | ❌ |
+| **worker** | `apps/worker` | Render Workflows (fallback: Background Worker + Cron Job) | Xử lý domain events, cron (expiry sweep, reminder sweep, reconcile PayPal), settlement trigger | ❌ (gọi Gateway internal API) |
+| **db** | — | **Neon** (ADR-018) | 2 schema: `app` (web/api) và `leash` (gateway) | — |
+| **demo-sites** | `apps/demo-sites` | Static Site | Trang "Hoodie Deals" có prompt injection (+ catalog demo nếu không dùng Channel3) | ❌ |
+| **leash-mcp** | `packages/leash-mcp` | Không deploy — chạy trên máy người dùng (`bunx`) | Bridge MCP stdio → `POST /mcp` của Gateway, ký Ed25519 bằng key sinh tại máy; không policy, không cache số dư ([ADR-027](20-risks-and-decisions.md)) | ❌ |
 
 **Q: Tại sao tách gateway thành service riêng thay vì route trong Next.js?**
 A: (1) Câu chuyện bảo mật chỉ đứng vững nếu secret thật sự nằm ở một process khác agent và UI. (2) Gateway là "platform" có thể dùng lại (tầm nhìn bậc 2) — một MCP server độc lập. (3) Process tối giản, không có LLM, dễ audit.
 
 **Q: Tại sao agent runtime tách khỏi web?**
-A: Private keys agent không nên nằm trong process phục vụ HTTP public; agent loop chạy lâu (tool calls, browser) không hợp với request lifecycle của Next.js; dễ thay thế bằng Astropods (COULD).
+A: Private keys agent không nên nằm trong process phục vụ HTTP public; agent loop chạy lâu (nhiều tool call) không hợp với request lifecycle của Next.js.
+
+**Q: Vì sao cần `leash-mcp` khi Gateway đã là MCP server?**
+A: Gateway đòi chữ ký Ed25519 trên từng request (nonce + timestamp + hash body — ADR-004). MCP client phổ biến chỉ gửi header cố định hoặc OAuth nên không tự ký được. `leash-mcp` chạy cạnh client, giữ private key tại máy và ký hộ — trust boundary không đổi: tiền vẫn chỉ đi qua policy của Gateway.
 
 ## 4. Luồng chính (sequence)
 
@@ -82,7 +83,6 @@ sequenceDiagram
   participant T as Treasurer (agents)
   participant G as Gateway
   participant DB as Postgres (leash)
-  participant Z as Zapier/Slack
   participant O as Organizer (web)
   participant P as PayPal
 
@@ -91,7 +91,7 @@ sequenceDiagram
   G->>DB: BEGIN; lock leash chain; usage; evaluate()
   G->>DB: insert intent(awaiting_approval) + hold; COMMIT
   G-->>T: {decision: STEP_UP, approvalId}
-  G->>Z: notify (via worker → agents/Zapier)
+  G-->>O: leash.approval_requested → worker → SSE (badge Approvals + toast)
   O->>G: POST /v1/approvals/:id/approve (session via web BFF)
   G->>P: POST /v1/payments/payouts (PayPal-Request-Id=intentId)
   P-->>G: 201 batch PENDING
@@ -127,12 +127,28 @@ sequenceDiagram
   participant D as Demo "Hoodie Deals" page
   participant G as Gateway
   participant W as web
-  S->>D: fetch product page (via KERNEL/http)
+  S->>D: fetch product page (http)
   D-->>S: HTML with hidden instruction
   S->>G: leash_request_payout(refund-desk@scam.example, 2000)
   G->>G: evaluate → DENY [PAYEE_NOT_ALLOWED, AMOUNT_EXCEEDS_PER_TX, INSUFFICIENT_LEASH_BALANCE]
   G-->>S: DENY (final)
-  G-->>W: leash.intent_denied (severity=high) → red banner + Slack
+  G-->>W: leash.intent_denied (severity=high) → red banner
+```
+
+### 4.4 Agent bên ngoài qua `leash-mcp`
+```mermaid
+sequenceDiagram
+  participant X as Claude Desktop (MCP client)
+  participant L as leash-mcp (stdio, máy người dùng)
+  participant G as Gateway
+  participant W as web
+  X->>L: tools/call leash_request_payout (stdio, JSON-RPC)
+  L->>L: ký Ed25519 (leash-v1, nonce, timestamp, sha256 body)
+  L->>G: POST /mcp (Leash-Agent, Leash-Signature…)
+  G->>G: verify → resolve leash của agent → evaluate()
+  G-->>L: DENY [PAYEE_NOT_ALLOWED] (final)
+  L-->>X: tool result (DENY + reasons)
+  G-->>W: leash.intent_denied → Activity ("External: Claude Desktop")
 ```
 
 ## 5. Ranh giới dữ liệu
@@ -142,7 +158,7 @@ sequenceDiagram
 | Users, events, members, tasks, budget lines, vendors, chat | `web` (schema `app`) | Agents qua `web` app API (token theo event) |
 | Kitties, leashes, intents, approvals, ledger, paypal objects, webhook events, audit | `gateway` (schema `leash`) | Web qua Gateway admin API; worker qua internal API |
 | Agent private keys | `agents` (env/secret) | Không ai |
-| Documents (báo giá PDF) + audit search index | Elastic | Agents (search), worker (index) |
+| Private key của agent bên ngoài | Máy người dùng (file cấu hình `leash-mcp`, quyền `600`) | Không ai — Gateway chỉ giữ public key |
 
 DB role: `kitty_web` chỉ có quyền trên schema `app`; `kitty_gateway` có quyền trên `leash` (+ read `app.events` cho organizer check). (MVP có thể dùng 1 DB, 2 roles; xem [08-infrastructure.md](08-infrastructure.md).)
 
@@ -154,8 +170,8 @@ DB role: `kitty_web` chỉ có quyền trên schema `app`; `kitty_gateway` có q
 | `kitty.allocated` | kittyId, leashId, amount | web |
 | `leash.created` / `leash.revoked` / `leash.paused` / `leash.expired` | leash snapshot | web, agents (agent biết quyền đổi) |
 | `leash.intent_decided` | intentId, decision, reasons | web (activity), worker (index) |
-| `leash.intent_denied` | + severity | web (banner), worker (Slack alert), Elastic |
-| `leash.approval_requested` | approvalId, intent | worker → Zapier notify |
+| `leash.intent_denied` | + severity | web (banner đỏ) |
+| `leash.approval_requested` | approvalId, intent | web (badge Approvals + toast) |
 | `leash.intent_settled` / `leash.intent_failed` | intentId, paypal refs | web (gates, dashboard), agents |
 | `kitty.refunded` | memberId, amount | web |
 
@@ -185,9 +201,9 @@ kitty/
 │  ├─ db/                      # Drizzle schemas (app, leash) + migrations + seed
 │  ├─ signing/                 # ed25519 request signing (agent side + verify side)
 │  ├─ events/                  # domain event types (zod)
+│  ├─ leash-mcp/               # CLI bridge stdio → Gateway MCP, ký Ed25519 (ADR-027)
 │  ├─ ui/                      # shared React components (shadcn)
-│  └─ config/                  # tsconfig base, biome config, env schema (zod)
-├─ postman/                    # Kitty collection + environment
+│  └─ config/                  # env schema (zod)
 └─ scripts/                    # sandbox setup, seed demo, reset demo
 ```
 

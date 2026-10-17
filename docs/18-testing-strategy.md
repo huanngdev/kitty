@@ -62,7 +62,7 @@ fc.assert(fc.property(opsArb, (ops) => {
 
 1. Login demo organizer → Overview hiển thị số liệu seed.
 2. Tạo leash Treasurer → thấy "Max possible loss" cập nhật.
-3. Member trả qua trang `/pay` (MSW hoặc sandbox thật ở smoke) → Kitty tăng, gate mở trên Gantt.
+3. Member trả qua trang `/pay` (MSW hoặc sandbox thật ở smoke) → Kitty tăng, gate mở trên timeline.
 4. Treasurer payout step-up → approve → settled → task done.
 5. Injection: trigger Shopper với trang Hoodie Deals → banner DENY → Revoke.
 

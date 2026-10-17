@@ -1,62 +1,66 @@
 # 16 — Roadmap & Kế hoạch theo ngày
 
-> Hôm nay: **Fri 16/10/2026**. Hạn nội bộ nộp bài: **Wed 11/11/2026 23:59 ICT**. Hạn chót Devpost: Thu 12/11 12:00pm PST (≈ 03:00 Fri 13/11 ICT).
-> Còn **26 ngày làm việc** + 1 ngày buffer. Cập nhật cột "Trạng thái" hằng ngày.
+> Cập nhật: **Sat 17/10/2026** — re-plan sau review chiến lược + audit code ([ADR-026](20-risks-and-decisions.md), [ADR-027](20-risks-and-decisions.md)). Hạn nội bộ nộp bài: **Wed 11/11/2026 23:59 ICT**. Hạn chót Devpost: Thu 12/11 12:00pm PST (≈ 03:00 Fri 13/11 ICT).
+> Còn **25 ngày** + 1 ngày buffer. Cập nhật bảng trạng thái (§6) mỗi tối.
 
 ## 1. Milestones
 
 | Mốc | Ngày | Định nghĩa "xong" |
 |---|---|---|
-| **M0 — Foundations** | Sat 17/10 | Monorepo chạy `bun run dev` (Turborepo); Render deploy "hello" 3 services; sandbox-check pass (invoice + payout $1) |
-| **M1 — Leash core** | Thu 22/10 | `packages/leash` + ledger + gateway: tạo kitty/leash, MCP `leash_request_payout` ký Ed25519, reserve, execute Payout sandbox, webhook settle. 100% branch coverage policy engine |
-| **M2 — Money loop end-to-end** | Wed 28/10 | Web: tạo event → invoices → member trả (sandbox) → Kitty tăng realtime → leash Treasurer → step-up → payout → settled. **Đây là bài nộp tối thiểu hợp lệ** |
-| **M3 — Agents + Tier-1 UI** | Mon 02/11 | Planner tạo plan; Bryntum Gantt có payment gates; AG Studio dashboard; Collector + Zapier; Shopper + Channel3; injection demo bị chặn |
-| **M4 — Feature freeze** | Thu 05/11 | Sub-leash, settlement, Elastic, (KERNEL nếu kịp). Sau mốc này **chỉ sửa bug & polish** |
-| **M5 — Submission-ready** | Tue 10/11 | README, LICENSE, render.yaml, Postman, video upload YouTube public, submission draft đầy đủ |
+| **M0 — Foundations** | Sat 17/10 (trễ nhất Sun 18/10) | Monorepo + CI (đã có); `render.yaml` + Dockerfiles; web/api/gateway chạy trên Render + Neon; `sandbox:check` pass (invoice + payout $1); webhook PayPal trỏ về gateway đã deploy |
+| **M1 — Leash core** | Thu 22/10 | Đã có: policy engine, ledger, signing, MCP 5 tool, reserve → payout, webhook payout + reconcile. **Còn:** đường tiền vào (`leash_create_invoice` + webhook `INVOICING.INVOICE.PAID` → ledger), approve/reject + hết hạn approval, 4 tool MCP còn thiếu, MCP đúng spec (405 cho GET/DELETE, tool annotations), chạy live trên URL đã deploy |
+| **M2 — Money loop end-to-end** | Wed 28/10 | Web: tạo event (form) → members/vendors → gửi invoice → member trả (sandbox) → Kitty tăng → cấp leash Treasurer → step-up → approve → payout → settled; payment gate mở trên timeline; manual mode đủ dùng. **Đây là bài nộp tối thiểu hợp lệ** |
+| **M3 — Agents + MCP + Tier-1 UI** | Mon 02/11 | `apps/agents` (AI SDK loop, MCP client có ký) + BYOK tối thiểu + demo key; Treasurer + Shopper chạy thật; injection demo bị chặn; **`leash-mcp`** + màn hình "Connect an external agent" (Claude Desktop / Claude Code kết nối được); AG Studio dashboard; Planner tạo plan |
+| **M4 — Feature freeze** | Thu 05/11 | Sub-leash Planner → Shopper, settlement, Collector nhắc nợ, AG Studio Agent Framework, Channel3 (nếu kịp). Sau mốc này **chỉ sửa bug & polish** |
+| **M5 — Submission-ready** | Tue 10/11 | README (kèm MCP quickstart), LICENSE, `render.yaml`, video upload YouTube public, submission draft đầy đủ |
 | **M6 — Submitted** | Wed 11/11 | Nộp trên Devpost; test lại từ máy sạch theo README |
 
 ## 2. Kế hoạch theo ngày
 
-### Tuần 0–1: Foundations + Leash core
+### Đã xong (16–17/10)
+Bộ docs 01–25 · monorepo Turborepo + Bun + CI · `packages/leash` (100% coverage, property tests) · `packages/ledger` · `packages/signing` (+ `createSignedFetch`) · `packages/paypal` (Payouts, Invoicing, Orders, Refunds, verify webhook) · `packages/db` (schema `leash`; schema `app`: events, members, vendors, budget lines, auth) · gateway: admin `/v1` (kitties, agents, leashes, payees, audit), reserve → execute payout, MCP 5 tool (KIT-5), webhook payout + reconcile (KIT-7) · `apps/api`: Better Auth, demo login, events/members/vendors/budget lines + tạo kitty (KIT-30) · web: sign in/up, app shell, theme (KIT-24) · runtime spike (KIT-10) · 647 test pass.
+
+**Sau re-plan (17/10, đã merge lên main):** test layout theo package `test/` (KIT-56, PR #18) · UI reset — shadcn cài trực tiếp trong `apps/web`, xoá `packages/ui`, `<Logo />` (KIT-55, PR #19) · `LinkButton` dùng chung (PR #20) · UI-QA — `proxy.ts` xác thực session thật thay vì chỉ tin cookie, nhãn nút demo rõ ("Try the demo (for judges)"), shell mobile gọn (PR #22).
+
+### Tuần 0–1: Deploy + đóng vòng tiền ở gateway
 | Ngày | Việc | Output |
 |---|---|---|
-| Fri 16/10 | Docs (bộ này) · tạo PayPal developer app sandbox · sandbox accounts · claim Render credits · form APIMatic · join Discord | docs/, accounts |
-| Sat 17/10 | Scaffold monorepo (Turborepo + Bun workspaces, tsconfig base, Biome, `bun test`) · `apps/web` bằng `bunx create-next-app@latest` · `apps/gateway`/`agents`/`worker` Hono trên Bun · `packages/config` env schemas · Postgres Docker · **spike Bun** ([07](07-tech-stack.md) §6) · `render.yaml` + Dockerfiles v0 deploy · **`scripts/sandbox-check.ts`** (OAuth, invoice $1, payout $1) | **M0** |
-| Sun 18/10 | `packages/paypal` (OAuth cache, Invoicing, Payouts, Orders, Refund, verify webhook) với APIMatic plugin · spike Agent Toolkit (ADR-007) | client + tests (`bun test` + MSW) |
-| Mon 19/10 | `packages/ledger` (money cents, bucket entries, balanceOf) · `packages/db` schema `leash` + migrations | invariants tests |
-| Tue 20/10 | `packages/leash` policy engine (evaluate, reason codes, delegation validator) + property tests (fast-check) · kích hoạt trial AG Studio + Bryntum | 100% coverage |
-| Wed 21/10 | `packages/signing` (Ed25519 sign/verify, nonce) · gateway: admin API (kitties, agents, leashes), reservation transaction | |
-| Thu 22/10 | gateway: MCP server (`leash_status`, `leash_check`, `leash_request_payout`), execute_intent, webhook endpoint + dedupe + state machine · test script agent giả ký request → payout sandbox → settled | **M1** |
+| Sat 17/10 | `render.yaml` + Dockerfiles (web, api, gateway) · deploy lên Render + Neon · `sandbox:check` pass · đăng ký webhook PayPal trỏ về gateway đã deploy · re-plan docs (ADR-026, ADR-027) | **M0** |
+| Sun 18/10 | Spike ADR-007 (`@paypal/agent-toolkit` trong gateway: có `PayPal-Request-Id` không?) → chốt · approvals: `POST /v1/approvals/:id/approve` / `reject`, approve → execute, hết hạn 15' → release hold | ADR-007 chốt |
+| Mon 19/10 | `leash_create_invoice` (Toolkit hoặc REST) + webhook `INVOICING.INVOICE.PAID` → ledger `member_contribution` → `kitty.available` · endpoint "collect" cho organizer (manual mode) | Tiền vào được (R16) |
+| Tue 20/10 | `leash_send_reminder` (Invoicing `/remind`), `leash_request_refund`, `leash_delegate` (validator có sẵn) · MCP đúng spec: GET/DELETE `/mcp` → 405, tool annotations (`readOnlyHint` / `destructiveHint` / `idempotentHint`), resource `leash://status` | 9/9 tool |
+| Wed 21/10 | Web: `/events` gọi API thật, tạo event (form), Overview khung, People (members + vendors, verify vendor) | |
+| Thu 22/10 | Web: Collect (gửi invoice) + `/pay/:requestId` (payer-view link + Orders fallback JS SDK v6) · chạy live: invoice → paid → kitty tăng → payout → settled trên URL đã deploy | **M1** |
 
-### Tuần 2: Money loop end-to-end
+### Tuần 2: Money loop end-to-end trên web
 | Ngày | Việc |
 |---|---|
-| Fri 23/10 | web: Next.js shell, Better Auth (demo accounts), layout, tokens/theme · schema `app` |
-| Sat 24/10 | web: tạo event (form thủ công trước), members, vendors (verify), kitty tạo qua gateway |
-| Sun 25/10 | gateway: `leash_create_invoice` + Invoicing webhook → contributions · web: trang `/pay/:requestId` (+ Orders fallback JS SDK v6) |
-| Mon 26/10 | outbox → worker → SSE realtime · Overview page số liệu thật |
-| Tue 27/10 | Leashes page (create/presets/revoke/pause/top-up, "Max possible loss") · Approval Inbox · approve → execute · **manual mode**: nút Send invoices / Pay vendor cho organizer |
-| Wed 28/10 | Activity timeline · reconcile sweep · expiry sweep · deploy demo · quay thử luồng | 
-| | | **M2 ✅ — từ đây luôn có bản nộp được** |
+| Fri 23/10 | Leashes page: create/presets/pause/revoke/top-up, "Max possible loss", "Explain this leash" |
+| Sat 24/10 | Approval Inbox + Approval detail (approve → execute) · manual "Pay vendor" cho organizer |
+| Sun 25/10 | `apps/worker`: outbox → SSE (fallback polling 10s) · reconcile + expiry sweep (Render cron) |
+| Mon 26/10 | Activity timeline · Overview số liệu thật · schema `app` cho tasks + payment gates |
+| Tue 27/10 | Plan: **timeline payment gate (shadcn)** — gate 🔒/🔓 tự mở theo ledger event |
+| Wed 28/10 | Deploy · chạy trọn money loop ×2 trên demo URL · quay clip |
+| | **M2 ✅ — từ đây luôn có bản nộp được** |
 
-### Tuần 3: Agents + Tier-1 UI
+### Tuần 3: Agents + MCP + AG Studio
 | Ngày | Việc |
 |---|---|
-| Thu 29/10 | apps/agents: runtime loop qua **AI SDK**, MCP client có signing, tool dispatcher theo vai, agent_runs trace · **BYOK**: `packages/crypto-box`, `ai_credentials`/`model_settings`/`llm_usage`, `resolveModel()`, màn hình S21 (Anthropic + OpenAI-compatible), demo key cho tài khoản `is_demo` · Treasurer (gate mở → payout) |
-| Fri 30/10 | Planner: prompt → structured plan → plan diff UI → create tasks/budget/gates |
-| Sat 31/10 | **Bryntum Gantt**: tasks + deps + payment gate milestones + realtime mở gate + agent reschedule |
-| Sun 01/11 | **AG Studio**: data sources, Kitty Gauge + Who still owes custom widgets, theme · kích hoạt Zapier trial + KERNEL credits |
-| Mon 02/11 | Collector + **Zapier MCP** (Slack/Gmail reminders, step-up & DENY alerts) · Shopper + **Channel3** · demo-sites (Hoodie Deals injection page) · injection flow | **M3** |
+| Thu 29/10 | `apps/agents`: loop qua **AI SDK**, MCP client ký bằng `createSignedFetch`, tool dispatcher theo vai, `agent_runs` trace · **BYOK** tối thiểu: `packages/crypto-box`, `ai_credentials`/`model_settings`/`llm_usage`, `resolveModel()`, màn hình S21 (Anthropic + OpenAI-compatible), demo key cho tài khoản `is_demo` |
+| Fri 30/10 | Treasurer (gate mở → payout intent) + Shopper (payout trong leash) · `apps/demo-sites`: trang "Hoodie Deals" có injection · luồng injection → DENY → banner đỏ → Revoke |
+| Sat 31/10 | **`packages/leash-mcp`** (`init` sinh keypair trên máy người dùng, stdio → `/mcp` có ký) + màn hình "Connect an external agent" · test với MCP Inspector, Claude Desktop, Claude Code (ADR-027) |
+| Sun 01/11 | Kích hoạt trial **AG Studio** (45 ngày → ~16/12, phủ judging) · Money Room: Kitty Gauge + Who still owes (custom widgets), theme, layout preset |
+| Mon 02/11 | Planner: prompt → structured plan → plan diff → tạo tasks/budget/gates | **M3** |
 
 ### Tuần 4: Hoàn thiện + freeze
 | Ngày | Việc |
 |---|---|
-| Tue 03/11 | Sub-leash (`leash_delegate`) Planner → Shopper · probing detector · Studio Agent Framework "Kitty Analyst" |
-| Wed 04/11 | Settlement (preview + refunds) · **Elastic** (kitty-docs quotes RAG cho Planner; kitty-audit security view) |
-| Thu 05/11 | (Could) KERNEL booking + live view · (Could) Scheduler leash timeline · **FEATURE FREEZE 23:59** | **M4** |
+| Tue 03/11 | Sub-leash Planner → Shopper (`leash_delegate`) · probing detector · AG Studio Agent Framework "Kitty Analyst" |
+| Wed 04/11 | Settlement (preview + refunds) · Collector: gửi invoice + nhắc qua `leash_send_reminder` (cron) · (Should) Channel3 cho Shopper |
+| Thu 05/11 | Buffer cho M4 · (Could) Bryntum Gantt thay timeline nếu mọi thứ khác đã xong · **FEATURE FREEZE 23:59** | **M4** |
 | Fri 06/11 | Bug bash toàn flow ×3 · empty/loading/error states · mobile `/pay` |
-| Sat 07/11 | Seed demo + `demo:reset` · nhiều event demo cho judges · evals agent · security checklist |
-| Sun 08/11 | README (EN), kiến trúc diagram, threat model, setup guide, Postman collection, LICENSE MIT, Deploy-to-Render |
+| Sat 07/11 | Seed demo + `demo:reset` · nhiều event demo cho judges · evals agent (injection 5 biến thể) · security checklist |
+| Sun 08/11 | README (EN): what/why/how, architecture diagram, **PayPal APIs used**, **MCP quickstart (`leash-mcp`)**, setup, threat model, honest limits · LICENSE MIT · Deploy-to-Render |
 | Mon 09/11 | Viết kịch bản video, quay lần 1, xem lại, sửa UI theo video |
 | Tue 10/11 | Quay final, dựng, phụ đề EN, upload YouTube public · điền draft submission Devpost | **M5** |
 | Wed 11/11 | Test từ máy sạch theo README · kiểm demo URL · **SUBMIT** · screenshot xác nhận | **M6** |
@@ -65,38 +69,41 @@
 ## 3. Critical path
 
 ```
-sandbox-check (Payouts OK?) → paypal client → policy engine → gateway reserve/execute/webhook
-   → web money loop (M2) → agents (Treasurer, Planner) → Gantt gates → dashboard → video
+deploy + sandbox-check → approvals + tiền vào bằng invoice (R16) → web money loop (M2)
+   → agents (Treasurer, Shopper) + injection demo → leash-mcp → AG dashboard → video
 ```
 Bất kỳ trễ nào trên chuỗi này → cắt theo §4 ngay, không đợi.
 
 ## 4. Cut list (theo thứ tự cắt)
 
-1. Astropods
-2. KERNEL booking (giữ injection page fetch bằng HTTP thường)
-3. Bryntum Scheduler/Calendar (giữ Gantt)
-4. Elastic audit view (giữ RAG quotes nếu kịp, nếu không cắt cả Elastic)
-5. Studio Agent Framework (giữ custom widgets)
-5b. BYOK provider OpenAI / Google / OpenRouter riêng và biểu đồ usage (giữ Anthropic + OpenAI-compatible, vì OpenRouter cũng vào được qua compatible)
+1. Bryntum Gantt (đã là Could — giữ timeline shadcn)
+2. Channel3 (Shopper dùng catalog trong `apps/demo-sites`)
+3. AG Studio Agent Framework (giữ custom widgets)
+4. Collector tự động theo cron (giữ nút "Send reminder" thủ công)
+5. BYOK provider OpenAI / Google / OpenRouter riêng và biểu đồ usage (giữ Anthropic + OpenAI-compatible, vì OpenRouter cũng vào được qua compatible)
 6. Settlement refunds tự động (giữ preview)
 7. Sub-leash (giữ leash gốc cho Shopper)
 
-**Không bao giờ cắt:** Leash Gateway + policy + signing · prefunded allocation · money loop invoice→payout với webhooks · injection-blocked demo · Gantt payment gate · AG dashboard cơ bản · BYOK tối thiểu (key mã hoá + chọn model) + demo key cho judges · manual mode · README + video.
+**Đã bỏ khỏi scope hackathon ([ADR-026](20-risks-and-decisions.md)):** Zapier, Elastic, KERNEL, Astropods, Postman collection.
+
+**Không bao giờ cắt:** Leash Gateway + policy + signing · prefunded allocation · money loop invoice → payout với webhooks trên URL đã deploy · approve/reject step-up · injection-blocked demo · payment gate (timeline) · AG dashboard cơ bản · `leash-mcp` với ≥1 MCP client bên ngoài · BYOK tối thiểu (key mã hoá + chọn model) + demo key cho judges · manual mode · README + video.
 
 ## 5. Nhịp làm việc
 
-- Mỗi ngày: cuối ngày deploy demo + cập nhật bảng trạng thái + ghi quyết định mới vào [20-risks-and-decisions.md](20-risks-and-decisions.md).
+- Mỗi ngày: cuối ngày deploy demo + cập nhật [MILESTONES.md](../MILESTONES.md) / [PROGRESS.md](../PROGRESS.md) + ghi quyết định mới vào [20-risks-and-decisions.md](20-risks-and-decisions.md).
 - Mỗi milestone: quay một đoạn screen recording ngắn (dùng lại cho video, và làm bằng chứng tiến độ).
 - Kiểm tra Devpost **Updates** mỗi thứ Hai.
 
 ## 6. Bảng trạng thái
 
-| Milestone | Trạng thái | Ghi chú |
+| Milestone | Trạng thái | Ghi chú (17/10) |
 |---|---|---|
-| M0 | ⏳ | |
-| M1 | ⏳ | |
-| M2 | ⏳ | |
-| M3 | ⏳ | |
-| M4 | ⏳ | |
-| M5 | ⏳ | |
+| M0 | 🟡 | Monorepo, CI, script `sandbox:check` có; chưa có `render.yaml` / deploy |
+| M1 | 🟡 | Code lõi xong (policy, ledger, signing, MCP 5/9 tool, payout + webhook payout + reconcile); thiếu tiền vào (invoice), approvals, 4 tool, chạy live |
+| M2 | 🟡 | ~25%: API events/members/vendors/budget lines + tạo kitty; web mới có auth + shell (đã qua UI reset PR #19 và UI-QA PR #22) |
+| M3 | ⏳ | `apps/agents`, `leash-mcp`, BYOK, AG Studio chưa bắt đầu |
+| M4 | ⏳ | Chỉ có delegation validator trong `packages/leash` |
+| M5 | ⏳ | LICENSE có; README còn sơ khai |
 | M6 | ⏳ | |
+
+> Trạng thái chi tiết theo từng task: [MILESTONES.md](../MILESTONES.md). Nhật ký đã làm: [PROGRESS.md](../PROGRESS.md).

@@ -64,7 +64,7 @@ A: Trang `/pay` public cần SSR nhanh; AG Studio và Bryntum có wrapper React 
 | Services | `apps/gateway` (Leash Gateway), `apps/agents` (agent runtime), `apps/worker` (jobs/outbox) |
 | Entry | `export default { port: env.PORT, fetch: app.fetch }` → Bun tự `serve`. Mỗi app khai báo default trong `src/env.ts` (api 8787, gateway 8788) |
 | Middleware dùng | `hono/logger` (thay bằng pino), `hono/secure-headers`, `hono/body-limit`, `hono/timeout`, `zValidator` (`@hono/zod-validator`), middleware tự viết `leashSignature()` cho Ed25519 |
-| MCP | **`@hono/mcp@0.3.x` + `@modelcontextprotocol/sdk@1.32.x`**: Streamable HTTP transport gắn vào route `POST /mcp` của gateway |
+| MCP | **`@modelcontextprotocol/sdk@1.32.x`** dùng trực tiếp: `WebStandardStreamableHTTPServerTransport` (stateless, JSON response) gắn vào route `POST /mcp` của gateway (KIT-5). Không dùng `@hono/mcp`. Client bên ngoài nối qua `packages/leash-mcp` (`StdioServerTransport`, ADR-027) |
 | Type sharing | Contract là Zod schema trong **`@kitty/shared`** (`z.infer` cho type). Không dùng Hono RPC `hc<AppType>` (xem ADR-016) |
 | Raw body cho webhook | `await c.req.text()` trước khi parse JSON (cần raw cho verify chữ ký PayPal) |
 
@@ -103,11 +103,11 @@ export default { port: env.PORT, fetch: app.fetch };
 | Form | **react-hook-form + `@hookform/resolvers/zod`** | Formik | Schema lấy từ `@kitty/shared` |
 | Client state | React state trước; **Zustand** (tuỳ chọn) | Redux | Chỉ cho cross-component client state; không chứa server data |
 | Data contracts | **`@kitty/shared` (Zod v4)** | Hono RPC `hc<AppType>` | Một nguồn sự thật cho web + api; type = `z.infer` |
-| Styling | **Tailwind CSS 4 + `cn()` (clsx + tailwind-merge)** | CSS-in-JS | Nhanh; token dùng chung với AG Studio/Bryntum |
-| Gantt/Scheduler/Calendar | **Bryntum (React wrappers, trial)** | frappe-gantt | Sponsor; dependency engine thật cho payment gate |
+| Styling | **Tailwind CSS 4 + `cn()` (clsx + tailwind-merge)** | CSS-in-JS | Nhanh; token dùng chung với AG Studio (và Bryntum nếu dùng) |
+| Payment-gate timeline | **Component shadcn của mình**; Bryntum Gantt (React wrapper, trial) chỉ là nâng cấp Could (ADR-026) | frappe-gantt | Không phụ thuộc trial cho tính năng "không bao giờ cắt" |
 | Dashboard | **AG Studio (React) + Studio Agent Framework** | Recharts | Sponsor; NL → widget |
 | Backend HTTP | **Hono 4.13 trên Bun** | Express, Fastify, Elysia | Web-standard, nhẹ, RPC types, middleware gọn |
-| MCP | **`@hono/mcp` + `@modelcontextprotocol/sdk`** (Streamable HTTP) | stdio | Gateway là MCP server từ xa |
+| MCP | **`@modelcontextprotocol/sdk`**: Streamable HTTP stateless cho Gateway; stdio cho `leash-mcp` | `@hono/mcp` | Gateway là MCP server từ xa; client có sẵn (Claude Desktop, Claude Code, Cursor) nối qua bridge ký Ed25519 (ADR-027) |
 | DB | **Neon** (serverless PostgreSQL 16) | Render Postgres, SQLite | Branch theo dev/preview/test; pooled URL cho app, unpooled cho migrations; `SELECT … FOR UPDATE` cần TCP |
 | Object storage | **Cloudflare R2** (S3 API + presigned URL) | S3, GCS | Chỉ khi cần file; browser upload trực tiếp, key/metadata ở Postgres |
 | ORM / driver | **Drizzle ORM 0.45 + `postgres` (postgres.js)** | Prisma, `Bun.sql` | Chạy cả Bun lẫn Node (giữ được fallback); kiểm soát transaction/lock |
@@ -122,10 +122,8 @@ export default { port: env.PORT, fetch: app.fetch };
 | IDs | **ULID có prefix** (`ulidx`) | UUID | Sắp theo thời gian, dễ đọc log |
 | Money | **Integer cents (`bigint`)** + helper `Money` | float, decimal.js | Không sai số |
 | Jobs | **Render Workflows** | BullMQ + Redis | Sponsor; fallback: worker Hono/Bun poll outbox + Render Cron |
-| Search/RAG | **Elastic Serverless** (`semantic_text` + Jina, hybrid) | pgvector | Sponsor |
-| Product data | **Channel3 API/MCP** | scraping | Sponsor |
-| Browser agent | **KERNEL** (+ `playwright-core` qua CDP) | Browserbase | Sponsor |
-| Notifications | **Zapier MCP** (Slack, Gmail, Calendar) | Slack SDK | Sponsor; không phải tự build OAuth |
+| Product data | **Channel3 API/MCP** (Should) | scraping | Sponsor; không kịp → catalog demo |
+| Notifications | **In-app** (SSE: badge, toast, banner) + email của PayPal (invoice, reminder) | Zapier MCP, Slack SDK | ADR-026 |
 | Unit/integration test | **`bun test`** + **fast-check** (property) | Vitest | Có sẵn trong Bun, API giống Jest |
 | HTTP mock | **MSW 2** (`msw/node`, mock qua axios adapter) | nock | Mock PayPal API |
 | E2E | **Playwright** (`bunx playwright test`) | Cypress | |
@@ -133,8 +131,9 @@ export default { port: env.PORT, fetch: app.fetch };
 | Logging | **pino** (JSON) | console | Có redact secrets |
 | CI | **GitHub Actions** + `oven-sh/setup-bun` + Turborepo cache | | typecheck · lint · test · env-isolation |
 | Hosting | **Render** (Blueprint `render.yaml`, Docker runtime với image `oven/bun:1.3`) | Vercel + Fly | Sponsor; mọi service một chỗ |
-| API dev | **Postman** | | Sponsor |
-| AI coding | **Claude Code + APIMatic Context Plugin cho PayPal** | | Sponsor |
+| AI coding | **Claude Code + APIMatic Context Plugin cho PayPal + PayPal AI-Toolkit plugin** | | Dev tooling (ADR-007) |
+
+> Đã bỏ khỏi stack hackathon ([ADR-026](20-risks-and-decisions.md)): Elastic (search/RAG), KERNEL (browser agent), Zapier MCP (notifications), Postman (API dev).
 
 ## 3. Model LLM theo vai
 
@@ -156,7 +155,7 @@ Tài khoản demo/judge dùng **demo key** của team, có hạn mức ([24](24-
 |---|---|
 | Server-side REST | **`packages/paypal`**: client mỏng tự viết trên **axios** (instance riêng, OAuth2 client credentials có cache, retry, `PayPal-Request-Id`). Chỉ gateway import |
 | Tham khảo schema | PayPal Server SDK (TypeScript) / APIMatic Context Plugin |
-| Agent tools | **Không đưa PayPal Agent Toolkit trực tiếp cho agent.** Gateway có thể dùng Toolkit *bên trong*, sau khi policy ALLOW (ADR-007) |
+| Agent tools | **Không đưa PayPal Agent Toolkit / PayPal MCP server cho agent.** Gateway có thể dùng `@paypal/agent-toolkit` *bên trong* cho invoice/order/refund, sau khi policy ALLOW (ADR-007). Toolkit không có Payouts → Payouts luôn qua `packages/paypal` |
 | Client checkout | **PayPal JS SDK v6** trên trang `/pay` và trang nạp quỹ |
 
 ## 5. Cách chạy
@@ -188,8 +187,8 @@ Services Hono chạy thẳng file `.ts`, không cần bước build; `build` ch�
 | Kiểm | Pass khi | Nếu fail |
 |---|---|---|
 | `bun --bun next build && start` với Next 16.4 + Tailwind 4 + Better Auth | Trang + auth chạy | Next chạy trên Node (`bun run next start`); Render image cài thêm Node |
-| AG Studio + Bryntum render trong Next 16 (client components, `dynamic(..., { ssr: false })`) | Hiển thị đúng | Bọc trong client-only component; báo sponsor trên Discord |
-| `@hono/mcp` + MCP SDK trên Bun: agent client gọi tool được qua Streamable HTTP | Tool call thành công | Dùng transport của MCP SDK trực tiếp với `c.req.raw` |
+| AG Studio (và Bryntum nếu dùng) render trong Next 16 (client components, `dynamic(..., { ssr: false })`) | Hiển thị đúng | Bọc trong client-only component; báo sponsor trên Discord |
+| MCP SDK trên Bun: agent client gọi tool được qua Streamable HTTP | ✅ Đã chạy (KIT-5) bằng transport của MCP SDK trực tiếp — không cần `@hono/mcp` | — |
 | postgres.js + Drizzle transaction `FOR UPDATE` trên Bun | 2 transaction đồng thời bị serialize | `Bun.sql` driver của Drizzle |
 | AI SDK (`ai@7`) + `@ai-sdk/anthropic` + `@ai-sdk/openai-compatible` streaming và tool calling trên Bun | Stream + tool call được với ít nhất 2 provider | Chạy agents trên Node |
 | Render deploy Docker image `oven/bun:1.3` | Health check xanh | Native runtime + cài Bun trong build command |

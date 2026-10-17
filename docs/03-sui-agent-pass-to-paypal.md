@@ -32,7 +32,7 @@ Nguồn:
 | Coin allowance | Giới hạn số coin | `per_tx_max`, `daily_max`, `allocation` |
 | Allowed recipients | Địa chỉ được nhận | `allowed_payees` (email PayPal / merchant id) |
 | Allowed actions | Hàm contract được gọi | `allowed_actions` (`payout`, `create_invoice`, `create_order`, `refund`, `delegate`) |
-| Non-coin assets | NFT, object khác | **Non-money actions có rủi ro**: gửi invoice, tạo order, đặt chỗ qua browser (KERNEL) — cũng bị leash giới hạn |
+| Non-coin assets | NFT, object khác | **Non-money actions có rủi ro**: gửi invoice, gửi nhắc nợ, tạo order, đặt chỗ qua browser (ngoài scope hackathon) — cũng bị leash giới hạn |
 | Bounded loss bằng protocol | Contract không cho vượt | **Prefunded envelope**: tiền agent tiêu được đã được *tách riêng* khỏi Kitty; vượt là không có tiền để tiêu |
 | Thu hồi pass | Hủy object | `revoke` → status `revoked`, tiền chưa dùng trở về Kitty, cascade sub-leash |
 | (không công bố) | | **Sub-leash: delegation chỉ thu hẹp** — điểm mở rộng của Kitty |
@@ -89,8 +89,9 @@ A: Đây là giới hạn trung thực của mô hình: Gateway là một bên p
 }
 ```
 
-## 6. Ba "aha moment" muốn judges thấy
+## 6. Bốn "aha moment" muốn judges thấy
 
-1. **Prompt injection bị chặn trực tiếp trên màn hình:** agent bị lừa gọi payout cho `refund-desk@scam.example` → Gateway trả `DENY: PAYEE_NOT_ALLOWED, AMOUNT_EXCEEDS_PER_TX` → dashboard đỏ → Slack báo → organizer bấm Revoke. *"Max possible loss: $500. Actual loss: $0."*
+1. **Prompt injection bị chặn trực tiếp trên màn hình:** agent bị lừa gọi payout cho `refund-desk@scam.example` → Gateway trả `DENY: PAYEE_NOT_ALLOWED, AMOUNT_EXCEEDS_PER_TX` → banner đỏ trên dashboard → organizer bấm Revoke. *"Max possible loss: $500. Actual loss: $0."*
 2. **Delegation chỉ thu hẹp:** Planner (leash $3.000) cấp cho Shopper sub-leash $500 chỉ cho "merch" 48h; Shopper thử xin rộng hơn → bị từ chối `DELEGATION_EXCEEDS_PARENT`.
-3. **Tiền thật di chuyển và kế hoạch phản ứng:** thành viên trả invoice sandbox → webhook → Kitty tăng → task "Đặt cọc homestay" trên Gantt mở khoá → Treasurer payout vendor → task ✅.
+3. **Tiền thật di chuyển và kế hoạch phản ứng:** thành viên trả invoice sandbox → webhook → Kitty tăng → task "Đặt cọc homestay" trên timeline mở khoá → Treasurer payout vendor → task ✅.
+4. **Agent bất kỳ cũng bị leash:** `bunx leash-mcp init` → Claude Desktop nối vào một leash → bị lừa trả cho payee lạ → cùng một DENY ([ADR-027](20-risks-and-decisions.md)).

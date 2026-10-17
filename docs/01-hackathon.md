@@ -1,6 +1,6 @@
 # 01 — Thông tin Hackathon
 
-> Nguồn: crawl https://paypalaihackathon.devpost.com/ (trang chính, `/rules`, `/resources`, `/details/dates`, `/updates`, `/details/faqs`, và 10 trang sponsor) ngày **2026-10-16**.
+> Nguồn: crawl https://paypalaihackathon.devpost.com/ (trang chính, `/rules`, `/resources`, `/details/dates`, `/updates`, `/details/faqs`, và 10 trang sponsor) ngày **2026-10-16**; kiểm lại ngày **2026-10-17** (rules, giải, judging, deadline không đổi; Updates mới có 3 bài, không đổi luật).
 > Nếu có mâu thuẫn giữa tài liệu này và Official Rules → **Official Rules thắng**. Kiểm tra lại trang Updates mỗi tuần.
 
 ## 1. Tổng quan
@@ -11,10 +11,10 @@
 | Sponsor         | PayPal Inc. (2211 North First Street, San Jose, CA 95131)      |
 | Administrator   | Devpost, Inc.                                                  |
 | Hình thức       | Online, public, toàn cầu                                       |
-| Participants    | ~15.475 (tại 16/10/2026)                                       |
+| Participants    | ~15.972 (tại 17/10/2026)                                       |
 | Tổng giải       | **$67.500 tiền mặt** + $2.250 Render credits = **$69.750**     |
 | Tracks          | **Không có track, không có đề bài cố định**                    |
-| Yêu cầu cốt lõi | Project phải **dùng thực chất cả PayPal và AI**                |
+| Yêu cầu cốt lõi | Project phải **dùng thực chất cả PayPal và AI**. **Không bắt buộc** dùng PayPal Agent Toolkit hay PayPal MCP server; sponsor tools là tuỳ chọn "miễn PayPal là trung tâm" |
 | Tags            | Low/No Code · Machine Learning/AI · Web                        |
 | Liên hệ         | PayPal Discord: https://discord.gg/sJ2G6DyvSK                  |
 
@@ -94,13 +94,15 @@ Judges **không bắt buộc** test project — có thể chấm chỉ dựa tr�
 ### Sponsor Prizes
 | Giải | Phần thưởng | Số winner | Điều kiện |
 |---|---|---|---|
-| Best Use of AG Grid — 1st | $5.000 | 1 | Dùng bất kỳ tool AG Grid |
+| Best Use of AG Grid — 1st | $5.000 | 1 | Dùng bất kỳ tool AG Grid; trang giải nhấn **polish** + **Studio Agent Framework** (https://paypalaihackathon.devpost.com/details/aggrid) |
 | Best Use of AG Grid — 2nd | $2.000 | 1 | |
 | Best Use of AG Grid — 3rd | $1.000 | 3 | |
 | Best Use of APIMatic | $1.000 + 6 tháng APIMatic Business | 3 | Dùng tool APIMatic |
-| Best Use of Bryntum | $1.000 | 3 | Dùng tool Bryntum |
-| Best Use of Channel3 | $1.500 | 1 | Gọi Channel3 API/MCP thực chất |
+| Best Use of Bryntum | $1.000 | 3 | Dùng tool Bryntum; gợi ý "an agent that drives the schedule itself" (https://paypalaihackathon.devpost.com/details/bryntum) |
+| Best Use of Channel3 | $1.500 | 1 | Gọi Channel3 API/MCP thực chất — chỉ nhắc tên mà không gọi thì **không đủ điều kiện** (https://paypalaihackathon.devpost.com/details/channel3) |
 | Best Use of Render — 1st/2nd/3rd | $1.000 / $750 / $500 Render credits | 1 mỗi hạng | Dùng tool Render |
+
+**Không có giải sponsor** cho Zapier, Postman, Elastic, KERNEL, Astropods (kiểm 17/10) — họ chỉ cung cấp tool/credits. Không sponsor nào có yêu cầu riêng về MCP. Chiến lược sponsor của Kitty: [13-sponsor-integrations.md](13-sponsor-integrations.md), [ADR-026](20-risks-and-decisions.md).
 
 ### ⚠️ Luật cộng dồn giải
 > Một project chỉ thắng tối đa **1 Grand Prize + 1 Sponsor Prize** HOẶC **1 Honorable Mention + 1 Sponsor Prize**.
@@ -147,18 +149,18 @@ Hệ quả cho chiến lược: tích hợp nhiều sponsor chỉ **tăng số g
 
 ## 8. Sponsor tools (tóm tắt — chi tiết tích hợp ở [13-sponsor-integrations.md](13-sponsor-integrations.md))
 
-| Sponsor | Là gì | Free access |
-|---|---|---|
-| AG Grid (AG Studio) | Embedded analytics: dashboards + charts + grids, Studio Agent Framework | Trial 45 ngày; boilerplate PayPal: https://github.com/paypaldev/hackathon-paypal-ag-grid-boilerplate |
-| APIMatic | Context Plugins cho AI coding agents (PayPal đã bật sẵn) | 1 tháng Basic (form), winners 6 tháng Business |
-| Astropods | Agent OS: deploy/monitor agents | Free tier |
-| Bryntum | Gantt, Scheduler, Calendar components | Trial 45 ngày (`@bryntum/scheduler@npm:@bryntum/scheduler-trial`) |
-| Channel3 | API sản phẩm 100M+ items / 25k+ retailers, có MCP | 20.000 credits, promo `PAYPAL-HACKATHON-2026` |
-| Elastic | Elasticsearch, vector/hybrid search, Agent Builder, Jina embeddings | Trial 14 ngày (+30 ngày tự gia hạn) tại https://ela.st/elastic-paypal-hackathon |
-| KERNEL | Cloud browsers cho AI agents | $50 credits |
-| Postman | API platform; PayPal collection | Free |
-| Render | Cloud hosting + Render Workflows | $50 credits |
-| Zapier | Zapier MCP: 9.000+ apps | 14 ngày Professional trial |
+| Sponsor | Là gì | Free access | Có giải? | Kitty dùng? (ADR-026) |
+|---|---|---|---|---|
+| AG Grid (AG Studio) | Embedded analytics: dashboards + charts + grids, Studio Agent Framework | Trial 45 ngày; boilerplate PayPal: https://github.com/paypaldev/hackathon-paypal-ag-grid-boilerplate | ✅ | **Tier 1 — nhắm giải** |
+| APIMatic | Context Plugins cho AI coding agents (PayPal đã bật sẵn) | 1 tháng Basic (form), winners 6 tháng Business | ✅ | Dev tooling |
+| Astropods | Agent OS: deploy/monitor agents | Free tier | ❌ | Bỏ |
+| Bryntum | Gantt, Scheduler, Calendar components | Trial 45 ngày (`@bryntum/scheduler@npm:@bryntum/scheduler-trial`) | ✅ | Could |
+| Channel3 | API sản phẩm 100M+ items / 25k+ retailers, có MCP | 20.000 credits, promo `PAYPAL-HACKATHON-2026` | ✅ | Should (Shopper) |
+| Elastic | Elasticsearch, vector/hybrid search, Agent Builder, Jina embeddings | Trial 14 ngày (+30 ngày tự gia hạn) tại https://ela.st/elastic-paypal-hackathon | ❌ | Bỏ |
+| KERNEL | Cloud browsers cho AI agents | $50 credits | ❌ | Bỏ |
+| Postman | API platform; PayPal collection | Free | ❌ | Bỏ |
+| Render | Cloud hosting + Render Workflows | $50 credits | ✅ (credits) | Hosting |
+| Zapier | Zapier MCP: 9.000+ apps | 14 ngày Professional trial | ❌ | Bỏ |
 
 ## 9. Tài nguyên PayPal chính thức
 
@@ -171,9 +173,20 @@ Hệ quả cho chiến lược: tích hợp nhiều sponsor chỉ **tăng số g
 - Invoicing: https://developer.paypal.com/invoicing/about
 - Webhooks: https://developer.paypal.com/api/webhooks/overview
 - Pay Later: https://developer.paypal.com/pay-later/overview
-- AI Toolkit: https://github.com/paypal/AI-Toolkit
-- PayPal AI docs: https://docs.paypal.ai/ (Agent Toolkit quickstart, MCP quickstart, Agent tools reference)
 - Postman: https://www.postman.com/paypal
+
+### 9.1 Công cụ AI của PayPal (kiểm 17/10)
+
+> ⚠️ Link `docs.paypal.ai/...` trên trang Resources của Devpost **đã redirect sang 404**. Dùng link `developer.paypal.com/ai-tools/...` bên dưới.
+
+| Công cụ | Là gì | Link |
+|---|---|---|
+| **PayPal AI-Toolkit** | Plugin cho **coding assistant** (Claude Code, Codex, Cursor), nối vào PayPal MCP sandbox qua SSE. Dùng lúc **build**, không phải runtime | https://github.com/paypal/AI-Toolkit |
+| **`@paypal/agent-toolkit`** | Thư viện **runtime** cho agent (v1.11, 09/2026). Tools: Invoices, Orders/Refunds, Disputes, Shipment, Catalog, Subscriptions, Reporting — **không có Payouts** | https://github.com/paypal/agent-toolkit · https://developer.paypal.com/ai-tools/agent-tools/ |
+| **PayPal MCP server** | Remote: `mcp.sandbox.paypal.com` (`/sse` hoặc `/http`), auth bằng bearer từ client credentials hoặc đăng nhập PayPal. Local: `@paypal/mcp`. Remote có thêm `search_product`, `create_cart`, `checkout_cart` (header `x-feature-flags: commerce:true`, hiện chỉ gift card) | https://developer.paypal.com/ai-tools/mcp-server |
+| Agent Ready / Agentic Commerce Services | ACP (ChatGPT, qua Braintree delegated tokens), UCP (Google AI Mode/Gemini); Store Sync. Cần onboarding merchant qua form — **chưa thấy quyền truy cập sandbox** | https://developer.paypal.com/agent-ready/overview |
+
+Kitty dùng các công cụ này thế nào (và vì sao agent **không bao giờ** cầm chúng): [11-paypal-integration.md](11-paypal-integration.md) §7, [ADR-007](20-risks-and-decisions.md).
 
 ### Webinars
 | Ngày | Chủ đề | Link |
@@ -185,10 +198,11 @@ Hệ quả cho chiến lược: tích hợp nhiều sponsor chỉ **tăng số g
 
 ## 10. Inspiration chính thức (khớp với Kitty)
 
-Trang Resources gợi ý 5 nhóm. Kitty chạm vào 3:
+Trang Resources gợi ý 5 nhóm. Kitty chạm vào 4:
 - **AI Agents or Automation:** "agents that use PayPal to take action — not just recommend, but actually transact… two agents negotiating and settling a payment (agent-to-agent commerce)". → Leash + Treasurer/Shopper agents.
 - **Money Movement Experiences:** "splitting a group dinner bill automatically", "payout tool… pays out the moment a task is approved". → Kitty pool + payment-gated tasks.
-- **Consumer Experiences:** "a 'request money' experience embedded in a chat app". → Collector agent + Zapier.
+- **Consumer Experiences:** "a 'request money' experience embedded in a chat app". → Collector agent (PayPal invoice + reminder).
+- **Social Impact:** "neighbors pool money for a shared community… project". → Kitty là đúng quỹ chung của một nhóm.
 
 ## 11. Những điều KHÔNG được làm (dễ bị loại)
 

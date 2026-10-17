@@ -52,7 +52,7 @@ services:
     dockerfilePath: ./apps/agents/Dockerfile
     dockerContext: .
     envVars:
-      - fromGroup: kitty-agents-secrets       # AI_KEYS_MASTER_KEY, DEMO_LLM_*, agent private keys, Channel3, Zapier, KERNEL, Elastic
+      - fromGroup: kitty-agents-secrets       # AI_KEYS_MASTER_KEY, DEMO_LLM_*, agent private keys, Channel3
 
   - type: worker
     name: kitty-worker                        # fallback nếu không dùng Render Workflows
@@ -141,7 +141,7 @@ Mỗi app parse env bằng Zod trong `src/env.ts` (schema riêng cho từng app)
 | `GATEWAY_URL`, `GATEWAY_ADMIN_TOKEN` | (kế hoạch) gọi admin API |
 | `AGENTS_URL`, `AGENTS_INTERNAL_TOKEN` | (kế hoạch) gọi agent runtime |
 | `AG_STUDIO_LICENSE_KEY` | (kế hoạch) trial |
-| `BRYNTUM_*` | (kế hoạch) trial dùng package trial, không cần key |
+| `BRYNTUM_*` | (Could — ADR-026) trial dùng package trial, không cần key |
 
 > Web **không** có `DATABASE_URL`: chỉ `apps/api` và `apps/gateway` được dùng `@kitty/db` (ESLint chặn import `@kitty/db` trong `apps/web`).
 
@@ -164,13 +164,15 @@ Mỗi app parse env bằng Zod trong `src/env.ts` (schema riêng cho từng app)
 | `AGENT_KEYS_JSON` | map `agentId → ed25519 private key` (MVP; xem §6) — hoặc `AGENT_MASTER_SEED` để derive key per agent |
 | `GATEWAY_MCP_URL` | `https://kitty-gateway…/mcp` |
 | `WEB_APP_API_URL`, `WEB_APP_API_TOKEN` | app tools |
-| `CHANNEL3_API_KEY` | |
-| `ZAPIER_MCP_URL` (+ token theo docs Zapier) | |
-| `ELASTIC_URL`, `ELASTIC_API_KEY` | |
-| `KERNEL_API_KEY` | |
+| `CHANNEL3_API_KEY` | (Should) Shopper discovery |
+
+> Zapier, Elastic, KERNEL đã bỏ khỏi scope ([ADR-026](20-risks-and-decisions.md)) — không có biến môi trường cho chúng.
 
 ### `kitty-worker`
-`DATABASE_URL` (đọc outbox), `GATEWAY_INTERNAL_TOKEN`, `AGENTS_URL`, `ELASTIC_*`, `RENDER_*` (Workflows).
+`DATABASE_URL` (đọc outbox), `GATEWAY_INTERNAL_TOKEN`, `AGENTS_URL`, `RENDER_*` (Workflows).
+
+### `leash-mcp` (chạy trên máy người dùng, không deploy)
+Không có secret của Kitty. Cấu hình local (`--gateway <url>`, `--agent <agentId>`, file profile chứa private key quyền `600`) — xem [10-api-spec.md](10-api-spec.md) §2.3, [ADR-027](20-risks-and-decisions.md).
 
 Bun tự load file `.env` theo thư mục chạy. Vẫn phải parse bằng Zod để fail sớm, và **mỗi app có `.env` riêng**: không đặt PayPal secret ở `.env` gốc của repo, vì mọi service chạy từ gốc sẽ đọc được.
 
@@ -204,32 +206,30 @@ Bun tự load file `.env` theo thư mục chạy. Vẫn phải parse bằng Zod 
 |---|---|---|
 | Render | Claim $50 credits, tạo workspace, kiểm Workflows | 16–17/10 |
 | APIMatic | Điền form free subscription; cài Context Plugin cho Claude Code | 16/10 |
-| Postman | Fork PayPal collection vào workspace Kitty | 17/10 |
-| Elastic | Trial 14 ngày (ela.st/elastic-paypal-hackathon) → Serverless project "Search"/"Vector" → **ghi ngày hết hạn, tự gia hạn 30 ngày trước demo** | ~28/10 (để không hết trước judging) |
-| AG Grid | Trial 45 ngày | ~20/10 (hết ~04/12 — **cần xin gia hạn trên Discord để phủ judging 1–15/12**) |
-| Bryntum | Trial 45 ngày | ~20/10 (như trên) |
-| Channel3 | Sign up, key + promo `PAYPAL-HACKATHON-2026` | 28/10 |
-| Zapier | Account mới → 14 ngày Pro; cấu hình MCP với Slack + Gmail | **~01/11** (để còn hiệu lực khi quay video; free plan sau đó phải vẫn đủ cho demo) |
-| KERNEL | Claim $50 credits | 01/11 |
-| Astropods | (COULD) | nếu dư thời gian |
+| AG Grid | Trial 45 ngày | **01/11** (hết ~16/12 — phủ judging 1–15/12; vẫn hỏi license hackathon trên Discord) |
+| Channel3 | Sign up, key + promo `PAYPAL-HACKATHON-2026` | 28/10 (Should) |
+| Bryntum | Trial 45 ngày | Chỉ khi quyết định làm Gantt (Could, sau M4) |
 
-⚠️ **Trial hết hạn trong judging (1–15/12) là rủi ro thật**: demo URL phải vẫn chạy. Giải pháp: (1) hỏi sponsor trên Discord về license cho hackathon; (2) app phải **degrade gracefully** — nếu AG/Bryntum license lỗi vẫn hiển thị (watermark trial chấp nhận được); nếu Zapier/Elastic/KERNEL lỗi → feature flag tắt, core flow vẫn chạy. Ghi trong [20-risks-and-decisions.md](20-risks-and-decisions.md).
+Đã bỏ ([ADR-026](20-risks-and-decisions.md)): Postman, Elastic, Zapier, KERNEL, Astropods.
+
+⚠️ **Trial hết hạn trong judging (1–15/12) là rủi ro thật**: demo URL phải vẫn chạy. Giải pháp: (1) kích hoạt AG Studio đúng 01/11; (2) hỏi sponsor trên Discord về license cho hackathon; (3) app phải **degrade gracefully** — nếu AG license lỗi vẫn hiển thị (watermark trial chấp nhận được), core flow không phụ thuộc trial nào. Ghi trong [20-risks-and-decisions.md](20-risks-and-decisions.md) (R3).
 
 ## 6. Secrets & keys
 
 - Secrets nằm trong **Render Environment Groups**, mỗi service một group; không bao giờ commit `.env` (chỉ `.env.example`).
 - Agent keys: MVP sinh bằng `scripts/gen-agent-keys.ts`; private key vào `kitty-agents-secrets`; public key đăng ký vào Gateway khi tạo agent (`POST /v1/agents`). Mỗi event có 4 agent → derive bằng HKDF từ `AGENT_MASTER_SEED` + `agentId` để không phải quản lý nhiều key thủ công.
 - Rotation: `POST /v1/agents/:id/rotate-key` (COULD).
+- **Agent bên ngoài (`leash-mcp`):** keypair sinh **trên máy người dùng** bằng `bunx leash-mcp init`; chỉ public key được gửi lên (qua màn hình "Connect an external agent" → `POST /v1/agents`). Kitty không bao giờ thấy private key này ([ADR-027](20-risks-and-decisions.md)).
 
 ## 7. Observability
 
 | Gì | Công cụ |
 |---|---|
 | Logs | pino JSON → Render logs |
-| Audit (nghiệp vụ) | `leash.audit_events` (append-only) + index Elastic `kitty-audit` |
+| Audit (nghiệp vụ) | `leash.audit_events` (append-only) |
 | Agent traces | Bảng `app.agent_runs` (mỗi tool call, latency, tokens) — hiển thị trên Activity |
 | Health | `/health` mỗi service; Render health checks |
-| Alerts | Domain event `leash.intent_denied` severity high → Slack (Zapier) |
+| Alerts | Domain event `leash.intent_denied` severity high → banner đỏ in-app (không Slack — ADR-026) |
 
 ## 8. Backup & reset demo
 

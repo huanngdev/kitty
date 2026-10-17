@@ -1,23 +1,27 @@
 # 13 — Sponsor Integrations
 
+> Cập nhật 17/10 theo [ADR-026](20-risks-and-decisions.md): thu hẹp sponsor theo luật cộng dồn giải. Tiêu chí từng giải sponsor kiểm trên Devpost ngày 17/10 ([01-hackathon.md](01-hackathon.md) §6).
+
 ## 0. Chiến lược
 
 **Q: Nên tích hợp bao nhiêu sponsor?**
-A: Luật thưởng: tối đa **1 giải chính/Honorable Mention + 1 giải sponsor**. Tích hợp nhiều sponsor chỉ tăng *số giải được xét*. Nhưng tích hợp gượng ép làm giảm điểm **Design** (mạch lạc). ⇒ Chia ba bậc:
+A: Luật thưởng: tối đa **1 giải chính/Honorable Mention + 1 giải sponsor**. Tích hợp nhiều sponsor chỉ tăng *số giải được xét*, không tăng tổng tiền tối đa — và tích hợp gượng ép làm giảm điểm **Design** (mạch lạc), kéo trễ critical path. ⇒ Chỉ giữ sponsor **có giải** hoặc **giải một việc thật** trong flow:
 
 | Bậc | Sponsor | Mức độ | Lý do |
 |---|---|---|---|
-| **Tier 1 — nhắm giải** | **AG Grid (AG Studio)**, **Bryntum** | Sâu, tuỳ biến, có agent | Pool lớn ($10k / 5 suất AG; 3 suất Bryntum), hợp tự nhiên (dashboard tiền, timeline có payment gate) |
-| **Tier 2 — tính năng thật** | **Channel3**, **Render**, **Zapier**, **Elastic** | Một tính năng hoàn chỉnh mỗi cái | Mỗi cái giải một việc thật trong flow |
-| **Tier 3 — dev tooling / bonus** | **APIMatic**, **Postman**, **KERNEL**, **Astropods** | Dùng trong quá trình build hoặc COULD | Ghi trong submission; KERNEL/Astropods cắt được |
+| **Tier 1 — nhắm giải** | **AG Grid (AG Studio)** | Sâu: custom widgets, theme, Studio Agent Framework | Pool lớn nhất (1st $5k, 2nd $2k, 3rd $1k ×3 = 5 suất), có judge AG Grid, hợp tự nhiên (dashboard tiền) |
+| **Tier 2 — tính năng thật** | **Render**, **Channel3** | Render: toàn bộ hosting. Channel3: Shopper discovery (Should) | Render dùng thật; Channel3 có giải nhưng chỉ khi gọi API thực chất |
+| **Tier 3 — dev tooling** | **APIMatic** | Dùng lúc build `packages/paypal` | Có giải; chỉ ghi khi dùng thật |
+| **Could** | **Bryntum** | Gantt thay timeline shadcn nếu dư thời gian sau M4 | Có giải nhưng luật chỉ cho 1 giải sponsor; payment gate vẫn có mà không cần Bryntum |
+| **Bỏ (ADR-026)** | Zapier, Elastic, KERNEL, Astropods, Postman | — | Không có giải sponsor; mỗi cái là một tích hợp phụ trên đường găng |
 
-**Giải sponsor ưu tiên:** AG Grid 1st ($5k) > AG Grid 2nd/3rd > Bryntum > Channel3 > APIMatic.
+**Giải sponsor ưu tiên:** AG Grid 1st ($5k) > AG Grid 2nd/3rd > Channel3 > APIMatic > Render credits.
 
 ---
 
 ## 1. AG Grid — AG Studio (Tier 1)
 
-**Mục tiêu theo tiêu chí AG Grid nêu:** *"covers both what your dashboard looks like and how you build it… custom widgets, theming, layout tools… Studio Agent Framework: a custom agent talking to Studio's built-in agents, or a swapped-in harness."*
+**Tiêu chí AG Grid nêu:** *"covers both what your dashboard looks like and how you build it… custom widgets, theming, layout tools… Studio Agent Framework: a custom agent talking to Studio's built-in agents, or a swapped-in harness."* Trang giải (17/10) nhấn mạnh **độ hoàn thiện (polish)** và **Studio Agent Framework**.
 
 ### Dùng ở đâu
 Trang **`/events/:id/money` — "Kitty Money Room"** và một tab **"Leash Control Center"**.
@@ -44,7 +48,7 @@ Trang **`/events/:id/money` — "Kitty Money Room"** và một tab **"Leash Cont
 ### Bắt đầu
 - Boilerplate: https://github.com/paypaldev/hackathon-paypal-ag-grid-boilerplate (đọc trước để copy setup AG Studio + PayPal).
 - Docs: Quick Start, Custom Widgets & Theming, Studio Agent Framework (links ở [01-hackathon.md](01-hackathon.md)).
-- Trial 45 ngày: kích hoạt ~20/10.
+- Trial 45 ngày: kích hoạt **01/11** → hết ~16/12, phủ judging 1–15/12 ([08](08-infrastructure.md) §5).
 
 ### "Definition of done" để cạnh tranh giải
 - [ ] ≥2 custom widgets (Kitty Gauge, Who still owes)
@@ -54,101 +58,62 @@ Trang **`/events/:id/money` — "Kitty Money Room"** và một tab **"Leash Cont
 
 ---
 
-## 2. Bryntum (Tier 1)
+## 2. Render (Tier 2 — hạ tầng)
 
-**Tiêu chí Bryntum nêu:** *"the cleanest timeline, the smartest resource booking, or an agent that drives the schedule itself."* Ý tưởng gợi ý của họ trùng Kitty: *"payment tranches marked as dependencies, so a late PayPal payment visibly blocks the next phase"* và *"Agent-driven rescheduler… watches PayPal payment events and automatically moves or flags milestones"*.
-
-### Dùng ở đâu
-| Component | Màn hình | Nội dung |
-|---|---|---|
-| **Gantt** (Must) | `/events/:id/plan` | Tasks + dependencies; **payment gate = milestone ẩn "💰 Kitty ≥ $X"** mà task phụ thuộc; gate đóng → task 🔒 và Gantt hiển thị bị chặn; webhook → gate mở → engine tự dời lịch |
-| **Scheduler** (Could) | `/events/:id/leashes` | "Leash timeline": mỗi agent một resource row; event bar = khoảng hiệu lực leash; marker = intents (xanh ALLOW, vàng STEP_UP, đỏ DENY) |
-| **Calendar** (Could) | `/m/:token` | Lịch trình cho member |
-
-### Agent-driven rescheduler
-- Payout vendor `failed`/trễ → Treasurer gọi `app.update_task` (dời hoặc flag) → Gantt cập nhật realtime và hiện ghi chú "Moved by Treasurer: payout to Highland Bus failed (RETURNED)".
-
-### Kỹ thuật
-- Package trial: `@bryntum/gantt@npm:@bryntum/gantt-trial` (tương tự cho scheduler/calendar) + wrapper React.
-- Data: CrudManager load/sync qua `/api/events/:id/gantt` (tasks, dependencies); ghi lại khi organizer kéo thả.
-- Gate milestone render bằng `taskRenderer`/icon; read-only khi gate đóng.
-
-### Definition of done
-- [ ] Gantt với ≥12 tasks, dependencies, 2 payment gates
-- [ ] Gate mở tự động từ webhook (quay được)
-- [ ] Agent reschedule 1 task khi payout fail
-- [ ] (Could) Scheduler leash timeline
+- Toàn bộ deploy bằng **Blueprint** `render.yaml` (web, api, gateway, private service agents, worker/cron, static demo sites). Postgres ở **Neon**, không ở Render ([ADR-018](20-risks-and-decisions.md)).
+- **Render Workflows** (nếu có cho account) cho durable tasks: `execute_intent`, `process_outbox`, `reminder_sweep`, `leash_expiry_sweep`, `reconcile_payouts`, `settle_event`. Fallback: worker + Render Cron.
+- Credits $50: https://credits-portal-mmdm.onrender.com/claim/paypal-ai-hackathon.
+- README có nút **"Deploy to Render"**.
 
 ---
 
-## 3. Channel3 (Tier 2)
+## 3. Channel3 (Tier 2 — Should)
 
-**Yêu cầu của họ:** gọi API/MCP **thực chất** (search, enrichment, recommendations) — chỉ nhắc tên là không đủ.
+**Yêu cầu của họ:** gọi API/MCP **thực chất** (search, enrichment, recommendations). Trang giải ghi rõ: project chỉ nhắc tên mà không gọi API thì không đủ điều kiện.
 
 - Shopper dùng Channel3 search: `"custom embroidered hoodie"` + filter giá → 3 product cards (ảnh, giá, retailer, variants).
 - Enrichment: lấy chi tiết sản phẩm để Shopper so sánh và viết lý do chọn.
 - Fulfilment trong demo: payout tới **demo vendor** (merch-shop sandbox) — UI ghi rõ (xem [04-product-spec.md](04-product-spec.md) §6).
 - Key: https://trychannel3.com/developers + promo `PAYPAL-HACKATHON-2026` (20.000 credits). MCP: https://trychannel3.com/mcp. Docs: https://docs.trychannel3.com.
 - Cache kết quả search 24h (tiết kiệm credits, demo ổn định).
+- Không kịp (cut list #2) → Shopper dùng catalog tĩnh trong `apps/demo-sites`; khi đó **không** ghi Channel3 trong Built With.
 
 ---
 
-## 4. Render (Tier 2 — hạ tầng)
+## 4. APIMatic (Tier 3 — dev tooling, vẫn xét giải)
 
-- Toàn bộ deploy bằng **Blueprint** `render.yaml` (web, gateway, private service agents, worker/workflows, cron, static demo sites, Postgres).
-- **Render Workflows** cho durable tasks: `execute_intent`, `process_outbox`, `reminder_sweep`, `leash_expiry_sweep`, `reconcile_payouts`, `settle_event`, `index_audit`. Ưu điểm kể trong submission: retry tự động, chạy song song (vd 12 invoice cùng lúc), quan sát từng task.
-- Credits $50: https://credits-portal-mmdm.onrender.com/claim/paypal-ai-hackathon.
-- README có nút **"Deploy to Render"**.
-
----
-
-## 5. Zapier MCP (Tier 2)
-
-- Collector & alerting gửi qua Zapier MCP: **Slack** (kênh #da-lat-offsite, DM organizer), **Gmail** (nhắc nợ), **Google Calendar** (gửi lịch cho members — Could).
-- Step-up approval notification: tin Slack có deep link "Review in Kitty".
-- High-severity DENY alert: "🚨 Shopper tried to pay refund-desk@scam.example $2,000 — blocked by leash. [Revoke leash]".
-- Docs: https://docs.zapier.com/mcp/get-started/quickstart. Trial Pro 14 ngày → kích hoạt sát ngày quay (~01/11); kiểm tra free plan có đủ cho judges xem không, nếu không → feature flag hiển thị "notification preview" trong app.
-
----
-
-## 6. Elastic (Tier 2)
-
-Hai index:
-| Index | Nội dung | Dùng cho |
-|---|---|---|
-| `kitty-docs` | Báo giá/hợp đồng vendor (PDF → text), field `semantic_text` với **Jina embeddings** qua inference endpoint | Planner: "Which homestay offers free cancellation and fits 12 people?" (hybrid search: BM25 + semantic) |
-| `kitty-audit` | Audit events + intents | "Security view": tìm "all denied attempts to new payees", phát hiện bất thường (payee mới, tần suất) bằng ES|QL |
-
-- Trial: https://ela.st/elastic-paypal-hackathon (Serverless, project type Search/Vector). Hết 14 ngày → form gia hạn 30 ngày. Fallback: chạy Elasticsearch local trong dev.
-- Inference endpoint id của Jina phải kiểm khi setup (tên endpoint có thể khác theo version).
-
----
-
-## 7. APIMatic (Tier 3 — dev tooling, vẫn xét giải)
-
-- Cài **APIMatic Context Plugin for PayPal** vào Claude Code khi code `packages/paypal` và gateway executors.
+- Cài **APIMatic Context Plugin for PayPal** vào Claude Code khi code `packages/paypal` và gateway executors (cùng với PayPal AI-Toolkit plugin — [ADR-007](20-risks-and-decisions.md)).
 - Ghi trong submission: "We built the PayPal integration with Claude Code + APIMatic Context Plugin" + ví dụ cụ thể (vd: plugin cung cấp schema Payouts/Invoicing).
 - Điền form free subscription: https://docs.google.com/forms/d/e/1FAIpQLScc2oCgAFACm7d6H3R4mgzv-O34DdyVnLIBNiwmUNggr_-hhA/viewform
 
-## 8. Postman (Tier 3)
+---
 
-- Fork **PayPal collection** (https://www.postman.com/paypal) để thử sandbox nhanh.
-- Xuất **Kitty Gateway collection** (`postman/kitty-gateway.postman_collection.json`): Admin API + một request MCP mẫu (ký bằng pre-request script) — giúp judges test Gateway độc lập.
+## 5. Bryntum (Could)
 
-## 9. KERNEL (Tier 3 — Could)
+**Tiêu chí Bryntum nêu:** *"the cleanest timeline, the smartest resource booking, or an agent that drives the schedule itself."* Ý tưởng gợi ý của họ trùng Kitty: *"payment tranches marked as dependencies, so a late PayPal payment visibly blocks the next phase"*.
 
-- Shopper/Planner đặt chỗ trên **demo vendor site** (`apps/demo-sites/booking`) — form không có API — bằng KERNEL browser + Playwright.
-- Live view nhúng vào chat card ("Watching Shopper book a table…").
-- Hành động `browser_booking` vẫn đi qua leash (amount 0, rate limit, action allowlist).
-- Cũng dùng KERNEL để Shopper "duyệt" trang Hoodie Deals có injection → cảnh demo thực tế hơn.
-- Credits: https://dashboard.onkernel.com/hackathon?code=KERNELDEVPOST2026
-
-## 10. Astropods (Tier 3 — Could)
-
-- Nếu dư thời gian: đóng gói Collector agent theo spec Astropods và deploy, để có observability riêng. Không nằm trên critical path.
+- **Bản chính của payment gate là timeline shadcn của mình** (M2). Bryntum chỉ thay vào nếu M4 xong sớm.
+- Nếu làm: Gantt ở `/events/:id/plan` (package trial `@bryntum/gantt@npm:@bryntum/gantt-trial` + wrapper React, bọc trong component của mình theo [CODE_RULES.md](../CODE_RULES.md) §C); payment gate = milestone "💰 Kitty ≥ $X"; Treasurer dời task khi payout fail (`app.update_task`).
+- Scheduler "Leash timeline" và Calendar cho member: bỏ khỏi hackathon.
 
 ---
 
-## 11. Bảng "Built With" cho submission
+## 6. Đã bỏ khỏi scope hackathon (ADR-026)
 
-`PayPal Invoicing API · PayPal Payouts API · PayPal Orders API v2 · PayPal Payments (Refunds) · PayPal Webhooks · PayPal JS SDK v6 · PayPal Agent Toolkit · Anthropic Claude (BYOK, any model via Vercel AI SDK) · Model Context Protocol · AG Studio · Bryntum Gantt/Scheduler · Channel3 · Elastic (Jina embeddings) · Zapier MCP · Render (Workflows, Postgres) · KERNEL · APIMatic Context Plugin · Postman · Next.js · TypeScript · PostgreSQL · Drizzle`
+| Sponsor | Kế hoạch cũ | Thay bằng |
+|---|---|---|
+| Zapier MCP | Slack/Gmail nhắc nợ; Slack báo step-up và DENY | Nhắc nợ = PayPal Invoicing `/remind` qua `leash_send_reminder` (PayPal gửi email). Step-up/DENY = thông báo in-app (badge, toast, banner đỏ) |
+| Elastic | RAG báo giá vendor; index audit cho "Security view" | Planner làm việc với dữ liệu event + vendor đã nhập; "Security view" lọc `leash.audit_events` trực tiếp |
+| KERNEL | Browser agent đặt chỗ trên trang vendor demo | Shopper fetch trang demo bằng HTTP thường (đủ cho injection demo); action `browser_booking` giữ trong spec, không build |
+| Astropods | Host Collector agent | Collector chạy trong `apps/agents` |
+| Postman | Kitty Gateway collection có pre-request script ký Ed25519 | Judges test Gateway bằng **MCP Inspector + `leash-mcp`** ([ADR-027](20-risks-and-decisions.md)) — hướng dẫn trong README |
+
+---
+
+## 7. Bảng "Built With" cho submission
+
+**Quy tắc ([21](21-design-questions.md) F5):** chỉ liệt kê thứ mà code chạy trên demo thật sự gọi; dev tooling ghi rõ là dev tooling. Mục có điều kiện chỉ thêm khi điều kiện đúng lúc nộp.
+
+**Chắc chắn:** `PayPal Payouts API · PayPal Invoicing API · PayPal Orders API v2 · PayPal Payments (Refunds) · PayPal Webhooks · PayPal JS SDK v6 · Model Context Protocol (Leash Gateway MCP server + leash-mcp bridge) · Vercel AI SDK (BYOK: Anthropic Claude + any OpenAI-compatible model) · AG Studio · Render · Next.js · Hono · Bun · TypeScript · PostgreSQL (Neon) · Drizzle`
+
+**Có điều kiện:** `PayPal Agent Toolkit` (chỉ khi gateway gọi nó — ADR-007) · `Channel3` (chỉ khi Shopper gọi API thật) · `Bryntum Gantt` (chỉ khi thay timeline) · `APIMatic Context Plugin` + `PayPal AI-Toolkit` (ghi là dev tooling)

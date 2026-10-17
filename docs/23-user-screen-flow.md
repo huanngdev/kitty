@@ -33,7 +33,8 @@ Nó trả lời bốn câu hỏi cho từng bước:
 | `S03` | Mã màn hình (xem bảng §3) |
 | `[Nút]` | Hành động người dùng |
 | ⚡ | Sự kiện hệ thống tự đến (webhook, agent, realtime) |
-| 🔔 | Thông báo ngoài app (Slack, email) có deep link quay lại app |
+| 🔔 | Thông báo trong app (badge, toast, banner) có deep link tới màn hình liên quan |
+| 📧 | Email do PayPal gửi (invoice, nhắc nợ) |
 | ⟶ | Chuyển màn hình |
 
 ---
@@ -59,19 +60,19 @@ Nó trả lời bốn câu hỏi cho từng bước:
 | S04 | `/events/new` | Create with Planner | Organizer | Có | Mô tả event bằng chat → nhận plan | Chat, Plan Review panel |
 | S05 | `/events/:id` | Overview | Organizer | Có | Bức tranh tổng: tiền, alerts, agents, việc tiếp theo | KPI tiles, alert banners, agent list, "Next up" |
 | S06 | `/events/:id/people` | People & vendors | Organizer | Có | Members, vendors, verify vendor | 2 bảng, nút Verify |
-| S07 | `/events/:id/plan` | Plan (Gantt) | Organizer | Có | Timeline, payment gates | Bryntum Gantt |
+| S07 | `/events/:id/plan` | Plan (timeline) | Organizer | Có | Timeline, payment gates | Timeline shadcn (Bryntum Gantt nếu dư thời gian) |
 | S08 | `/events/:id/money` | Money room | Organizer | Có | Dashboard tiền, hỏi analyst | AG Studio |
 | S09 | `/events/:id/leashes` | Leashes | Organizer | Có | Cấp, xem, pause, revoke leash; max possible loss | Leash cards, cây delegation, (Scheduler) |
 | S10 | `/events/:id/leashes/new` | Grant a leash (sheet) | Organizer | Có | Tạo leash | Preset picker, form, "Explain this leash" |
 | S11 | `/events/:id/approvals` | Approval inbox | Organizer | Có | Duyệt step-up | Approval cards có countdown |
-| S12 | `/events/:id/approvals/:apr` | Approval detail | Organizer | Có | Duyệt một yêu cầu (đích của deep link Slack) | Số tiền, payee, leash, reason, Approve/Reject |
+| S12 | `/events/:id/approvals/:apr` | Approval detail | Organizer | Có | Duyệt một yêu cầu (đích của badge/toast approval) | Số tiền, payee, leash, reason, Approve/Reject |
 | S13 | `/events/:id/activity` | Activity | Organizer | Có | Audit timeline | Timeline có filter |
 | S14 | `/events/:id/activity/:intent` | Intent detail | Organizer | Có | Chi tiết một intent: decision, reasons, PayPal refs | JSON viewer, reason list |
 | S15 | `/events/:id/chat` | Chat with agents | Organizer | Có | Giao việc cho agents | Chat + cards (product, decision, plan diff, live view) |
 | S16 | `/events/:id/settle` | Settlement | Organizer | Có | Quyết toán, refund | Bảng refund preview, nút Settle |
 | S17 | `/pay/:requestId` | Member pay | Member | Không | Trả phần góp | Số tiền, nút PayPal, giải thích tiền dùng vào đâu |
 | S18 | `/pay/:requestId/done` | Payment received | Member | Không | Xác nhận | Mèo vui, link portal |
-| S19 | `/m/:token` | Member portal | Member | Token | Đã góp gì, lịch trình, refund | Tóm tắt, (Bryntum Calendar) |
+| S19 | `/m/:token` | Member portal | Member | Token | Đã góp gì, lịch trình, refund | Tóm tắt, lịch trình dạng danh sách |
 | S20 | `/events/:id/settings` | Event settings | Organizer | Có | Sửa thông tin, đóng event, reset playground (judge) | Form |
 | S21 | `/settings/ai` | **AI keys & models** (BYOK) | Organizer, Judge | Có | Thêm/xoá API key, chọn model default + theo vai, xem usage | Provider picker, key input, Test connection, model dropdowns, usage chart |
 
@@ -98,7 +99,7 @@ flowchart TD
 
   subgraph Event["Event workspace (S05–S16, S20)"]
     S05 --- S06[S06 People & vendors]
-    S05 --- S07[S07 Plan / Gantt]
+    S05 --- S07[S07 Plan / timeline]
     S05 --- S08[S08 Money room]
     S05 --- S09[S09 Leashes]
     S09 --> S10[S10 Grant a leash]
@@ -116,9 +117,9 @@ flowchart TD
     S18 --> S19[S19 Member portal]
   end
 
-  EM[[📧 PayPal invoice email]] --> S17
-  SL[[🔔 Slack / email từ Zapier]] --> S12
-  SL --> S14
+  EM[[📧 PayPal invoice / reminder email]] --> S17
+  NT[[🔔 Badge / toast / banner trong app]] --> S12
+  NT --> S14
 ```
 
 ---
@@ -200,7 +201,7 @@ flowchart TD
 | 2 | Dialog | Tóm tắt: 12 invoice, hạn trả, mẫu tin nhắn; ghi chú "Collector agent sends these with its own leash" | `[Send invoices]` | Tạo leash Collections (nếu chưa có) → Collector gọi `leash_create_invoice` ×12 → PayPal gửi invoice | S06 (tab Members) |
 | 3 | S06 Members | Cột Status chuyển `draft → sent` lần lượt (realtime) | Chờ, hoặc `[Open invoice]` để xem payer-view link | — | S06 |
 | 4 | ⚡ Webhook `INVOICING.INVOICE.PAID` | Toast "Tuan paid $334 🎉"; dòng Tuan → **Paid**; Kitty tile trên S05 tăng; gauge trên S08 nhích | — | Ledger contribution, outbox → SSE | (giữ màn hình hiện tại) |
-| 5 | ⚡ Collector reminder (cron) | Activity: "Collector sent a friendly reminder to Linh (3 days left)"; Slack/email tới Linh | Có thể `[Pause reminders]` cho từng người | Zapier MCP gửi tin | — |
+| 5 | ⚡ Collector reminder (cron) | Activity: "Collector sent a friendly reminder to Linh (3 days left)"; 📧 PayPal gửi email nhắc tới Linh | Có thể `[Pause reminders]` cho từng người | Collector gọi `leash_send_reminder` → Invoicing `/remind` | — |
 
 **Lỗi:** invoice tạo thất bại → dòng member đỏ "Couldn't send — Retry"; webhook chậm → nút `[Sync now]` trên S06.
 
@@ -250,12 +251,12 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-  W[⚡ Kitty đạt $1,200] --> G[S07 Gantt: gate 🔒→🔓<br/>'Pay homestay deposit']
+  W[⚡ Kitty đạt $1,200] --> G[S07 Plan: gate 🔒→🔓<br/>'Pay homestay deposit']
   G --> T[⚡ Treasurer gửi payout intent $1,200]
   T --> D{Leash decision}
   D -->|ALLOW ≤ $500| X[Payout gửi ngay]
-  D -->|STEP_UP > $500| N[🔔 Slack: 'Approve $1,200 to Pine Hill?']
-  N -->|deep link| A[S12 Approval detail]
+  D -->|STEP_UP > $500| N[🔔 Badge + toast: 'Approve $1,200 to Pine Hill?']
+  N -->|bấm| A[S12 Approval detail]
   A -->|Approve| X
   A -->|Reject| R[Intent cancelled<br/>tiền giữ chỗ được trả lại leash]
   X --> S[⚡ Webhook SUCCEEDED]
@@ -265,8 +266,8 @@ flowchart TD
 | # | Màn hình | Người dùng thấy | Người dùng làm | Hệ thống làm |
 |---|---|---|---|---|
 | 1 | (bất kỳ) | Toast "Kitty reached $1,200 — Pay homestay deposit is unlocked 🔓" | — | Gate check sau webhook |
-| 2 | S07 Gantt | Gate milestone đổi 🔒 xám → 🔓 cam (animation); task kế tiếp hết bị chặn | Có thể bỏ qua | — |
-| 3 | 🔔 Slack | "💼 Treasurer wants to pay **Pine Hill Homestay $1,200** (deposit). Needs your OK — expires in 15 min. [Review in Kitty]" | Bấm link | Badge approvals trên top bar = 1 |
+| 2 | S07 Plan | Gate đổi 🔒 xám → 🔓 cam (animation); task kế tiếp hết bị chặn | Có thể bỏ qua | — |
+| 3 | 🔔 Toast (mọi màn hình) | "💼 Treasurer wants to pay **Pine Hill Homestay $1,200** (deposit). Needs your OK — expires in 15 min. [Review]" | Bấm Review | Badge approvals trên top bar = 1 |
 | 4 | S12 Approval | **$1,200** lớn; payee ✓ verified; leash "Vendor payments" (available $2,500 → $1,300 sau khi trả); lý do: "over your $500 step-up"; task liên quan; *agent's note (unverified)*; countdown | `[Approve]` | Gateway thực thi payout |
 | 5 | S12 | Trạng thái: Approved → Sending to PayPal… → **Paid ✅** (realtime) | `[Back to plan]` | Webhook → settled |
 | 6 | S07 | Task "Pay homestay deposit" ✅, task phụ thuộc tự dời lịch nếu cần | — | — |
@@ -301,7 +302,7 @@ flowchart TD
 flowchart LR
   I[⚡ Shopper đọc trang 'Hoodie Deals'<br/>có lệnh ẩn] --> P[⚡ Payout $2,000 → refund-desk@scam]
   P --> D[Leash: DENY ×3 lý do]
-  D --> B[Banner đỏ trên mọi màn hình event<br/>+ 🔔 Slack alert]
+  D --> B[Banner đỏ trên mọi màn hình event]
   B -->|Details| S14[S14 Intent detail]
   B -->|Revoke leash| C[Confirm dialog]
   S14 -->|Revoke leash| C
@@ -362,7 +363,7 @@ Click một con số bất kỳ ⟶ S13 Activity đã lọc sẵn theo con số 
 | S04 Create | 3 prompt mẫu | Planner stream từng bước | Retry / Start blank | Plan diff |
 | S05 Overview | Checklist Get started | Skeleton tiles | Tile lỗi riêng lẻ, phần khác vẫn hiện | Mọi domain event |
 | S06 People | "Add your first member" | Skeleton rows | Inline per row | `kitty.funds_received`, trạng thái invoice |
-| S07 Plan | "Ask Planner to build a timeline" | Gantt skeleton | Fallback dạng bảng nếu Gantt lỗi license | Gate mở, task done/moved |
+| S07 Plan | "Ask Planner to build a timeline" | Timeline skeleton | Fallback dạng bảng nếu timeline lỗi | Gate mở, task done/moved |
 | S08 Money | Gauge 0% + "No money yet" | Widget skeleton | Widget lỗi riêng lẻ | Ledger thay đổi |
 | S09 Leashes | "No leash — agents can't spend" | Skeleton | — | created/revoked/paused/expired, usage |
 | S11 Approvals | "Nothing waiting 🎉" | Skeleton | — | requested/expired/decided |
@@ -376,17 +377,17 @@ Nguyên tắc: **lỗi ở một widget không làm sập cả màn hình**; m�
 
 ## 7. Thông báo và deep link
 
-| Sự kiện | Trong app | Ngoài app (Zapier) | Deep link tới |
+| Sự kiện | Trong app | Ngoài app (chỉ email PayPal — không Slack, ADR-026) | Deep link tới |
 |---|---|---|---|
-| Approval requested | Badge + banner vàng + toast | Slack DM organizer | S12 |
+| Approval requested | Badge + banner vàng + toast | — | S12 |
 | Approval sắp hết hạn (≤ 3') | Banner vàng nhấp nháy nhẹ | — | S12 |
-| Intent DENY severity high | **Banner đỏ** toàn event | Slack alert | S14 |
-| Member paid | Toast | (tuỳ chọn) Slack kênh nhóm | S06 |
+| Intent DENY severity high | **Banner đỏ** toàn event | — | S14 |
+| Member paid | Toast | (PayPal gửi biên nhận cho member) | S06 |
 | Payout settled | Toast + task ✅ | — | S14 |
-| Payout failed / unclaimed | Toast đỏ | Slack | S14 |
+| Payout failed / unclaimed | Toast đỏ | — | S14 |
 | Leash sắp hết hạn (24h) | Chip đỏ trên card | — | S09 |
-| Reminder gửi cho member | Dòng trong Activity | Email/Slack cho member | S17 (cho member) |
-| Trip ended | Banner "Settle up?" | Email organizer | S16 |
+| Reminder gửi cho member | Dòng trong Activity | 📧 Email nhắc của PayPal cho member | S17 (cho member) |
+| Trip ended | Banner "Settle up?" | — | S16 |
 
 Mọi deep link đi qua `/events/:id/...`; chưa đăng nhập → S02 → quay lại đúng link.
 
