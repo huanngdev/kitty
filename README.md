@@ -10,4 +10,4 @@ Inspired by the agent-pass concept Sui introduced at Basecamp 2026, rebuilt for 
 
 ## License
 
-MIT (to be added with the first code commit).
+MIT — see [LICENSE](LICENSE).
