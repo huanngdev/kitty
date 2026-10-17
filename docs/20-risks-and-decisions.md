@@ -55,7 +55,7 @@
 - **Lý do:** Một công cụ thay cho Node + pnpm + tsx + Vitest; Hono native trên Bun; Hono RPC chia sẻ type API sang Next; dev loop nhanh.
 - **Hệ quả:** + Đơn giản, nhanh. − Rủi ro tương thích Bun với một số package → giữ `packages/*` chỉ dùng API Web-standard và chọn driver chạy được cả Node; spike ngày 17/10 ([07](07-tech-stack.md) §6).
 - **Fallback:** service nào có package lỗi trên Bun thì chạy service đó trên Node 22; code không đổi.
-- **Kết quả spike (điền ngày 17/10):** _chưa chạy_
+- **Kết quả spike (17/10 — KIT-10, [07](07-tech-stack.md) §6):** postgres.js transaction `SELECT … FOR UPDATE` qua Neon pooled URL (`prepare: false`) serialize đúng (5/5 vòng, 1 decrement/vòng) → **PASS**; Ed25519 qua WebCrypto `crypto.subtle` trên Bun sign/verify OK → **PASS**. Các dòng còn lại của bảng §6 (Next 16, AG Studio + Bryntum, MCP SDK, AI SDK, Render image) **chưa chạy**.
 
 ### ADR-009 — Một leash active mỗi agent (MVP)
 - **Lý do:** Agent không cần chọn leash → không thể "chọn nhầm/chọn trộm". Gateway tra leash theo agent.

@@ -6,6 +6,7 @@
       "name": "kitty-turbo-scaffold",
       "devDependencies": {
         "@kitty/prettier-config": "workspace:*",
+        "postgres": "^3.4.9",
         "prettier": "^3.9.10",
         "turbo": "^2.11.9",
       },

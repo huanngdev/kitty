@@ -194,6 +194,24 @@ Services Hono chạy thẳng file `.ts`, không cần bước build; `build` ch�
 | AI SDK (`ai@7`) + `@ai-sdk/anthropic` + `@ai-sdk/openai-compatible` streaming và tool calling trên Bun | Stream + tool call được với ít nhất 2 provider | Chạy agents trên Node |
 | Render deploy Docker image `oven/bun:1.3` | Health check xanh | Native runtime + cài Bun trong build command |
 
+### 6.1. Kết quả runtime spike — KIT-10 (17/10/2026)
+
+Chạy `bun run spike:runtime` (`bun --env-file=apps/gateway/.env scripts/spikes/runtime-spike.ts`) trên Neon dev branch, dùng **pooled** `DATABASE_URL` với `{ prepare: false }` — giống hệt `@kitty/db` `createDb`.
+
+**Runtime:** Bun `1.3.14` · node-compat `24.3.0` · postgres.js `3.4.9`.
+
+| Kiểm | Kết quả | Chi tiết |
+|---|---|---|
+| postgres.js + pooled URL: 2 transaction đồng thời `SELECT … FOR UPDATE` | ✅ **PASS** (5/5 vòng) | transaction thứ hai chờ transaction thứ nhất nhả lock (Δ lock 586–600 ms ≈ 500 ms sleep + overhead); đúng **1** lần trừ thành công mỗi vòng; số dư cuối **300**; **không** gặp lỗi "prepared statement" qua pooler |
+| Ed25519 qua `crypto.subtle` trên Bun (không dùng `Bun.*`) | ✅ **PASS** | `generateKey` → `exportKey("raw")` (public key 32 byte, base64url) → `importKey("raw")` round-trip khớp → `sign`/`verify` OK (chữ ký 64 byte) → `verify` từ chối message bị sửa |
+
+Một vòng tiêu biểu: tx A giữ lock @+83 ms, tx B vào lock @+670 ms (Δ 587 ms) và đọc số dư 300 nên **không** trừ → số dư cuối 300. Timing Ed25519: `generateKey` ~1 ms · `exportKey`/`importKey` <1 ms · `sign` ~1 ms · `verify` ~0 ms.
+
+**Kết luận:**
+
+- Neon pooled `DATABASE_URL` (PgBouncer transaction mode) + postgres.js `{ prepare: false }` chạy `SELECT … FOR UPDATE` **đúng** — transaction được serialize, không race. **Không cần** fallback `Bun.sql`; `packages/leash` / ledger / gateway có thể dựa vào `SELECT … FOR UPDATE` trong transaction để reserve tiền (bất biến §3 #4/#5/#6).
+- Ed25519 qua `crypto.subtle` chạy tốt trên Bun → `packages/signing` chỉ dùng API Web-standard, giữ được fallback Node.
+
 Ghi kết quả vào ADR-008 ở [20-risks-and-decisions.md](20-risks-and-decisions.md).
 
 ## 7. Quy ước code
