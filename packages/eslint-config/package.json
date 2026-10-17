@@ -1,0 +1,33 @@
+{
+  "name": "@kitty/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "base.js",
+    "hono.js",
+    "index.js",
+    "next.js"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./base": "./base.js",
+    "./hono": "./hono.js",
+    "./next": "./next.js"
+  },
+  "dependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint-config-next": "^16.4.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-turbo": "^2.11.9",
+    "globals": "^17.13.0",
+    "typescript-eslint": "^8.71.2"
+  },
+  "devDependencies": {
+    "eslint": "^10.13.0"
+  },
+  "peerDependencies": {
+    "eslint": "^10"
+  }
+}
