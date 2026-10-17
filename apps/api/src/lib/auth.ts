@@ -16,7 +16,7 @@ import {
   isPasswordResetAvailable,
   shouldRequireEmailVerification,
 } from "./auth-config";
-import { resolveGuardAction } from "./auth-guard";
+import { isDemoBlockedPath, resolveGuardAction } from "./auth-guard";
 import { buildPasswordResetEmail, buildVerificationEmail } from "./auth-emails";
 import { getDb } from "./db";
 import { AppError } from "./errors";
@@ -97,7 +97,9 @@ export function createAuthGuardHooks(input: {
         ? await readEmail(ctx)
         : null;
     const emailIsDemo = email === null ? null : await input.isDemoEmail(email);
-    const current = await getSessionFromCtx(ctx);
+    // Only the demo-blocked paths need the session: resolving it for every auth
+    // request would add a lookup the endpoint is about to do anyway.
+    const current = isDemoBlockedPath(path) ? await getSessionFromCtx(ctx) : null;
     const action = resolveGuardAction({
       path,
       passwordResetAvailable: input.passwordResetEnabled,
