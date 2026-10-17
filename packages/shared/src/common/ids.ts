@@ -11,6 +11,7 @@ export const idPrefixes = {
   spendIntent: "int",
   agent: "agt",
   approval: "apr",
+  contribution: "ctr",
   member: "mem",
   vendor: "ven",
   task: "tsk",
