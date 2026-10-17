@@ -138,6 +138,12 @@ bun run --filter web dev         # chạy riêng một service
 - Tên gọi thống nhất: **Kitty** (app/quỹ), **Leash** (pass), **Leash Gateway**, **Spend Intent**, **Decision**, **Step-up**, vai **Planner/Shopper/Collector/Treasurer**. Xem [glossary](docs/22-glossary.md).
 - Commit nhỏ, mô tả rõ; không commit `.env`, secrets, dữ liệu thật.
 - Trước khi dùng API của thư viện/sponsor: kiểm docs hiện hành (version có thể đã đổi). Với Anthropic API: dùng skill `claude-api`.
+- **Linear (backlog & thực thi):** mọi issue của dự án nằm ở workspace **Kitty** (`huanngdev-kitty`), team **`KIT`**, project **`P-KIT-1` "Kitty — PayPal AI Hackathon"**.
+  - Agent **chỉ** dùng MCP server `kitty-linear`. **Không bao giờ** tạo/sửa issue ở server `linear` (workspace cá nhân `huanngdev`).
+  - Milestone = 7 mốc `M0 · Foundations` … `M6 · Submitted` của [16-roadmap.md](docs/16-roadmap.md) §1; không tạo mốc mới.
+  - Mỗi issue cần: title tiếng Anh không prefix · milestone · **1** label `area` · priority · estimate (Fibonacci `1 2 3 5 8`) · assignee · description mở đầu bằng block `## DoD`.
+  - Issue đường tiền (leash/ledger/signing/gateway/money loop) thêm block `## Invariants §3 chạm tới` và `## Test bắt buộc`.
+  - Quy ước đầy đủ (labels, priority, cycles, views): doc **"Kitty — Linear conventions"** trong project `P-KIT-1`.
 
 ## 7. Cách làm một task
 
