@@ -18,6 +18,7 @@
     "db:generate": "bun run --filter @kitty/db db:generate",
     "db:migrate": "bun run --filter @kitty/db db:migrate",
     "db:studio": "bun run --filter @kitty/db db:studio",
+    "db:smoke:leash": "bun --env-file=apps/gateway/.env packages/db/scripts/leash-smoke.ts",
     "sandbox:check": "bun run --filter gateway sandbox:check",
     "clean": "bun -e \"const fs=require('node:fs');const p=['.turbo','node_modules/.cache'];for(const d of ['apps','packages']){if(fs.existsSync(d))for(const x of fs.readdirSync(d))p.push(d+'/'+x+'/.turbo',d+'/'+x+'/.next',d+'/'+x+'/node_modules/.cache')}for(const x of p)fs.rmSync(x,{recursive:true,force:true});console.log('clean: removed',p.length,'paths')\"",
     "ci": "bun run format:check && bun run lint && bun run check-types && bun run test && bun run check:env-isolation && bun run build"
