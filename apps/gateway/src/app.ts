@@ -2,6 +2,7 @@ import { healthResponseSchema } from "@kitty/shared/health";
 import { Hono, type Context } from "hono";
 import { AppError } from "./lib/errors";
 import { logger } from "./lib/logger";
+import { mcpRoutes } from "./modules/agent-mcp";
 import { intentsRoutes } from "./modules/intents";
 import { v1Routes } from "./modules/v1";
 
@@ -44,5 +45,8 @@ app.route("/v1", v1Routes);
 
 // Gateway Internal API (docs/10-api-spec.md §6). Bearer internal token.
 app.route("/internal", intentsRoutes);
+
+// Gateway Agent API (docs/10-api-spec.md §2). Signed MCP Streamable HTTP.
+app.route("/mcp", mcpRoutes);
 
 export type GatewayApp = typeof app;

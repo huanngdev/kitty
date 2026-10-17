@@ -5,5 +5,6 @@ export * from "./headers";
 export * from "./keys";
 export * from "./nonce-store";
 export * from "./sign";
+export * from "./signed-fetch";
 export * from "./timestamp";
 export * from "./verify";

@@ -2,7 +2,7 @@ import type { SpendIntentStatus } from "@kitty/db/schema";
 import { type Decision, type SpendIntent, evaluate } from "@kitty/leash";
 import { release, reserve } from "@kitty/ledger";
 import { PayPalApiError, toPayPalApiError } from "@kitty/paypal";
-import { idPrefixes, type ExecuteOutcome, type IntentView } from "@kitty/shared";
+import { errorCodes, idPrefixes, type ExecuteOutcome, type IntentView } from "@kitty/shared";
 import { AppError } from "../../lib/errors";
 import { newId } from "../../lib/ids";
 import { logger } from "../../lib/logger";
@@ -368,14 +368,14 @@ export function createIntentsService(deps: IntentsServiceDeps): IntentsService {
         const active = await tx.findActiveLeashForAgent(args.agentId);
 
         if (active !== null && active.id !== record.intent.leashId) {
-          throw new AppError("INTENT_ID_CONFLICT", 409, {
+          throw new AppError(errorCodes.intentIdReused, 409, {
             intentId: args.request.intentId,
             reason: "leash_mismatch",
           });
         }
 
         if (record.intent.payloadHash !== null && record.intent.payloadHash !== hash) {
-          throw new AppError("INTENT_ID_CONFLICT", 409, {
+          throw new AppError(errorCodes.intentIdReused, 409, {
             intentId: args.request.intentId,
             reason: "payload_hash_mismatch",
           });

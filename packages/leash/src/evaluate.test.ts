@@ -540,3 +540,27 @@ describe("evaluate — step-up threshold", () => {
     expect(codesOf(decision)).toEqual(["POSSIBLE_DUPLICATE", "STEP_UP_REQUIRED"]);
   });
 });
+
+describe("evaluate — justification is audit-only", () => {
+  test("never reads intent.justification (a throwing getter cannot break a decision)", () => {
+    const intent = makeIntent();
+    Object.defineProperty(intent, "justification", {
+      get(): string {
+        throw new Error("evaluate must never read justification");
+      },
+      enumerable: true,
+      configurable: true,
+    });
+
+    expect(evaluate(makeInput({ intent }))).toEqual({ outcome: "ALLOW" });
+  });
+
+  test("two intents that differ only in justification decide identically", () => {
+    const allowed = evaluate(makeInput({ intent: makeIntent({ justification: "cheap" }) }));
+    const denied = evaluate(
+      makeInput({ intent: makeIntent({ justification: "anything at all" }) }),
+    );
+
+    expect(allowed).toEqual(denied);
+  });
+});

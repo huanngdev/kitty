@@ -392,7 +392,7 @@ describe.skipIf(databaseUrl === undefined)("intents reserve/execute (integration
               payee,
             }),
           }),
-        "INTENT_ID_CONFLICT",
+        "INTENT_ID_REUSED",
       );
 
       const rows = await db.select().from(spendIntents).where(eq(spendIntents.id, intentId));

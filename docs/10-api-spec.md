@@ -171,6 +171,14 @@ Input: `{ limit?: number }` → 20 intent gần nhất của leash của agent.
 
 > Không có tool nào cho agent để: approve, tạo leash gốc, sửa leash của mình, đọc leash agent khác, đọc ledger toàn kitty, gọi PayPal tuỳ ý.
 
+### 2.1 Đã triển khai (KIT-5)
+
+- **Transport:** `POST /mcp` trên `apps/gateway` bằng MCP TypeScript SDK (`@modelcontextprotocol/sdk`), Streamable HTTP **stateless** (`WebStandardStreamableHTTPServerTransport` + `sessionIdGenerator: undefined`, server/transport mới mỗi request), trả JSON (`enableJsonResponse`).
+- **Auth trước tầng MCP:** mọi request verify bằng `@kitty/signing` `verifyRequest` trên **đúng byte thân request** (đọc một lần, truyền lại cho transport); `resolvePublicKey` = `leash.agent_keys` (key `active`), `nonceStore` = `leash.nonces` (`INSERT … ON CONFLICT DO UPDATE … WHERE expires_at <= now() RETURNING` — không cần migration mới). Lỗi → `401` shape chung với `code` là mã verify (`MALFORMED_HEADERS`, `STALE_TIMESTAMP`, `UNKNOWN_AGENT`, `BAD_SIGNATURE`, `NONCE_REPLAY`). `agentId` truyền vào tool handler qua closure — tool **không** nhận `leashId`/`agentId` từ input.
+- **Tool trong scope:** `leash_status`, `leash_check`, `leash_request_payout`, `leash_intent_status`, `leash_activity`. Kết quả là structured content + text summary. `leash_check` chỉ evaluate + ghi audit `intent.check` (không tạo intent, không reserve). `leash_request_payout` gọi `reserveIntent` (KIT-16) và trả `available` sau khi giữ chỗ. Tool ngoài scope (invoice, reminder, refund, delegate) chưa được đăng ký.
+- **Idempotency:** cùng `intentId` + body khác → `INTENT_ID_REUSED` (một tên duy nhất, ở `@kitty/shared` `errorCodes`).
+- **Client helper:** `createSignedFetch({ agentId, privateKey })` export từ `@kitty/signing` để `apps/agents` ký mọi request MCP.
+
 ---
 
 ## 3. Web App API (`/api/agent/*`)

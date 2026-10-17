@@ -227,7 +227,7 @@ describe("reserveIntent", () => {
           agentId: AGENT_ID,
           request: spendIntent({ intentId: "int_conflict", amountCents: 2_000n }),
         }),
-      "INTENT_ID_CONFLICT",
+      "INTENT_ID_REUSED",
     );
     expect(harness.store.state.intents).toHaveLength(1);
   });
