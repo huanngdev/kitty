@@ -1,21 +1,46 @@
+import Image from "next/image";
 import type { JSX } from "react";
 import { cn } from "@/lib/utils";
 
 /** Visual sizes for the mark and the wordmark. */
 export type LogoSize = "sm" | "md" | "lg";
 
+/**
+ * Which artwork to render:
+ * - `"auto"` (default) renders both files and lets CSS follow the theme via the
+ *   `dark` class on `<html>` — no hydration mismatch and no flash on load.
+ * - `"light"` / `"dark"` render a single file, for fixed-background places.
+ */
+export type LogoTheme = "auto" | "light" | "dark";
+
 export interface LogoProps {
   /** Mark + wordmark scale. Defaults to `"md"`. */
   size?: LogoSize;
   /** Render the "Kitty" wordmark next to the mark. Defaults to `false`. */
   showWordmark?: boolean;
+  /** Artwork variant. Defaults to `"auto"` (follows the theme). */
+  theme?: LogoTheme;
+  /** Mark the mark as a priority image (preload) on landing/sign-in. */
+  priority?: boolean;
   className?: string;
 }
 
+const LIGHT_SRC = "/brand/kitty-logo-light.svg";
+const DARK_SRC = "/brand/kitty-logo-dark.svg";
+
+/**
+ * Intrinsic size of the artwork. The source is cropped to the exact geometric
+ * bounding box of its paths (`viewBox="300 17.536248 300 282.463752"`), so the
+ * aspect ratio is ~1.0621 and not square (docs/15-ui-ux.md §1).
+ */
+const MARK_WIDTH = 300;
+const MARK_HEIGHT = 282;
+
+/** `next/image` sizes by height; width comes from the intrinsic aspect ratio. */
 const markClasses: Record<LogoSize, string> = {
-  sm: "size-5",
-  md: "size-8",
-  lg: "size-12",
+  sm: "h-5",
+  md: "h-8",
+  lg: "h-12",
 };
 
 const wordmarkClasses: Record<LogoSize, string> = {
@@ -25,33 +50,66 @@ const wordmarkClasses: Record<LogoSize, string> = {
 };
 
 /**
- * The Kitty brand mark: a cat head with a leash loop, drawn with `currentColor`
- * only so it follows the theme. This file is the single place the brand is
- * rendered (CODE_RULES.md §C).
+ * The Kitty brand mark: the owner's cat artwork, light and dark variants. This
+ * file is the single place the brand is rendered (CODE_RULES.md §C).
  */
-export function Logo({ size = "md", showWordmark = false, className }: LogoProps): JSX.Element {
+export function Logo({
+  size = "md",
+  showWordmark = false,
+  theme = "auto",
+  priority = false,
+  className,
+}: LogoProps): JSX.Element {
+  const imageClass = cn("w-auto shrink-0", markClasses[size]);
+
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
-      <svg
-        viewBox="0 0 24 24"
-        role="img"
-        aria-label="Kitty"
-        className={cn("shrink-0 text-primary", markClasses[size])}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.6}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M7.6 7.7 6.6 3.7l4.2 2.2" />
-        <path d="M16.4 7.7 17.4 3.7l-4.2 2.2" />
-        <circle cx="12" cy="12.6" r="6.3" />
-        <circle cx="9.7" cy="11.9" r="0.85" fill="currentColor" stroke="none" />
-        <circle cx="14.3" cy="11.9" r="0.85" fill="currentColor" stroke="none" />
-        <path d="M11.4 14.2 12 14.8l.6-.6" />
-        <path d="M17.1 17.3 18.2 18.4" />
-        <circle cx="19.3" cy="19.5" r="2" />
-      </svg>
+      {theme === "dark" ? (
+        <Image
+          src={DARK_SRC}
+          alt="Kitty"
+          width={MARK_WIDTH}
+          height={MARK_HEIGHT}
+          unoptimized
+          priority={priority}
+          className={imageClass}
+        />
+      ) : theme === "light" ? (
+        <Image
+          src={LIGHT_SRC}
+          alt="Kitty"
+          width={MARK_WIDTH}
+          height={MARK_HEIGHT}
+          unoptimized
+          priority={priority}
+          className={imageClass}
+        />
+      ) : (
+        // Both variants carry the same accessible name. Only one is ever in the
+        // layout (`dark:hidden` / `hidden dark:block`), so `display:none` keeps
+        // the other out of the accessibility tree — the logo is announced once,
+        // and `img[alt="Kitty"]` is visible in both themes.
+        <>
+          <Image
+            src={LIGHT_SRC}
+            alt="Kitty"
+            width={MARK_WIDTH}
+            height={MARK_HEIGHT}
+            unoptimized
+            priority={priority}
+            className={cn(imageClass, "dark:hidden")}
+          />
+          <Image
+            src={DARK_SRC}
+            alt="Kitty"
+            width={MARK_WIDTH}
+            height={MARK_HEIGHT}
+            unoptimized
+            priority={priority}
+            className={cn(imageClass, "hidden dark:block")}
+          />
+        </>
+      )}
       {showWordmark ? (
         <span className={cn("font-heading font-semibold tracking-tight", wordmarkClasses[size])}>
           Kitty

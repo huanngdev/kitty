@@ -17,6 +17,17 @@ Tokens định nghĩa một lần (Tailwind v4 `@theme`) và map sang theme AG S
 
 > **Cập nhật (ADR-024):** token brand riêng đã bỏ. Theme giờ là **mặc định của preset shadcn `b4VmS9QxUG`** trong `apps/web/src/app/globals.css` (CLI generate, không sửa tay). Bảng màu phía trên là **định hướng**, không còn biến `--kitty-*`/`--success`/`--warning` riêng.
 
+### 1.1 Logo (artwork của owner)
+
+| Thứ | Quyết định |
+|---|---|
+| File | `apps/web/public/brand/kitty-logo-light.svg` (thân đen `#000000`, chi tiết trắng `#FFFFFF`) · `apps/web/public/brand/kitty-logo-dark.svg` (thân trắng, chi tiết đen) |
+| Light/dark | Render qua `<Logo />` (`apps/web/src/components/brand/logo.tsx`) — chỗ **duy nhất** dựng brand (CODE_RULES §C). `theme="auto"` (mặc định) render **cả hai** file rồi để CSS chuyển: ảnh light `dark:hidden`, ảnh dark `hidden dark:block` (next-themes gắn class `dark` lên `<html>`) → không lệch hydration, không nháy. `theme="light"`/`"dark"` render đúng một file cho chỗ nền cố định. |
+| Crop (zero padding) | ViewBox = hộp bao hình học chính xác của toàn bộ path (kể cả cung): `viewBox="300 17.536248 300 282.463752"`. Vì artwork không vuông nên tỉ lệ ~1.0621 (300:282.463752) — **giữ nguyên**, không pad cho vuông. |
+| Kích thước | Theo **chiều cao**, chiều rộng auto (`w-auto`): `sm` h-5 · `md` h-8 · `lg` h-12; intrinsic 300×282 cho `next/image`. |
+| Favicon | `apps/web/src/app/icon.svg` dựng từ **cùng path + viewBox**, có `<style>` `@media (prefers-color-scheme: dark)` đổi fill → icon tab theo theme OS. Không còn `favicon.ico`. |
+
+
 ## 2. Nguyên tắc UX
 
 1. **Tiền luôn hiển thị kèm nguồn gốc.** Mọi con số click được → ledger entries/PayPal ref.

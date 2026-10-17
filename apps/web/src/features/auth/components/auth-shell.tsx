@@ -23,7 +23,7 @@ export function AuthShell({ title, description, children, footer }: AuthShellPro
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-8 bg-muted/40 p-6">
       <Link href={routes.home} className="flex flex-col items-center gap-1">
-        <Logo size="md" showWordmark />
+        <Logo size="md" showWordmark priority />
         <span className="text-xs text-muted-foreground">Let your agents spend. On a leash.</span>
       </Link>
 

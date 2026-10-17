@@ -36,6 +36,7 @@
 
 ## 17/10/2026
 
+- **PR #25** — Logo owner thật (branch `feat/brand-logo`): hai SVG `apps/web/public/brand/kitty-logo-light.svg` (thân đen/chi tiết trắng) + `kitty-logo-dark.svg` (thân trắng/chi tiết đen), crop **zero padding** bằng viewBox đúng hộp bao hình học `300 17.536248 300 282.463752` (getBBox khớp < 0.0001, 4 cạnh 600px/32px đều có pixel mực); `<Logo />` giữ API cũ thêm `theme: "auto"|"light"|"dark"` + `priority` (auto render cả hai ảnh, CSS `dark:hidden`/`hidden dark:block` — không lệch hydration), size theo chiều cao; favicon `apps/web/src/app/icon.svg` theo `prefers-color-scheme` (bỏ `favicon.ico`); e2e UI-QA assert đúng 1 mark hiển thị và đúng file theo theme trên `/`, `/sign-in`, `/events`.
 - **PR #21 re-plan (Le Quoc Uy, @UyLeQuoc) — landed on main qua PR này:** thu hẹp sponsor theo luật cộng dồn giải (ADR-026: chỉ AG Grid nhắm giải; bỏ Zapier/Elastic/KERNEL/Astropods/Postman; Bryntum → Could), thêm `packages/leash-mcp` bridge stdio (ADR-027), và re-plan roadmap 17/10→12/11 (tiền vào + approvals lên trước, agents + MCP sau). Landed **với nguyên commit của Uy**; ADR-024/025 của Uy đổi thành **ADR-026/027** vì main đã dùng hai số đó cho việc UI reset và session validation.
 - **Bỏ Linear khỏi repo:** xoá block Linear trong [AGENTS.md](AGENTS.md) §6; tiến độ giờ theo [MILESTONES.md](MILESTONES.md) + [PROGRESS.md](PROGRESS.md).
 - **PR #1** — turborepo workspace (web + api) + shared configs + CI.

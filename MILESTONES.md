@@ -55,6 +55,7 @@ Web: tạo event (form) → members/vendors → gửi invoice → member trả (
 - ⬜ **KIT-20** — Deploy demo + quay clip M2 walkthrough · 28/10 · depends-on: KIT-8
 - ✅ **fix** — `LinkButton` cho nút điều hướng · PR #20
 - ✅ **fix** — UI-QA: `proxy.ts` xác thực session thật, nhãn nút demo rõ ("Try the demo (for judges)"), shell mobile gọn · PR #22
+- ✅ **fix** — Logo owner thật: SVG light/dark crop zero-padding, `<Logo />` đổi theo theme, favicon `icon.svg` theo OS · PR #25
 
 ## M3 — Agents + MCP + Tier-1 UI · Mon 02/11
 

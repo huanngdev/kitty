@@ -251,6 +251,62 @@ async function checkCssApplied(page: Page, theme: ThemeName): Promise<void> {
   }
 }
 
+/** Screens where the brand logo is asserted (docs/15-ui-ux.md §1). */
+const brandLogoPaths = new Set(["/", "/sign-in", "/events"]);
+
+/**
+ * The `<Logo />` contract in "auto" mode: both files are rendered and CSS picks
+ * one by theme, so a single brand mark is visible at a time and it is the file
+ * for the current theme. The other image is `display:none`, so it is never
+ * announced twice by a screen reader.
+ */
+async function checkBrandLogo(page: Page): Promise<void> {
+  stepContext.step = "brand logo: theme-correct single mark";
+  const expectedFile =
+    stepContext.theme === "dark" ? "kitty-logo-dark.svg" : "kitty-logo-light.svg";
+
+  const allMarks = page.locator('img[src*="kitty-logo-"]');
+  const visibleMarks = page.locator('img[src*="kitty-logo-"]:visible');
+  const visibleKitty = page.locator('img[alt="Kitty"]:visible');
+
+  const total = await allMarks.count();
+  const visible = await visibleMarks.count();
+  const visibleWithAlt = await visibleKitty.count();
+
+  if (total === 0) {
+    recordIssue("brand", "no brand logo image rendered", [
+      `no <img src*="kitty-logo-"> on the page (${stepContext.theme} theme)`,
+    ]);
+    return;
+  }
+
+  if (visible !== 1) {
+    recordIssue("brand", "expected exactly one visible brand logo", [
+      `visible <img src*="kitty-logo-">=${visible} (total=${total}, theme=${stepContext.theme})`,
+    ]);
+  }
+
+  if (visibleWithAlt !== 1) {
+    recordIssue("brand", 'expected exactly one visible img[alt="Kitty"]', [
+      `visible img[alt="Kitty"]=${visibleWithAlt} (theme=${stepContext.theme})`,
+    ]);
+  }
+
+  const src = await visibleMarks.first().getAttribute("src");
+  if (src === null || !src.includes(expectedFile)) {
+    recordIssue("brand", "visible logo is not the file for the theme", [
+      `theme=${stepContext.theme} src=${String(src)} expected≈${expectedFile}`,
+    ]);
+  }
+
+  const visibleAlt = await visibleMarks.first().getAttribute("alt");
+  if (visibleAlt !== "Kitty") {
+    recordIssue("brand", "visible logo has no accessible name", [
+      `visible logo alt=${JSON.stringify(visibleAlt)}`,
+    ]);
+  }
+}
+
 function attachCollectors(page: Page): void {
   page.on("console", (message) => {
     const text = message.text();
@@ -359,6 +415,9 @@ async function visit(page: Page, path: string, label: string, takeShot = true): 
   }
   await settle(page);
   await checkCssApplied(page, stepContext.theme);
+  if (brandLogoPaths.has(path) && new URL(page.url()).pathname === path) {
+    await checkBrandLogo(page);
+  }
   if (takeShot) {
     await shot(page, label);
   }

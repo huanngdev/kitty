@@ -42,7 +42,7 @@ export default async function Home(): Promise<JSX.Element> {
       <div className="flex flex-col items-center gap-4 text-center">
         <ApiStatusBadge />
         <h1 className="flex justify-center">
-          <Logo size="lg" showWordmark className="flex-col gap-3" />
+          <Logo size="lg" showWordmark priority className="flex-col gap-3" />
         </h1>
         <p className="max-w-md text-lg text-balance text-muted-foreground">
           Let your agents spend. On a leash.
