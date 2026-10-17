@@ -34,6 +34,10 @@ const envSchema = z.object({
   // "Continue as demo organizer" button; never exposed to the browser.
   DEMO_USER_PASSWORD: z.preprocess(unsetIfEmpty, z.string().min(8).optional()),
 
+  // One-click demo login flag. OFF by default — enable it only on the judge
+  // demo deployment, where the seeded demo account is meant to be public.
+  DEMO_LOGIN_ENABLED: z.preprocess(unsetIfEmpty, z.stringbool().default(false)),
+
   // Leash Gateway Admin API.
   GATEWAY_URL: z.preprocess(unsetIfEmpty, z.url().optional()),
   GATEWAY_ADMIN_TOKEN: z.preprocess(unsetIfEmpty, z.string().min(1).optional()),

@@ -6,6 +6,16 @@ import { AppError } from "../../lib/errors";
 const DEMO_ORGANIZER_EMAIL = "organizer@demo.kitty";
 
 /**
+ * Whether this deployment exposes the one-click demo login.
+ *
+ * Off by default so a normal deployment can never sign anyone into the demo
+ * account; the judge demo sets `DEMO_LOGIN_ENABLED=true`.
+ */
+export function isDemoLoginEnabled(): boolean {
+  return env.DEMO_LOGIN_ENABLED;
+}
+
+/**
  * Signs the browser in as the demo organizer without ever shipping the demo
  * password to the client.
  *
