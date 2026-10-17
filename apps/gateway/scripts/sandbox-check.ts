@@ -10,6 +10,7 @@ import axios, { type AxiosInstance, isAxiosError } from "axios";
 import {
   buildInvoiceRequest,
   buildPayoutRequest,
+  extractInvoiceId,
   isoDate,
   paypalBaseUrl,
   readSandboxEnv,
@@ -130,14 +131,19 @@ try {
     amountValue: AMOUNT_VALUE,
   });
 
-  const created = await authed.post<{ id?: string }>("/v2/invoicing/invoices", draft, {
-    headers: { "PayPal-Request-Id": `${invoiceNumber}-create` },
+  const created = await authed.post<unknown>("/v2/invoicing/invoices", draft, {
+    headers: {
+      "PayPal-Request-Id": `${invoiceNumber}-create`,
+      // Ask for the representation back; Invoicing v2 still answers 201 with a
+      // HATEOAS link, so the id is read from the body *or* the Location header.
+      Prefer: "return=representation",
+    },
   });
 
-  const invoiceId = created.data.id;
-  if (invoiceId === undefined) {
-    throw new Error("PayPal returned no invoice id");
-  }
+  const invoiceId = extractInvoiceId({
+    body: created.data,
+    location: created.headers.location ?? null,
+  });
 
   const sent = await authed.post<{ status?: string }>(
     `/v2/invoicing/invoices/${invoiceId}/send`,
