@@ -2,6 +2,7 @@ import { healthResponseSchema } from "@kitty/shared/health";
 import { Hono, type Context } from "hono";
 import { AppError } from "./lib/errors";
 import { logger } from "./lib/logger";
+import { intentsRoutes } from "./modules/intents";
 import { v1Routes } from "./modules/v1";
 
 /**
@@ -26,9 +27,9 @@ export function handleError(error: Error, c: Context): Response {
  * Leash Gateway.
  *
  * This is the ONLY service allowed to hold PayPal secrets (AGENTS.md invariant
- * #1). It exposes the Gateway Admin API (`/v1`, docs/10-api-spec.md §1); the
- * signed agent money path (`verify -> policy -> reserve -> step-up -> PayPal`)
- * lands in later tasks.
+ * #1). It exposes the Gateway Admin API (`/v1`, docs/10-api-spec.md §1) and the
+ * Internal API (`/internal`, §6); the signed agent money path
+ * (`verify -> policy -> reserve -> step-up -> PayPal`) lands in later tasks.
  */
 export const app = new Hono();
 
@@ -40,5 +41,8 @@ app.get("/health", (c) => {
 
 // Gateway Admin API (docs/10-api-spec.md §1). Bearer token + HMAC signature.
 app.route("/v1", v1Routes);
+
+// Gateway Internal API (docs/10-api-spec.md §6). Bearer internal token.
+app.route("/internal", intentsRoutes);
 
 export type GatewayApp = typeof app;
