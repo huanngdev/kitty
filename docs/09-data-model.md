@@ -207,13 +207,31 @@ CREATE TABLE app.notifications (
 
 ## 3. Schema `leash`
 
+> Nguồn sự thật: `packages/db/src/schema/leash.ts` (Drizzle ORM). Mọi bảng, enum, view và trigger đều nằm trong schema Postgres `leash`. Migration: `packages/db/migrations/0002_chubby_rictor.sql` (bảng/enum/index/view) và `0003_leash_append_only.sql` (trigger).
+
+Quy ước (AGENTS.md §3, bất biến #4/#6):
+- Tiền là `bigint` **cents** (`mode: "bigint"`, tên cột hậu tố `_cents`), không float. `ledger_entries.amount_cents` **có dấu** (âm = tiền rời account).
+- ID là `text` PRIMARY KEY mang prefix ULID: `kty_` (kitty), `lsh_` (leash), `int_` (spend intent), `agt_` (agent), `apr_` (approval), `ctr_` (contribution). Danh sách prefix ở `@kitty/shared` (`idPrefixes`).
+- Thời gian `timestamptz` UTC, mặc định `now()`. Ngày hiển thị theo timezone event.
+
+### 3.1 Enums (`pgEnum` trong schema `leash`)
+
+| Enum | Giá trị | Nguồn |
+|---|---|---|
+| `leash_status` | `active`, `paused`, `revoked`, `expired`, `exhausted` | import `LEASH_STATUSES` từ `@kitty/leash` (docs/05 §11) |
+| `spend_intent_status` | `received`, `denied`, `awaiting_approval`, `reserved`, `submitted`, `settled`, `failed`, `released`, `cancelled` | docs/05 §4 — khai báo ở `db`, test khẳng định khớp danh sách |
+| `approval_status` | `pending`, `approved`, `rejected`, `expired` | `db` |
+| `leash_action` | `payout`, `create_invoice`, `send_reminder`, `create_order`, `refund`, `delegate`, `browser_booking` | import `ACTIONS` từ `@kitty/leash` (docs/05 §3) |
+
+### 3.2 Bảng
+
 ```sql
 CREATE TABLE leash.kitties (
-  id            text PRIMARY KEY,              -- kty_…
+  id            text PRIMARY KEY,               -- kty_…
   event_id      text NOT NULL UNIQUE,
   owner_user_id text NOT NULL,
   currency      text NOT NULL DEFAULT 'USD',
-  status        text NOT NULL DEFAULT 'open',  -- open|settling|closed
+  status        text NOT NULL DEFAULT 'open',   -- open|settling|closed
   created_at    timestamptz NOT NULL DEFAULT now()
 );
 
@@ -227,101 +245,104 @@ CREATE TABLE leash.agent_keys (
 );
 
 CREATE TABLE leash.leashes (
-  id            text PRIMARY KEY,              -- lsh_…
+  id            text PRIMARY KEY,               -- lsh_…
   kitty_id      text NOT NULL REFERENCES leash.kitties(id),
-  parent_id     text REFERENCES leash.leashes(id),
+  parent_id     text REFERENCES leash.leashes(id),     -- sub-leash (tối đa 2 cấp)
   agent_id      text NOT NULL REFERENCES leash.agent_keys(agent_id),
   currency      text NOT NULL DEFAULT 'USD',
   allocation_cents bigint NOT NULL CHECK (allocation_cents >= 0),
-  per_tx_max_cents bigint NOT NULL,
-  daily_max_cents  bigint NOT NULL,
-  max_tx_per_hour  int NOT NULL,
+  per_tx_max_cents bigint NOT NULL CHECK (per_tx_max_cents >= 0),
+  daily_max_cents  bigint NOT NULL CHECK (daily_max_cents >= 0),
+  max_tx_per_hour  int NOT NULL CHECK (max_tx_per_hour >= 0),
   allowed_actions  text[] NOT NULL,
-  allowed_payees   text[] NOT NULL,            -- lowercase emails | 'member:*'
-  allowed_categories text[] NOT NULL,          -- hoặc {'*'}
-  step_up_above_cents bigint,
+  allowed_payees   text[] NOT NULL,             -- lowercase emails | 'member:*'
+  allowed_categories text[] NOT NULL,           -- hoặc {'*'}
+  step_up_above_cents bigint CHECK (step_up_above_cents IS NULL OR step_up_above_cents >= 0),
   not_before    timestamptz NOT NULL DEFAULT now(),
   expires_at    timestamptz NOT NULL,
-  status        text NOT NULL DEFAULT 'active',
+  status        leash_status NOT NULL DEFAULT 'active',
   status_reason text,
-  created_by    text NOT NULL,                 -- user id hoặc agent id (delegate)
+  created_by    text NOT NULL,                  -- user id hoặc agent id (delegate)
   created_at    timestamptz NOT NULL DEFAULT now(),
   version       int NOT NULL DEFAULT 1
 );
-CREATE INDEX ON leash.leashes (kitty_id, status);
-CREATE INDEX ON leash.leashes (agent_id) WHERE status = 'active';
+CREATE INDEX leashes_kitty_id_status_idx ON leash.leashes (kitty_id, status);
+CREATE INDEX leashes_agent_id_active_idx ON leash.leashes (agent_id) WHERE status = 'active';
 
 CREATE TABLE leash.spend_intents (
-  id            text PRIMARY KEY,              -- intentId do agent gửi (idempotency)
+  id            text PRIMARY KEY,               -- intentId do agent gửi (idempotency, PK)
   leash_id      text NOT NULL REFERENCES leash.leashes(id),
   agent_id      text NOT NULL,
-  action        text NOT NULL,
-  amount_cents  bigint NOT NULL,
+  action        leash_action NOT NULL,
+  amount_cents  bigint NOT NULL CHECK (amount_cents >= 0),
   currency      text NOT NULL,
   payee         text,
   category      text,
   memo          text NOT NULL,
   task_id       text,
   justification text,
-  request_hash  text NOT NULL,                 -- sha256 body; intentId trùng nhưng hash khác → 409
-  decision      text NOT NULL,                 -- ALLOW|DENY|STEP_UP
-  reasons       jsonb NOT NULL DEFAULT '[]',
-  status        text NOT NULL,                 -- denied|awaiting_approval|reserved|submitted|settled|failed|released|cancelled
-  paypal_ref    text,                          -- payout_item_id | invoice_id | refund_id
+  request_hash  text NOT NULL,                  -- sha256 body; intentId trùng nhưng hash khác → 409
+  decision      text NOT NULL,                  -- ALLOW|DENY|STEP_UP
+  reasons       jsonb NOT NULL DEFAULT '[]'::jsonb,
+  status        spend_intent_status NOT NULL,
+  paypal_ref    text,                           -- payout_item_id | invoice_id | refund_id
   error         jsonb,
   created_at    timestamptz NOT NULL DEFAULT now(),
   updated_at    timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX ON leash.spend_intents (leash_id, created_at DESC);
-CREATE INDEX ON leash.spend_intents (payee, amount_cents, created_at);
+CREATE INDEX spend_intents_leash_id_created_at_idx ON leash.spend_intents (leash_id, created_at DESC);
+CREATE INDEX spend_intents_payee_amount_created_at_idx ON leash.spend_intents (payee, amount_cents, created_at);
 
 CREATE TABLE leash.approvals (
-  id            text PRIMARY KEY,              -- apr_…
+  id            text PRIMARY KEY,               -- apr_…
   intent_id     text NOT NULL UNIQUE REFERENCES leash.spend_intents(id),
-  kitty_id      text NOT NULL,
-  status        text NOT NULL DEFAULT 'pending', -- pending|approved|rejected|expired
+  kitty_id      text NOT NULL REFERENCES leash.kitties(id),
+  status        approval_status NOT NULL DEFAULT 'pending',
   decided_by    text,
   decided_at    timestamptz,
-  expires_at    timestamptz NOT NULL
+  expires_at    timestamptz NOT NULL            -- timeout 15' → cancelled + release
 );
 
-CREATE TABLE leash.contributions (            -- tiền vào kitty
-  id            text PRIMARY KEY,
+CREATE TABLE leash.contributions (              -- tiền vào kitty
+  id            text PRIMARY KEY,               -- ctr_…
   kitty_id      text NOT NULL REFERENCES leash.kitties(id),
-  member_id     text,                          -- null nếu organizer nạp
-  source        text NOT NULL,                 -- invoice|order
+  member_id     text,                           -- null nếu organizer nạp
+  source        text NOT NULL,                  -- invoice|order|seed
   paypal_invoice_id text UNIQUE,
-  paypal_capture_id text UNIQUE,               -- dùng khi refund
-  amount_cents  bigint NOT NULL,
-  refunded_cents bigint NOT NULL DEFAULT 0,
+  paypal_capture_id text UNIQUE,                -- dùng khi refund
+  amount_cents  bigint NOT NULL CHECK (amount_cents >= 0),
+  refunded_cents bigint NOT NULL DEFAULT 0 CHECK (refunded_cents >= 0),
   received_at   timestamptz NOT NULL
 );
 
-CREATE TABLE leash.ledger_entries (
+CREATE TABLE leash.ledger_entries (             -- append-only, double-entry
   id            bigserial PRIMARY KEY,
   kitty_id      text NOT NULL,
-  txn_id        text NOT NULL,                 -- nhóm các dòng của một bút toán
-  account       text NOT NULL,                 -- 'kitty:available' | 'leash:<id>:available' | 'leash:<id>:held' | 'external:payee:<email>' | 'external:member:<id>'
-  amount_cents  bigint NOT NULL,               -- âm = tiền rời account, dương = tiền vào account (Σ theo txn_id = 0)
-  kind          text NOT NULL,                 -- contribution|allocate|reserve|settle|release|revoke_return|refund|topup
-  ref           text,                          -- intent id / contribution id
+  txn_id        text NOT NULL,                  -- nhóm các dòng của một bút toán
+  account       text NOT NULL,                  -- 'kitty:{id}:available' | 'leash:{id}:available|held' | 'external:member:{id}' | 'external:payee:{email}'
+  amount_cents  bigint NOT NULL,                -- CÓ DẤU: âm = rời account, dương = vào account (Σ theo txn_id = 0)
+  kind          text NOT NULL,                  -- contribution|allocate|reserve|settle|release|revoke_return|refund|topup
+  ref           text,                           -- intent id / contribution id
   created_at    timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX ON leash.ledger_entries (kitty_id, account);
--- Trigger/constraint deferred: SUM(amount_cents) GROUP BY txn_id = 0 (kiểm trong code + test + check job).
+CREATE INDEX ledger_entries_kitty_id_account_idx ON leash.ledger_entries (kitty_id, account);
+CREATE INDEX ledger_entries_account_idx ON leash.ledger_entries (account);
+CREATE INDEX ledger_entries_txn_id_idx ON leash.ledger_entries (txn_id);
+-- Bất biến Σ(amount_cents) GROUP BY txn_id = 0 kiểm trong code + test + check job (chưa phải constraint DB).
 
-CREATE TABLE leash.paypal_objects (           -- mọi object PayPal tạo ra
-  id            text PRIMARY KEY,              -- id PayPal
-  kind          text NOT NULL,                 -- invoice|order|capture|payout_batch|payout_item|refund
+CREATE TABLE leash.paypal_objects (             -- mọi object PayPal tạo ra; id = id PayPal
+  id            text PRIMARY KEY,               -- id PayPal
+  kind          text NOT NULL,                  -- invoice|order|capture|payout_batch|payout_item|refund
   intent_id     text,
   kitty_id      text NOT NULL,
   status        text NOT NULL,
-  raw           jsonb NOT NULL,                -- đã lọc PII không cần thiết
+  raw           jsonb NOT NULL,                 -- đã lọc PII không cần thiết
   updated_at    timestamptz NOT NULL DEFAULT now()
 );
+CREATE UNIQUE INDEX paypal_objects_kind_id_unique ON leash.paypal_objects (kind, id);
 
 CREATE TABLE leash.webhook_events (
-  id            text PRIMARY KEY,              -- PayPal event id (dedupe)
+  id            text PRIMARY KEY,               -- PayPal event id (dedupe)
   event_type    text NOT NULL,
   resource_id   text,
   verified      boolean NOT NULL,
@@ -335,20 +356,21 @@ CREATE TABLE leash.nonces (
   agent_id      text NOT NULL,
   nonce         text NOT NULL,
   seen_at       timestamptz NOT NULL DEFAULT now(),
+  expires_at    timestamptz NOT NULL,           -- TTL 10'; sweep dọn theo cột này
   PRIMARY KEY (agent_id, nonce)
-);                                             -- dọn > 10 phút bằng sweep
+);
+CREATE INDEX nonces_expires_at_idx ON leash.nonces (expires_at);
 
-CREATE TABLE leash.audit_events (             -- append-only
+CREATE TABLE leash.audit_events (               -- append-only
   id            bigserial PRIMARY KEY,
   kitty_id      text NOT NULL,
-  actor         text NOT NULL,                 -- user:<id> | agent:<id> | paypal | system
+  actor         text NOT NULL,                  -- user:<id> | agent:<id> | paypal | system
   type          text NOT NULL,
   data          jsonb NOT NULL,
   created_at    timestamptz NOT NULL DEFAULT now()
 );
--- REVOKE UPDATE, DELETE ON leash.audit_events FROM kitty_gateway;
 
-CREATE TABLE leash.outbox (                   -- transactional outbox cho domain events
+CREATE TABLE leash.outbox (                      -- transactional outbox cho domain events
   id            bigserial PRIMARY KEY,
   kitty_id      text NOT NULL,
   type          text NOT NULL,
@@ -358,14 +380,34 @@ CREATE TABLE leash.outbox (                   -- transactional outbox cho domain
 );
 ```
 
+### 3.3 Append-only trigger
+
+`leash.audit_events` và `leash.ledger_entries` chỉ được phép `INSERT`: một `UPDATE`/`DELETE` là bug hoặc dấu hiệu bị xâm nhập (bất biến #6). Migration `0003_leash_append_only.sql` tạo hàm `leash.reject_append_only_mutation()` (raise `ERRCODE = 'restrict_violation'`) và hai trigger `BEFORE UPDATE OR DELETE` (row-level) trên hai bảng đó.
+
+### 3.4 Type suy ra
+
+`packages/db/src/schema/leash.ts` export type `typeof x.$inferSelect` / `$inferInsert` cho mọi bảng (`KittyRow`/`NewKitty`, `LeashRow`/`NewLeash`, `SpendIntentRow`/`NewSpendIntent`, `LedgerEntryRow`/`NewLedgerEntry`, …) và hai view (`AccountBalanceRow`, `LeashBalanceRow`), tất cả re-export qua `@kitty/db/schema`. Test schema (`packages/db/src/schema/leash.test.ts`, chạy bằng `bun test`, **không cần DB**) khẳng định: enum khớp `@kitty/leash`, mọi cột `_cents` là `bigint`, tên bảng/schema đúng, khoá idempotency đúng.
+
 ## 4. Số dư (views)
 
 ```sql
 CREATE VIEW leash.account_balances AS
-SELECT kitty_id, account, SUM(amount_cents) AS balance_cents
+SELECT kitty_id, account, CAST(SUM(amount_cents) AS bigint) AS balance_cents
 FROM leash.ledger_entries GROUP BY kitty_id, account;
+
+CREATE VIEW leash.leash_balances AS
+SELECT kitty_id,
+       split_part(account, ':', 2) AS leash_id,
+       CAST(SUM(CASE WHEN account LIKE 'leash:%:available' THEN amount_cents ELSE 0 END) AS bigint) AS available_cents,
+       CAST(SUM(CASE WHEN account LIKE 'leash:%:held'      THEN amount_cents ELSE 0 END) AS bigint) AS held_cents
+FROM leash.ledger_entries
+WHERE account LIKE 'leash:%'
+GROUP BY kitty_id, split_part(account, ':', 2);
 ```
-Quy ước dấu (mô hình bucket, [05-leash-spec.md](05-leash-spec.md) §8): số dư = SUM(amount_cents). Bucket nội bộ (`kitty:*`, `leash:*`) luôn ≥ 0; `external:member:*` âm khi member đã góp ròng; `external:payee:*` dương khi đã nhận tiền. Helper `balanceOf(account)` trong `packages/ledger` là **nơi duy nhất** tính số dư. Test I1–I4 trong [05-leash-spec.md](05-leash-spec.md) §8.
+
+Quy ước dấu (mô hình bucket, [05-leash-spec.md](05-leash-spec.md) §8): số dư = SUM(amount_cents). Bucket nội bộ (`kitty:*`, `leash:*`) luôn ≥ 0; `external:member:*` âm khi member đã góp ròng; `external:payee:*` dương khi đã nhận tiền. `leash_balances` là bản tổng hợp `available`/`held` cho từng leash đúng shape `leashBalance` của `@kitty/ledger`. Helper `balanceOf(account)` trong `packages/ledger` là **nơi duy nhất** tính số dư trong code. Test I1–I4 trong [05-leash-spec.md](05-leash-spec.md) §8.
+
+> Smoke test tích hợp `packages/db/scripts/leash-smoke.ts` (chạy tay: `bun run db:smoke:leash`, không chạy trong CI) mở một transaction rồi **rollback**: insert kitty → leash → bút toán `reserve` dựng bằng `@kitty/ledger` → đọc hai view → xác nhận trigger chặn `UPDATE ledger_entries` (mã `23001`) → xác nhận trùng `webhook_events.id` báo unique violation (`23505`).
 
 ## 5. Dữ liệu seed demo ("Da Lat Offsite")
 
