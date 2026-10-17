@@ -26,9 +26,9 @@ export function handleError(error: Error, c: Context): Response {
  * Leash Gateway.
  *
  * This is the ONLY service allowed to hold PayPal secrets (AGENTS.md invariant
- * #1). The money path (`verify -> policy -> reserve -> step-up -> PayPal`) lands
- * in later tasks; for now this is a health-checkable skeleton with no business
- * logic.
+ * #1). It exposes the Gateway Admin API (`/v1`, docs/10-api-spec.md §1); the
+ * signed agent money path (`verify -> policy -> reserve -> step-up -> PayPal`)
+ * lands in later tasks.
  */
 export const app = new Hono();
 
