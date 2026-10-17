@@ -207,7 +207,7 @@ CREATE TABLE app.notifications (
 
 ## 3. Schema `leash`
 
-> Nguồn sự thật: `packages/db/src/schema/leash.ts` (Drizzle ORM). Mọi bảng, enum, view và trigger đều nằm trong schema Postgres `leash`. Migration: `packages/db/migrations/0002_chubby_rictor.sql` (bảng/enum/index/view) và `0003_leash_append_only.sql` (trigger).
+> Nguồn sự thật: `packages/db/src/schema/leash.ts` (Drizzle ORM). Mọi bảng, enum, view và trigger đều nằm trong schema Postgres `leash`. Migration: `packages/db/migrations/0002_chubby_rictor.sql` (bảng/enum/index/view), `0003_leash_append_only.sql` (trigger) và `0004_huge_storm.sql` (`verified_payees`, KIT-6).
 
 Quy ước (AGENTS.md §3, bất biến #4/#6):
 - Tiền là `bigint` **cents** (`mode: "bigint"`, tên cột hậu tố `_cents`), không float. `ledger_entries.amount_cents` **có dấu** (âm = tiền rời account).
@@ -233,6 +233,14 @@ CREATE TABLE leash.kitties (
   currency      text NOT NULL DEFAULT 'USD',
   status        text NOT NULL DEFAULT 'open',   -- open|settling|closed
   created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE leash.verified_payees (            -- vendor organizer đã xác nhận (bất biến #12, KIT-6)
+  kitty_id      text NOT NULL REFERENCES leash.kitties(id),
+  email         text NOT NULL,                  -- lowercase
+  verified_by   text NOT NULL,                  -- organizer user id
+  verified_at   timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (kitty_id, email)
 );
 
 CREATE TABLE leash.agent_keys (
@@ -386,7 +394,7 @@ CREATE TABLE leash.outbox (                      -- transactional outbox cho dom
 
 ### 3.4 Type suy ra
 
-`packages/db/src/schema/leash.ts` export type `typeof x.$inferSelect` / `$inferInsert` cho mọi bảng (`KittyRow`/`NewKitty`, `LeashRow`/`NewLeash`, `SpendIntentRow`/`NewSpendIntent`, `LedgerEntryRow`/`NewLedgerEntry`, …) và hai view (`AccountBalanceRow`, `LeashBalanceRow`), tất cả re-export qua `@kitty/db/schema`. Test schema (`packages/db/src/schema/leash.test.ts`, chạy bằng `bun test`, **không cần DB**) khẳng định: enum khớp `@kitty/leash`, mọi cột `_cents` là `bigint`, tên bảng/schema đúng, khoá idempotency đúng.
+`packages/db/src/schema/leash.ts` export type `typeof x.$inferSelect` / `$inferInsert` cho mọi bảng (`KittyRow`/`NewKitty`, `LeashRow`/`NewLeash`, `SpendIntentRow`/`NewSpendIntent`, `LedgerEntryRow`/`NewLedgerEntry`, `VerifiedPayeeRow`/`NewVerifiedPayee`, …) và hai view (`AccountBalanceRow`, `LeashBalanceRow`), tất cả re-export qua `@kitty/db/schema`. Test schema (`packages/db/src/schema/leash.test.ts`, chạy bằng `bun test`, **không cần DB**) khẳng định: enum khớp `@kitty/leash`, mọi cột `_cents` là `bigint`, tên bảng/schema đúng, khoá idempotency đúng.
 
 ## 4. Số dư (views)
 

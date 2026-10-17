@@ -10,14 +10,20 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check-types": "tsc --noEmit",
-    "test": "bun test --no-env-file --pass-with-no-tests",
+    "test": "bun test --no-env-file --pass-with-no-tests --path-ignore-patterns='**/*.int.test.ts'",
+    "test:integration": "bun test --env-file=.env '.int.test.ts'",
     "sandbox:check": "bun scripts/sandbox-check.ts"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.9.1",
     "@kitty/db": "workspace:*",
+    "@kitty/leash": "workspace:*",
+    "@kitty/ledger": "workspace:*",
     "@kitty/paypal": "workspace:*",
     "@kitty/shared": "workspace:*",
+    "@kitty/signing": "workspace:*",
     "axios": "^1.20.0",
+    "drizzle-orm": "^0.45.4",
     "hono": "^4.13.13",
     "pino": "^10.4.0",
     "zod": "^4.6.7"

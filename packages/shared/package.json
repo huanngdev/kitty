@@ -13,9 +13,11 @@
     ".": "./src/index.ts",
     "./common": "./src/common/index.ts",
     "./health": "./src/health/index.ts",
-    "./api-paths": "./src/api-paths.ts"
+    "./api-paths": "./src/api-paths.ts",
+    "./leash-admin": "./src/leash-admin/index.ts"
   },
   "dependencies": {
+    "@kitty/leash": "workspace:*",
     "zod": "^4.6.7"
   },
   "devDependencies": {

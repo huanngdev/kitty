@@ -24,6 +24,9 @@ Auth: `Authorization: Bearer <GATEWAY_ADMIN_TOKEN>` + `X-Kitty-User: <userId>` +
 | GET | `/v1/kitties/:id` | Số dư: `available`, `allocated`, `held`, `spent`, `contributed`, `refunded` |
 | GET | `/v1/kitties/:id/ledger?cursor=` | Ledger entries (phân trang) |
 | GET | `/v1/kitties/:id/contributions` | Danh sách đóng góp |
+| POST | `/v1/kitties/:id/payees` | Organizer xác nhận vendor `{email}` → `verified_payees` |
+| GET | `/v1/kitties/:id/payees` | Danh sách vendor đã xác nhận |
+| DELETE | `/v1/kitties/:id/payees/:email` | Bỏ xác nhận vendor |
 | POST | `/v1/kitties/:id/topup-orders` | Organizer nạp quỹ: tạo PayPal Order → `{orderId}` cho JS SDK |
 | POST | `/v1/kitties/:id/topup-orders/:orderId/capture` | Capture sau khi approve |
 | POST | `/v1/agents` | Đăng ký agent `{agentId, kittyId, role, publicKey}` |
@@ -53,6 +56,54 @@ Auth: `Authorization: Bearer <GATEWAY_ADMIN_TOKEN>` + `X-Kitty-User: <userId>` +
 }
 ```
 Lỗi: `ALLOCATION_EXCEEDS_KITTY_AVAILABLE`, `EXPIRY_TOO_LONG`, `PAYEE_NOT_VERIFIED` (vendor chưa được organizer xác nhận), `AGENT_ALREADY_LEASHED` (MVP: 1 leash active/agent).
+
+### 1.1 Auth (đã triển khai — KIT-6)
+
+Mọi request `/v1` phải có 4 header:
+
+| Header | Giá trị |
+|---|---|
+| `Authorization` | `Bearer <GATEWAY_ADMIN_TOKEN>` (so sánh constant-time) |
+| `X-Kitty-User` | `userId` organizer mà web BFF gọi thay |
+| `X-Kitty-Timestamp` | Unix **giây**; lệch quá ±60 s so với đồng hồ gateway → 401 |
+| `X-Kitty-Signature` | hex `HMAC-SHA256(key = GATEWAY_ADMIN_TOKEN, message = userId + "\n" + timestamp + "\n" + rawBody)`, so sánh constant-time |
+
+Middleware chỉ xác thực và gán `c.var.userId`; **ownership kiểm trong service**: user phải là `kitties.owner_user_id` của kitty liên quan → nếu không `403 FORBIDDEN`; id không tồn tại → `404 KITTY_NOT_FOUND` / `LEASH_NOT_FOUND` / `AGENT_NOT_FOUND`. Helper client `signAdminRequest()` sống ở `apps/gateway/src/admin/auth.ts` (web BFF tự cài lại, secret không rời service — bất biến #1).
+
+### 1.2 Số dư kitty (tính từ ledger, không lưu — bất biến #5)
+
+`GET /v1/kitties/:id` trả `balances`:
+
+| Field | Nguồn |
+|---|---|
+| `available` | `SUM(amount_cents)` của account `kitty:{id}:available` |
+| `allocated` | tổng tiền đang nằm trong mọi bucket `leash:*` của kitty |
+| `held` | phần `allocated` đang giữ chỗ cho intent (`leash:*:held`) |
+| `spent` | các dòng `settle` dương (payout đã trả ra) |
+| `contributed` | các dòng `contribution` dương (invoice member / organizer nạp) |
+| `refunded` | các dòng `refund` dương (hoàn tiền member) |
+
+### 1.3 Validation khi tạo leash (trong gateway service)
+
+Thứ tự kiểm (fail sớm, mã lỗi ở cột phải):
+
+1. Kitty thuộc user + agent tồn tại và thuộc đúng kitty — `FORBIDDEN` / `KITTY_NOT_FOUND` / `AGENT_NOT_FOUND`.
+2. Agent chưa có leash `active` — `AGENT_ALREADY_LEASHED` (MVP: 1 leash active/agent).
+3. `allocation ≤ kitty available` — `ALLOCATION_EXCEEDS_KITTY_AVAILABLE` (409).
+4. Nếu `allocation > 0`: `perTxMax ≤ allocation` và `dailyMax ≤ allocation`; `stepUpAbove ≤ perTxMax` — `INVALID_LEASH_LIMITS`. (Leash `allocation = 0` kiểu Collector bỏ qua ràng buộc limits ≤ allocation.)
+5. `notBefore (now) < expiresAt` — `INVALID_EXPIRY`.
+6. `expiresAt − notBefore ≤ 30 ngày` — `EXPIRY_TOO_LONG`.
+7. Payee: `member:*` chỉ hợp lệ khi mọi action ⊆ `{create_invoice, refund, send_reminder}`; mọi email khác phải có trong `verified_payees` của kitty (lowercase) — `PAYEE_NOT_VERIFIED`. `member:*` không cần verify.
+
+Top-up kiểm lại bước 1, 2 (status ∈ `active|paused|exhausted` → ngược lại `INVALID_STATE_TRANSITION`), payee đã verify (bất biến #12) và `amount ≤ kitty available`, `amount > 0`. Pause chỉ từ `active`, resume chỉ từ `paused`, revoke từ `active|paused|exhausted` (`INVALID_STATE_TRANSITION` nếu sai).
+
+### 1.4 Tiền vào/ra một transaction (bất biến #5/#6/#12)
+
+Create/top-up/khoá leash chạy trong **một transaction**: `SELECT … FOR UPDATE` kitty (và agent khi create) → đọc số dư khả dụng từ ledger → ghi leash + bút toán `@kitty/ledger` (`allocateLeash` allocate/top-up, `revokeLeash` revoke trả tiền về nguồn, cascade con trước) + một dòng `audit_events`. Revoke cha trả tiền con về cha rồi trả phần còn lại của cha về `kitty:available` (docs/05 §9); tiền `held` chảy về khi intent kết thúc.
+
+> **Trong scope KIT-6:** kitties, agents, leashes (create/get/list/topup/pause/resume/revoke), intents (read), audit (read), payees. **Ngoài scope (issue sau):** `topup-orders` (KIT-27), `approvals` (KIT-25), `settlement/preview` (KIT-42), MCP (KIT-5), reserve/execute (KIT-16).
+
+> **Chọn lọc cleanup test:** suite integration `apps/gateway/src/**/*.int.test.ts` dùng một kitty id dùng-một-lần, xoá các dòng **mutable** (leashes, agent_keys, verified_payees, kitties) ở `afterAll`; `ledger_entries` và `audit_events` append-only nên để lại, đã scoped theo kitty id tạm. Suite này **không** nằm trong `bun run ci` (không có DB trong CI); chạy tay `bun run test:integration`.
 
 ---
 
