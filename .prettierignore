@@ -9,3 +9,6 @@ AGENTS.md
 CLAUDE.md
 README.md
 CODE_RULES.md
+.agents/
+.claude/
+skills-lock.json
