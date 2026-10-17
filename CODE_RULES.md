@@ -374,6 +374,26 @@ export const apiPaths = {
 - **MUST** — **Conventional Commits**; commit nhỏ, PR nhỏ.
 - **MUST** — Không commit `.env`, secret, `node_modules`, `.next`, `.turbo`.
 - **MUST** — Vào `main` chỉ qua PR.
+- **MUST** — **Test tách khỏi code**: mọi file test nằm trong `<pkg>/test/`, **KHÔNG** nằm cạnh code trong `src/`. `test/` mirror `src/` và giữ nguyên tên file, chỉ đổi vị trí (`src/common/money.schema.ts` → `test/common/money.schema.test.ts`). Integration test (`*.int.test.ts`) nằm dưới `test/integration/` (mirror sub-path bên trong `integration/`). Fixture/helper dùng chung (trước đây là `test-support/`) đặt ở `test/support/`. **Không** file nào dưới `src/` được import từ `test/`; test import code qua đường dẫn tương đối `../src/...` (không thêm path alias mới). Property test nằm cạnh unit test của nó trong `test/`.
+
+  ```
+  packages/ledger
+  ├── src/
+  │   ├── money.ts
+  │   └── entries.ts
+  └── test/
+      ├── money.test.ts          # tests src/money.ts
+      ├── entries.test.ts        # tests src/entries.ts
+      ├── properties.test.ts     # property test cạnh unit test
+      └── support/               # fixture/helper dùng chung (không phải *.test.ts)
+
+  apps/gateway
+  ├── src/modules/intents/intents.service.ts
+  └── test/
+      ├── modules/intents/intents.service.test.ts          # unit
+      ├── integration/modules/intents/intents.int.test.ts  # integration
+      └── support/                                         # fixture/helper dùng chung
+  ```
 
 **Checklist**
 
@@ -391,6 +411,7 @@ export const apiPaths = {
 - [ ] Chỉ dùng agent skill khớp công nghệ đang đụng (§H)
 - [ ] Không vi phạm bất biến AGENTS.md §3; không log secret/PII
 - [ ] Docs cập nhật nếu thay đổi hành vi/thiết kế; ADR nếu thêm thư viện/quyết định mới
+- [ ] Test nằm trong `test/`, không nằm cạnh code trong `src/`
 - [ ] Conventional Commits; không commit secret hay build artifact
 ```
 

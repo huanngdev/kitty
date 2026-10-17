@@ -160,6 +160,11 @@ apps/api/
 │     ├─ members/                  # ✅ KIT-30 (routes/service/repository)
 │     ├─ vendors/                  # ✅ KIT-30 (+ verify → gateway payee)
 │     └─ budget-lines/             # ✅ KIT-30 (PUT replace set)
+├─ test/                           # ✅ mirror src/ — test KHÔNG nằm cạnh code ([CODE_RULES.md](../CODE_RULES.md) §F)
+│  ├─ app.test.ts                  # tests src/app.ts
+│  ├─ lib/                         # admin-signing.test.ts · client-ip.test.ts · fixed-window-rate-limit.test.ts
+│  ├─ modules/                     # mirror src/modules: events/… · members/… · vendors/… · budget-lines/… · auth/…
+│  └─ support/                     # ✅ fixture/helper dùng chung: fakes.ts · session.ts (không phải *.test.ts)
 ├─ scripts/
 │  ├─ seed-demo-users.ts           # ✅ root script `seed:demo-users` (idempotent, signUpEmail)
 │  └─ smoke-events.ts              # ✅ KIT-30 `bun run --filter api smoke:events` (không trong CI)
@@ -193,6 +198,11 @@ packages/shared/
 │  └─ health/
 │     ├─ health-response.schema.ts # { ok: true }
 │     └─ index.ts
+├─ test/                           # ✅ mirror src/ — test KHÔNG nằm cạnh code ([CODE_RULES.md](../CODE_RULES.md) §F)
+│  ├─ domain-contracts.test.ts
+│  ├─ common/                      # ids.test.ts · money.test.ts
+│  ├─ auth/auth.schema.test.ts
+│  └─ leash-agent/leash-agent.test.ts
 └─ package.json                    # exports: "." + "./common" + "./auth" + "./health" + "./api-paths"
 ```
 
@@ -211,6 +221,8 @@ packages/db/
 │  │  ├─ leash.ts                  # pgSchema("leash")
 │  │  └─ index.ts
 │  └─ index.ts
+├─ test/                           # ✅ mirror src/ — test KHÔNG nằm cạnh code ([CODE_RULES.md](../CODE_RULES.md) §F)
+│  └─ schema/leash.test.ts         # tests src/schema/leash.ts
 ├─ migrations/                     # drizzle-kit generate → SQL
 ├─ drizzle.config.ts               # đọc DATABASE_URL_UNPOOLED (direct) cho migrations
 ├─ .env.example                    # DATABASE_URL_UNPOOLED (chỉ migrations)

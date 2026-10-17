@@ -11,7 +11,7 @@
     "lint:fix": "eslint . --fix",
     "check-types": "tsc --noEmit",
     "test": "bun test --no-env-file --pass-with-no-tests --path-ignore-patterns='**/*.int.test.ts'",
-    "test:integration": "bun test --env-file=.env '.int.test.ts'",
+    "test:integration": "bun test --env-file=.env 'test/integration'",
     "sandbox:check": "bun scripts/sandbox-check.ts"
   },
   "dependencies": {

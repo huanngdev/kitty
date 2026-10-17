@@ -76,5 +76,7 @@ Badge coverage + CI trong README.
 
 ## 7. Dữ liệu test & fixtures
 
-- `packages/paypal/test/fixtures/*.json`: response mẫu (orders, invoices, payouts, webhooks) — lấy từ docs/sandbox thật, đã ẩn PII.
-- Factory `makeLeash()`, `makeIntent()` trong `packages/leash/test/factories.ts`.
+- **Vị trí test:** mọi file test nằm trong `test/` (mirror `src/`), integration dưới `test/integration/`, fixture/helper dùng chung ở `test/support/` — không đặt cạnh code trong `src/` ([CODE_RULES.md](../CODE_RULES.md) §F).
+- `packages/paypal/test/support/server.ts`: MSW server mô phỏng PayPal REST (token, orders, invoices, payouts, webhooks).
+- Factory `makeLeash()`, `makeIntent()` trong `packages/leash/test/support/factories.ts`.
+- Fixture gateway: `apps/gateway/test/support/{intents,webhooks}/fixtures.ts` (+ `int-db.ts` cho integration).
