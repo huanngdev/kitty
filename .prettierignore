@@ -12,3 +12,10 @@ CODE_RULES.md
 .agents/
 .claude/
 skills-lock.json
+# shadcn CLI-generated vendor code (preset b4VmS9QxUG, ADR-024) — never hand-edited,
+# so its own formatting is left exactly as the CLI wrote it.
+apps/web/src/components/ui/
+apps/web/src/hooks/
+apps/web/src/lib/utils.ts
+apps/web/src/lib/highlighter.tsx
+apps/web/src/app/globals.css

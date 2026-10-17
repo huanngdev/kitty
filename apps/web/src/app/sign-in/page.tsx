@@ -1,4 +1,4 @@
-import { Separator } from "@kitty/ui/components/separator";
+import { Separator } from "@/components/ui/separator";
 import type { JSX } from "react";
 import { AuthShell } from "@/features/auth/components/auth-shell";
 import { DemoSignInButton } from "@/features/auth/components/demo-sign-in-button";

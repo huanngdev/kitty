@@ -1,16 +1,10 @@
 "use client";
 
-import { Alert, AlertDescription, AlertTitle } from "@kitty/ui/components/alert";
-import { Button } from "@kitty/ui/components/button";
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@kitty/ui/components/field";
-import { Input } from "@kitty/ui/components/input";
-import { Spinner } from "@kitty/ui/components/spinner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import type { JSX } from "react";
 import { useSignUpForm } from "../hooks/use-sign-up-form";
 

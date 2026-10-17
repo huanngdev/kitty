@@ -1,6 +1,6 @@
 "use client";
 
-import { TooltipProvider } from "@kitty/ui/components/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState, type JSX, type ReactNode } from "react";

@@ -1,6 +1,6 @@
 "use client";
 
-import { SidebarInset, SidebarProvider } from "@kitty/ui/components/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import type { JSX, ReactNode } from "react";
 import { AppSidebar } from "./app-sidebar";
 import { AppTopBar } from "./app-top-bar";

@@ -7,8 +7,28 @@ import {
 
 const config = [
   ...nextConfig,
-  ...tailwindConfig({ entryPoint: "../../packages/ui/src/styles/globals.css" }),
-  ...shadcnConfig({ uiImportPrefix: "@kitty/ui" }),
+  ...tailwindConfig({ entryPoint: "src/app/globals.css" }),
+  ...shadcnConfig({ uiImportPrefix: "@/components/ui", uiDir: "src/components/ui" }),
+  {
+    // CLI-generated vendor code (shadcn preset b4VmS9QxUG). These files are owned
+    // by the shadcn CLI and never hand-edited, so the design-system rules its own
+    // generated style trips are off for this dir only (ADR-024).
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: {
+      "shadcn/no-inline-styles": "off",
+      "shadcn/require-static-classes": "off",
+      "better-tailwindcss/no-unknown-classes": "off",
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
+  {
+    // CLI-generated helpers the vendor components import (ADR-024).
+    files: ["src/hooks/use-mobile.ts", "src/lib/highlighter.tsx"],
+    rules: {
+      "shadcn/no-inline-styles": "off",
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
   {
     // apps/web never touches the database directly — it talks to apps/api.
     files: ["**/*.{js,jsx,ts,tsx}"],

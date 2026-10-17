@@ -1,6 +1,6 @@
 # 25 — Code Architecture
 
-> **Trạng thái:** `@kitty/shared`, `@kitty/db`, `@kitty/ui` **đã tồn tại**; web đã có data layer (axios + TanStack Query + proxy `/api`), **auth UI + app shell** (`/sign-in`, `/sign-up`, `(app)` layout, sidebar, theme, demo login — KIT-24), `apps/api` đã có Better Auth (bảng `app.user`/`session`/`account`/`verification` + `is_demo`) + `POST /api/demo-sign-in` + seed demo users; logger pino + `onError` dùng chung; gateway đã có `bun run sandbox:check`. File này chốt cấu trúc thư mục và luật phụ thuộc để mọi người code theo. Rules bắt buộc ở [CODE_RULES.md](../CODE_RULES.md).
+> **Trạng thái:** `@kitty/shared`, `@kitty/db` **đã tồn tại**; web đã có data layer (axios + TanStack Query + proxy `/api`), **auth UI + app shell** (`/sign-in`, `/sign-up`, `(app)` layout, sidebar, theme, demo login — KIT-24), shadcn/ui cài trực tiếp trong `apps/web` (`src/components/ui`, preset `b4VmS9QxUG`, [ADR-024](20-risks-and-decisions.md)), `apps/api` đã có Better Auth (bảng `app.user`/`session`/`account`/`verification` + `is_demo`) + `POST /api/demo-sign-in` + seed demo users; logger pino + `onError` dùng chung; gateway đã có `bun run sandbox:check`. File này chốt cấu trúc thư mục và luật phụ thuộc để mọi người code theo. Rules bắt buộc ở [CODE_RULES.md](../CODE_RULES.md).
 
 Mục tiêu: tách rõ **hiển thị / logic / dữ liệu**, giữ **contract là một nguồn duy nhất** (`@kitty/shared`), và để mọi service backend (web BFF, `apps/api`, sau này gateway/agents/worker) dùng cùng một cách phân tầng.
 
@@ -36,7 +36,6 @@ kitty/
 ├─ packages/
 │  ├─ shared/                  # @kitty/shared — contracts (EXISTS)
 │  ├─ db/                      # @kitty/db — Drizzle schema + client + migrations (EXISTS)
-│  ├─ ui/                      # @kitty/ui — shadcn/ui + tokens + cn() (EXISTS)
 │  ├─ typescript-config/       # @kitty/typescript-config (EXISTS)
 │  ├─ eslint-config/           # @kitty/eslint-config (EXISTS)
 │  └─ prettier-config/         # @kitty/prettier-config (EXISTS)
@@ -47,15 +46,16 @@ kitty/
 |---|---|---|
 | `@kitty/shared` | Zod schema, type, enum, error code, API path, pure util — **contract** | exists |
 | `@kitty/db` | Drizzle schema + client + migrations. **Chỉ `apps/api` và `apps/gateway` dùng.** | exists |
-| `@kitty/ui` | shadcn/ui components (setup monorepo), Tailwind tokens, `cn()` | exists |
 | `@kitty/typescript-config` / `eslint-config` / `prettier-config` | config dùng chung | exists |
 
 **Luật phụ thuộc (MUST):**
 
-- `web → shared, ui`
+- `web → shared`
 - `api → shared, db`
 - `db → shared` (được dùng `drizzle-zod` nội bộ)
 - `shared → nothing` (không phụ thuộc package nội bộ nào)
+
+**UI không còn là package:** component shadcn/ui sống ngay trong `apps/web/src/components/ui`, do CLI generate (preset `b4VmS9QxUG`) — xem [ADR-024](20-risks-and-decisions.md). Không tạo lại `packages/ui`.
 
 **Cấm (MUST):** `web → db`; `shared →` bất cứ thứ gì app-specific (React, Hono, Drizzle, Node/Bun/browser API).
 
@@ -70,7 +70,8 @@ apps/web/
 ├─ src/
 │  ├─ proxy.ts                     # ✅ Next 16 proxy: cookie-only redirect cho /events, /settings, /sign-in, /sign-up
 │  ├─ app/                         # routes only (page/layout mỏng)
-│  │  ├─ layout.tsx                # ✅ bọc <Providers>, Inter + JetBrains Mono, suppressHydrationWarning
+│  │  ├─ globals.css               # ✅ Tailwind v4 entry + theme mặc định của preset b4VmS9QxUG (CLI generate; không sửa tay)
+│  │  ├─ layout.tsx                # ✅ bọc <Providers>, Inter + JetBrains Mono + Merriweather heading (CLI), suppressHydrationWarning
 │  │  ├─ providers.tsx             # ✅ ThemeProvider + QueryClientProvider + TooltipProvider (+ devtools chỉ ở dev)
 │  │  ├─ page.tsx                  # ✅ landing S01 (redirect user đã đăng nhập → /events), instant = false
 │  │  ├─ sign-in/page.tsx          # ✅ S02 + "Continue as demo organizer"
@@ -96,18 +97,26 @@ apps/web/
 │  │  └─ events/                   # ✅ empty/skeleton/error state (list thật ở KIT-21)
 │  │     ├─ components/events-empty-state.tsx · events-skeleton.tsx · events-error.tsx
 │  │     └─ hooks/use-events-error.ts
-│  ├─ components/                  # component ghép chung toàn app (chưa có)
-│  ├─ hooks/                       # hook chung toàn app (chưa có)
+│  ├─ components/                  # component ghép chung toàn app
+│  │  ├─ brand/logo.tsx            # ✅ <Logo /> — mark + wordmark, currentColor (brand đi qua đây)
+│  │  └─ ui/                       # ✅ shadcn/ui do CLI generate (preset b4VmS9QxUG) — VENDOR, không sửa tay
+│  ├─ hooks/                       # hook chung toàn app
+│  │  ├─ use-mobile.ts             # ✅ CLI generate (sidebar dùng)
+│  │  └─ use-highlighted-code.ts   # ✅ CLI generate (code-block dùng)
 │  ├─ lib/
 │  │  ├─ http.ts                   # ✅ axios instance (baseURL "/api", withCredentials) + ApiRequestError
 │  │  ├─ query-client.ts           # ✅ makeQueryClient/getQueryClient (staleTime 30s, không retry 4xx)
 │  │  ├─ auth-client.ts            # ✅ better-auth/react
 │  │  ├─ server-session.ts         # ✅ getServerSession() — gọi /api/auth/get-session qua rewrite
-│  │  ├─ auth-redirect.ts          # ✅ resolveAuthRedirect() (pure, proxy dùng; có test)
+│  │  ├─ auth-redirect.ts          # ✅ resolveAuthRedirect() (pure, proxy dùng; test ở test/lib)
+│  │  ├─ utils.ts                  # ✅ CLI generate — cn() re-export
+│  │  ├─ highlighter.tsx           # ✅ CLI generate (code-block dùng)
 │  │  ├─ routes.ts                 # ✅ routes + buildSignInPath/readNextPath
 │  │  └─ env.ts                    # ✅ zod-validated env (clientEnv + getServerEnv)
 │  └─ providers/
 │     └─ theme-provider.tsx        # ✅ next-themes (attribute="class")
+├─ test/                           # ✅ test mirror src/ (auth-error, initials, auth-redirect), alias @/
+├─ components.json                 # ✅ CLI generate (preset b4VmS9QxUG) — không sửa tay
 ├─ eslint.config.js
 └─ tsconfig.json
 ```
@@ -208,7 +217,7 @@ packages/shared/
 
 **Vì sao:** cả `apps/web` và `apps/api` import cùng schema → validate ở server và type ở client không bao giờ lệch. Đổi contract = đổi ở đây trước.
 
-## 6. packages/db và packages/ui
+## 6. packages/db (và UI trong `apps/web`)
 
 ```
 packages/db/
@@ -227,22 +236,11 @@ packages/db/
 ├─ drizzle.config.ts               # đọc DATABASE_URL_UNPOOLED (direct) cho migrations
 ├─ .env.example                    # DATABASE_URL_UNPOOLED (chỉ migrations)
 └─ package.json
-
-packages/ui/
-├─ src/
-│  ├─ components/                  # shadcn/ui components (CLI generate): button, card, input, label, badge,
-│  │                               #   sidebar, sheet, dropdown-menu, tooltip, avatar, separator, field,
-│  │                               #   alert, empty, skeleton, spinner, collapsible
-│  ├─ hooks/
-│  │  └─ use-mobile.ts             # useSyncExternalStore trên matchMedia (sidebar dùng)
-│  ├─ lib/
-│  │  └─ utils.ts                  # cn() = clsx + tailwind-merge
-│  └─ styles/globals.css           # Tailwind v4 + token brand Kitty (light + dark), xem docs/15 §1
-├─ components.json                 # config cho shadcn CLI (monorepo)
-└─ package.json                    # exports: ./styles/globals.css, ./components/*, ./hooks/*, ./lib/*
 ```
 
-**Vì sao:** `db` gom schema/migration một chỗ; `ui` là nơi duy nhất chứa component shadcn/ui + `cn()` để web và (sau này) các app UI khác dùng lại cùng token.
+**UI (shadcn/ui) không còn là package** ([ADR-024](20-risks-and-decisions.md)): CLI generate thẳng vào `apps/web/src/components/ui` (+ `src/hooks`, `src/lib/utils.ts` = `cn`, `src/app/globals.css` = theme mặc định của preset `b4VmS9QxUG`). File CLI sinh ra là **vendor — không sửa tay**; khi cần thì tắt đúng rule cho đúng path trong `apps/web/eslint.config.js`.
+
+**Vì sao:** `db` gom schema/migration một chỗ; UI nằm ngay trong app đang dùng nó để `bunx shadcn add/apply` chạy trực tiếp, không phải map alias/token qua một package trung gian.
 
 ## 7. Ánh xạ với kiến trúc [docs/06](06-architecture.md)
 

@@ -15,6 +15,8 @@
 
 Tokens định nghĩa một lần (Tailwind v4 `@theme`) và map sang theme AG Studio + Bryntum để ba hệ trông như một.
 
+> **Cập nhật (ADR-024):** token brand riêng đã bỏ. Theme giờ là **mặc định của preset shadcn `b4VmS9QxUG`** trong `apps/web/src/app/globals.css` (CLI generate, không sửa tay). Bảng màu phía trên là **định hướng**, không còn biến `--kitty-*`/`--success`/`--warning` riêng.
+
 ## 2. Nguyên tắc UX
 
 1. **Tiền luôn hiển thị kèm nguồn gốc.** Mọi con số click được → ledger entries/PayPal ref.

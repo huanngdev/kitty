@@ -93,7 +93,6 @@ packages/signing  (planned) Ed25519 request signing/verification
 packages/crypto-box  (planned) Envelope encryption for user LLM API keys (agents only)
 packages/db       (exists) @kitty/db — Drizzle schema, client, migrations (chỉ apps/api và apps/gateway)
 packages/events   (planned) Domain event types (zod)
-packages/ui       (exists) @kitty/ui — shadcn/ui components, Tailwind tokens, cn()
 packages/config   (planned) env schemas (zod)
 postman/          (planned) Postman collections
 scripts/          (exists) check-env-isolation; sandbox-check nằm ở apps/gateway/scripts; còn lại planned

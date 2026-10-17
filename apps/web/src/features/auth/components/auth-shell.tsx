@@ -1,6 +1,6 @@
 import type { JSX, ReactNode } from "react";
-import { Cat } from "lucide-react";
 import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
 import {
   Card,
   CardContent,
@@ -8,7 +8,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@kitty/ui/components/card";
+} from "@/components/ui/card";
 import { routes } from "@/lib/routes";
 
 interface AuthShellProps {
@@ -22,14 +22,9 @@ interface AuthShellProps {
 export function AuthShell({ title, description, children, footer }: AuthShellProps): JSX.Element {
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-8 bg-muted/40 p-6">
-      <Link href={routes.home} className="flex items-center gap-2">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <Cat aria-hidden className="size-5" />
-        </span>
-        <span className="flex flex-col">
-          <span className="text-lg font-semibold tracking-tight">Kitty</span>
-          <span className="text-xs text-muted-foreground">Let your agents spend. On a leash.</span>
-        </span>
+      <Link href={routes.home} className="flex flex-col items-center gap-1">
+        <Logo size="md" showWordmark />
+        <span className="text-xs text-muted-foreground">Let your agents spend. On a leash.</span>
       </Link>
 
       <div className="w-full max-w-md">

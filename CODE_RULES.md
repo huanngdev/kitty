@@ -24,7 +24,7 @@ Chỉ dùng những thứ dưới đây. **Thêm một thư viện khác làm c�
 | Runtime · package manager · monorepo | **Bun 1.3** · **Turborepo 2**. MUST NOT dùng `npm`/`pnpm`/`yarn` (chỉ `bun`/`bunx`)                                                                                                |
 | Language                             | **TypeScript strict** qua `@kitty/typescript-config`                                                                                                                               |
 | Frontend framework                   | **Next.js 16 App Router** · **React 19**                                                                                                                                           |
-| UI components                        | **shadcn/ui** (thêm bằng shadcn CLI). Mọi component UI đến từ shadcn/ui hoặc compose từ shadcn/ui primitives. MUST NOT thêm component library khác (MUI, Chakra, Ant…)             |
+| UI components                        | **shadcn/ui** (thêm bằng shadcn CLI). Component sống ở `apps/web/src/components/ui`, generate bằng CLI preset `b4VmS9QxUG`; **theme mặc định, không chỉnh**; **MUST NOT sửa tay file CLI generate**. Mọi component UI đến từ shadcn/ui hoặc compose từ shadcn/ui primitives. MUST NOT thêm component library khác (MUI, Chakra, Ant…) |
 | Icons                                | **lucide-react**                                                                                                                                                                   |
 | Styling                              | **Tailwind CSS 4** + helper `cn()` (`clsx` + `tailwind-merge`)                                                                                                                     |
 | HTTP client                          | **axios** — một instance đã cấu hình cho mỗi app                                                                                                                                   |
@@ -123,7 +123,8 @@ function label(result: Result): string {
 - **MUST** — Gọi API chỉ trong `features/<feature>/api/*.ts` (axios function + query key + `queryOptions`); hook bọc chúng bằng TanStack Query; component chỉ gọi hook.
 - **MUST** — Server Components được dùng cho layout/dữ liệu tĩnh và prefetch (`prefetchQuery` + `HydrationBoundary`); phần interactive là Client Component dùng hook.
 - **MUST** — Component sponsor (AG Studio, Bryntum) phải được bọc trong một component của mình để phần còn lại của app không import trực tiếp thư viện sponsor.
-- **MUST** — shadcn/ui component nằm ở vị trí chung định nghĩa trong [docs/25](docs/25-code-architecture.md); MUST NOT sửa file shadcn generate ra ngoài customisation đã ghi chú.
+- **MUST** — shadcn/ui component nằm ở `apps/web/src/components/ui` (định nghĩa ở [docs/25](docs/25-code-architecture.md)); **MUST NOT sửa tay file CLI generate** — muốn đổi thì chỉnh variant/rule trong `apps/web/eslint.config.js` hoặc hỏi owner, không patch file vendor.
+- **MUST** — Brand (mascot/wordmark "Kitty") chỉ render qua component `<Logo />` ở `apps/web/src/components/brand/logo.tsx`; MUST NOT dựng lại markup logo/text brand rải rác trong page/feature.
 - **MUST** — Naming: file `kebab-case`, component `PascalCase`, hook `useX`, một component một file, **named export** (ngoại lệ: file `page.tsx`/`layout.tsx`/`route.ts` của Next buộc default export).
 
 ```tsx
@@ -441,3 +442,4 @@ Chỉ dùng **skill chính thức** của nhà cung cấp công nghệ. Skill l�
 - **MUST** — Skill **không** override rules: ví dụ skill Neon gợi ý **Neon Auth** → bỏ qua, ta dùng **Better Auth** ([ADR-018](docs/20-risks-and-decisions.md)).
 - **MUST** — Chỉ cài skill **official**; thêm skill mới cần ADR ở [docs/20](docs/20-risks-and-decisions.md).
 - **MUST** — Cập nhật skill bằng CLI (`bunx skills update`, `bunx neon@latest skills update`), MUST NOT sửa tay file vendor trong `.agents/skills` / `.claude/skills`.
+- **MUST** — shadcn CLI chạy trong `apps/web` (`bunx --bun shadcn@latest …`), generate component vào `apps/web/src/components/ui` với preset `b4VmS9QxUG`; file CLI sinh ra là vendor — không sửa tay (§A, §C).

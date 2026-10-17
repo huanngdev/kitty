@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
-  transpilePackages: ["@kitty/ui", "@kitty/shared"],
+  transpilePackages: ["@kitty/shared"],
   turbopack: {
     rules: {
       "*.css": {

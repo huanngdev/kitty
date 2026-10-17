@@ -1,8 +1,9 @@
 "use client";
 
-import { Separator } from "@kitty/ui/components/separator";
-import { SidebarTrigger } from "@kitty/ui/components/sidebar";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { JSX } from "react";
+import { Logo } from "@/components/brand/logo";
 import { EventSwitcher } from "./event-switcher";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
@@ -18,6 +19,7 @@ export function AppTopBar({ name, email }: AppTopBarProps): JSX.Element {
     <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur">
       <SidebarTrigger />
       <Separator orientation="vertical" />
+      <Logo size="sm" showWordmark className="md:hidden" />
       <EventSwitcher />
       <div className="ml-auto flex items-center gap-1">
         <ThemeToggle />

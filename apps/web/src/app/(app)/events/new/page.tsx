@@ -1,5 +1,5 @@
-import { Badge } from "@kitty/ui/components/badge";
-import { Button } from "@kitty/ui/components/button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -7,7 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@kitty/ui/components/card";
+} from "@/components/ui/card";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
 import type { JSX } from "react";
