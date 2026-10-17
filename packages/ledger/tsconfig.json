@@ -1,0 +1,7 @@
+{
+  "extends": "@kitty/typescript-config/base.json",
+  "compilerOptions": {
+    "types": ["bun"]
+  },
+  "include": ["src"]
+}
