@@ -1,10 +1,10 @@
-import { Separator } from "@/components/ui/separator";
 import type { JSX } from "react";
+import Link from "next/link";
 import { AuthShell } from "@/features/auth/components/auth-shell";
 import { DemoSignInButton } from "@/features/auth/components/demo-sign-in-button";
-import { SignInForm } from "@/features/auth/components/sign-in-form";
+import { SignInMethods } from "@/features/auth/components/sign-in-methods";
+import { AuthDivider } from "@/features/auth/components/auth-divider";
 import { readNextPath, routes } from "@/lib/routes";
-import Link from "next/link";
 
 export const instant = false;
 
@@ -31,16 +31,8 @@ export default async function SignInPage({
       }
     >
       <div className="flex flex-col gap-6">
-        <SignInForm nextPath={nextPath} />
-        <div className="flex items-center gap-3">
-          <div className="flex-1">
-            <Separator />
-          </div>
-          <span className="text-xs text-muted-foreground">or</span>
-          <div className="flex-1">
-            <Separator />
-          </div>
-        </div>
+        <SignInMethods nextPath={nextPath} />
+        <AuthDivider />
         <DemoSignInButton />
       </div>
     </AuthShell>

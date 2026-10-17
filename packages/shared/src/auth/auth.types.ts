@@ -7,6 +7,8 @@ import type {
   changePasswordSchema,
   deleteAccountSchema,
   demoLoginStatusSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
   signInSchema,
   signUpFormSchema,
   signUpSchema,
@@ -16,6 +18,8 @@ import type {
 export type SignInInput = z.infer<typeof signInSchema>;
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type SignUpFormInput = z.infer<typeof signUpFormSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;

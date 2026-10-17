@@ -39,6 +39,22 @@ export const signUpFormSchema = signUpSchema
     message: "Passwords don't match",
   });
 
+/** Requests a reset link. The response is always the same (no enumeration). */
+export const forgotPasswordSchema = z.object({
+  email: authEmailSchema,
+});
+
+/** Consumes the single-use token from the reset email. */
+export const resetPasswordSchema = z
+  .object({
+    newPassword: authPasswordSchema,
+    confirmPassword: z.string().min(1, "Confirm your new password"),
+  })
+  .refine((values) => values.newPassword === values.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords don't match",
+  });
+
 /** Social sign-in providers Kitty supports (docs/23 F1, ADR-028). */
 export const socialProviderIds = ["github", "paypal"] as const;
 
@@ -116,9 +132,14 @@ export const changePasswordSchema = z
   });
 
 /** Settings → Account: delete the account (type the word to confirm). */
-export const deleteAccountSchema = z.object({
-  confirm: z.literal("DELETE", { error: 'Type "DELETE" to confirm' }),
-});
+export const deleteAccountSchema = z
+  .object({
+    confirm: z.string().min(1, 'Type "DELETE" to confirm'),
+  })
+  .refine((values) => values.confirm === "DELETE", {
+    path: ["confirm"],
+    message: 'Type "DELETE" to confirm',
+  });
 
 /**
  * Password strength hint for the sign-up form. Purely presentational — the

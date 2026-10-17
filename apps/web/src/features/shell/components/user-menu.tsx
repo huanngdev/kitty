@@ -11,8 +11,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut } from "lucide-react";
+import { LogOut, UserRound } from "lucide-react";
+import Link from "next/link";
 import type { JSX } from "react";
+import { routes } from "@/lib/routes";
 import { useUserMenu } from "../hooks/use-user-menu";
 
 export interface UserMenuProps {
@@ -43,6 +45,11 @@ export function UserMenu({ name, email }: UserMenuProps): JSX.Element {
             </span>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem render={<Link href={routes.accountSettings} />}>
+          <UserRound data-icon="inline-start" aria-hidden />
+          Account settings
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} disabled={isSigningOut}>
           <LogOut data-icon="inline-start" aria-hidden />

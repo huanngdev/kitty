@@ -9,6 +9,7 @@ import {
   MessagesSquare,
   ShieldCheck,
   Sparkles,
+  UserRound,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -113,6 +114,13 @@ export function useAppNav(): UseAppNavResult {
       {
         label: "Settings",
         items: [
+          {
+            title: "Account",
+            href: routes.accountSettings,
+            icon: UserRound,
+            disabled: false,
+            active: pathname === routes.accountSettings,
+          },
           {
             title: "AI models",
             href: routes.aiSettings,

@@ -199,8 +199,10 @@ function createAuth(options: CreateAuthOptions = {}) {
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,
       // Change password, unlink a provider and delete the account require a
-      // session fresher than this (Better Auth's freshSessionMiddleware).
-      freshAge: 60 * 60,
+      // session fresher than this (Better Auth's freshSessionMiddleware). One
+      // day matches the session refresh interval, so a normal visit is fresh
+      // while a days-old tab is forced to sign in again.
+      freshAge: 60 * 60 * 24,
     },
     rateLimit: {
       enabled: true,
