@@ -15,7 +15,9 @@ export interface CursorPage<TItem> {
 }
 
 /** Builds the response schema for a cursor-paginated list of `item`. */
-export function cursorPageSchema<TItem extends z.ZodType>(item: TItem) {
+export function cursorPageSchema<TItem extends z.ZodType>(
+  item: TItem,
+): z.ZodType<CursorPage<z.infer<TItem>>> {
   return z.object({
     items: z.array(item),
     nextCursor: z.string().nullable(),

@@ -22,6 +22,6 @@ export type IdPrefix = (typeof idPrefixes)[keyof typeof idPrefixes];
 const ulidBody = "[0-9A-HJKMNP-TV-Z]{26}";
 
 /** Validates `<prefix>_<ULID>`, for example `evt_01J...`. */
-export function idSchema(prefix: IdPrefix) {
+export function idSchema(prefix: IdPrefix): z.ZodString {
   return z.string().regex(new RegExp(`^${prefix}_${ulidBody}$`));
 }
