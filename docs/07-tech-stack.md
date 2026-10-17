@@ -122,7 +122,7 @@ export default { port: env.PORT, fetch: app.fetch };
 | Unit/integration test | **`bun test`** + **fast-check** (property) | Vitest | Có sẵn trong Bun, API giống Jest |
 | HTTP mock | **MSW 2** (`msw/node`) hoặc `spyOn(globalThis, "fetch")` | nock | Mock PayPal API |
 | E2E | **Playwright** (`bunx playwright test`) | Cypress | |
-| Lint + format | **Biome** | ESLint + Prettier | Một tool, rất nhanh, hợp với Bun |
+| Lint + format | **ESLint 10 (flat config qua `@kitty/eslint-config`) + Prettier 3 (`@kitty/prettier-config`)** | Biome | Chuẩn phổ biến; tách plugin theo framework (Next/Hono); format ổn định và đồng nhất toàn monorepo |
 | Logging | **pino** (JSON) | console | Có redact secrets |
 | CI | **GitHub Actions** + `oven-sh/setup-bun` + Turborepo cache | | typecheck · lint · test · env-isolation |
 | Hosting | **Render** (Blueprint `render.yaml`, Docker runtime với image `oven/bun:1.3`) | Vercel + Fly | Sponsor; mọi service một chỗ |
@@ -160,7 +160,7 @@ bun run dev                         # turbo run dev → web :3000, gateway :8787
 bun run build                       # turbo run build
 bun run test                        # turbo run test (bun test trong từng package)
 bun run typecheck                   # turbo run typecheck (tsc --noEmit)
-bun run lint                        # biome check .
+bun run lint                        # eslint .
 bun run --filter gateway dev        # chạy riêng một service
 bunx drizzle-kit migrate            # migrate DB
 ```

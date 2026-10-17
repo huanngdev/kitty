@@ -73,39 +73,45 @@ Nếu một task có vẻ đòi vi phạm điều trên → dừng lại, ghi v�
 
 ```
 apps/web          Next.js 16 UI + BFF + Web App API cho agents     (no PayPal secret)
-apps/gateway      Leash Gateway: Hono REST admin + MCP + webhooks  (ONLY PayPal secret)
-apps/agents       Agent runtime: tool-use loops (BYOK models), agent keys, decrypts user LLM keys (no PayPal secret)
-apps/worker       Render Workflows / outbox / cron sweeps          (no PayPal secret)
-apps/demo-sites   Static: demo vendor booking site + injection page
-packages/leash    Pure policy engine, types, reason codes
-packages/ledger   Money (cents) + bucket ledger helpers
-packages/paypal   Typed PayPal REST client (gateway only)
-packages/signing  Ed25519 request signing/verification
-packages/crypto-box  Envelope encryption for user LLM API keys (agents only)
-packages/db       Drizzle schemas (app, leash), migrations, seed
-packages/events   Domain event types (zod)
-packages/ui       Shared React components
-packages/config   tsconfig base, biome config, env schemas (zod)
-postman/          Postman collections
-scripts/          sandbox-check, gen-agent-keys, demo reset, env isolation check
+apps/api          Hono 4 chạy trên Bun — service API                (no PayPal secret)
+apps/gateway      (planned) Leash Gateway: Hono REST admin + MCP + webhooks (ONLY PayPal secret)
+apps/agents       (planned) Agent runtime: tool-use loops (BYOK models), agent keys, decrypts user LLM keys (no PayPal secret)
+apps/worker       (planned) Render Workflows / outbox / cron sweeps (no PayPal secret)
+apps/demo-sites   (planned) Static: demo vendor booking site + injection page
+packages/typescript-config  @kitty/typescript-config — tsconfig base/nextjs/bun
+packages/eslint-config      @kitty/eslint-config — shared ESLint flat config
+packages/prettier-config    @kitty/prettier-config — shared Prettier config
+packages/leash    (planned) Pure policy engine, types, reason codes
+packages/ledger   (planned) Money (cents) + bucket ledger helpers
+packages/paypal   (planned) Typed PayPal REST client (gateway only)
+packages/signing  (planned) Ed25519 request signing/verification
+packages/crypto-box  (planned) Envelope encryption for user LLM API keys (agents only)
+packages/db       (planned) Drizzle schemas (app, leash), migrations, seed
+packages/events   (planned) Domain event types (zod)
+packages/ui       (planned) Shared React components
+packages/config   (planned) env schemas (zod)
+postman/          (planned) Postman collections
+scripts/          (planned) sandbox-check, gen-agent-keys, demo reset, env isolation check
 turbo.json        Turborepo task graph
 ```
 
-**Stack:** Turborepo · **Bun 1.3** (runtime + package manager + test runner) · **Next.js 16 (latest)** cho `apps/web` · **Hono 4 chạy trên Bun** cho gateway/agents/worker · Postgres + Drizzle · LLM theo **BYOK** qua Vercel AI SDK (người dùng tự mang key và model). Chi tiết và lý do ở [07-tech-stack.md](docs/07-tech-stack.md).
+**Stack:** Turborepo · **Bun 1.3** (runtime + package manager + test runner) · **Next.js 16 (latest)** cho `apps/web` · **Hono 4 chạy trên Bun** cho `apps/api` (và gateway/agents/worker theo kế hoạch) · Postgres + Drizzle · LLM theo **BYOK** qua Vercel AI SDK (người dùng tự mang key và model). Chi tiết và lý do ở [07-tech-stack.md](docs/07-tech-stack.md).
 
-## 5. Lệnh (dự kiến — cập nhật khi scaffold)
+## 5. Lệnh
 
 ```bash
 bun install                      # cài toàn bộ workspace (bun.lock)
-bun run dev                      # turbo: web :3000 · gateway :8787 · agents :8788 · worker
-bun run test                     # turbo → bun test (unit + property) trong từng package
-bun run test:integration         # cần Postgres (docker compose up db)
-bun run typecheck && bun run lint   # tsc --noEmit · biome check
-bun run check:env-isolation      # fail nếu PayPal secret lọt ra ngoài gateway
-bun run sandbox:check            # OAuth + invoice $1 + payout $1 trên sandbox
-bun run demo:reset               # seed lại dữ liệu demo
-bun run eval                     # agent evals (injection, plan, retry)
-bun run --filter gateway dev     # chạy riêng một service
+bun run dev                      # turbo run dev → web :3000 · api :8787
+bun run build                    # turbo run build
+bun run start                    # turbo run start (sau build)
+bun run lint                     # turbo run lint (ESLint)
+bun run lint:fix                 # turbo run lint:fix
+bun run check-types              # turbo run check-types (tsc --noEmit)
+bun run format                   # prettier --write .
+bun run format:check             # prettier --check .
+bun run clean                    # xoá .turbo / .next / cache
+bun run ci                       # format:check + lint + check-types + build
+bun run --filter web dev         # chạy riêng một service
 ```
 
 - Không dùng `npm`/`pnpm`/`yarn` trong repo này; chỉ `bun` / `bunx`.
